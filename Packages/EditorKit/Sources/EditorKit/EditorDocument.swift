@@ -41,5 +41,7 @@ public struct EditorDocument {
         return nil
     }
 
-    public func nextCounterNumber() -> Int { 1 } // refined in Task 6
+    public func nextCounterNumber() -> Int {
+        annotations.filter { $0 is CounterAnnotation }.count + 1
+    }
 }
