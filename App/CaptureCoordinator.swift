@@ -66,18 +66,19 @@ final class CaptureCoordinator {
         let nsImage = NSImage(cgImage: image,
                               size: NSSize(width: image.width, height: image.height))
         guard let screen = NSScreen.main else { copy(image); save(image); return }
+        // visibleFrame excludes the Dock and menu bar, so the overlay sits above
+        // the Dock instead of being tucked into the very bottom corner behind it.
         let origin = OverlayPositioner.origin(
             corner: settings.settings.overlayCorner,
             overlaySize: CGSize(width: 220, height: 168),
-            screenFrame: screen.frame, margin: 16)
+            screenFrame: screen.visibleFrame, margin: 24)
         let actions = QuickAccessActions(
             onCopy: { [weak self] in self?.copy(image) },
-            onSave: { [weak self] in self?.save(image) },
+            // The overlay's download button always lands in the macOS screenshot folder.
+            onSave: { [weak self] in self?.save(image, to: SettingsStore.systemScreenshotLocation()) },
             onAnnotate: { [weak self] in self?.annotate(image) },
             fileURLForDrag: { TempImageWriter.writePNG(image, fileName: FileNamer.fileName(for: Date(), ext: "png")) })
-        quickAccess.present(image: nsImage, at: origin,
-                            autoDismissSeconds: settings.settings.overlayAutoDismissSeconds,
-                            actions: actions)
+        quickAccess.present(image: nsImage, at: origin, actions: actions)
     }
 
     /// Plan 3 replaces the stub body via `editorPresenter`.
@@ -93,12 +94,13 @@ final class CaptureCoordinator {
         NSPasteboard.general.writeObjects([nsImage])
     }
 
-    private func save(_ image: CGImage) {
+    private func save(_ image: CGImage, to directory: URL? = nil) {
+        let dir = directory ?? settings.saveDirectory
         let isPNG = settings.settings.format == .png
         let format: ImageFormat = isPNG ? .png : .jpg(quality: 0.9)
         guard let data = ImageEncoder.encode(image, as: format) else { return }
         let name = FileNamer.fileName(for: Date(), ext: isPNG ? "png" : "jpg")
-        try? data.write(to: settings.saveDirectory.appendingPathComponent(name))
+        try? data.write(to: dir.appendingPathComponent(name))
     }
 
     private func ensurePermission() -> Bool {

@@ -12,16 +12,22 @@ public struct QuickAccessActions {
     }
 }
 
-public final class QuickAccessOverlayController {
+/// A floating post-capture thumbnail. It is PERSISTENT: it never auto-dismisses.
+/// It goes away only when the user clicks ✕, clicks Save (download), drags the
+/// thumbnail out to another app, or opens the editor.
+///
+/// NSObject subclass so it is a first-class Obj-C target for the buttons. The
+/// previous version was a plain Swift class used as an NSTrackingArea owner,
+/// which crashed (`doesNotRecognizeSelector: mouseEntered:`) the moment the
+/// cursor entered the overlay — that whole auto-dismiss/tracking path is gone.
+public final class QuickAccessOverlayController: NSObject {
     private var panel: NSPanel?
-    private var dismissTimer: Timer?
     private var actions: QuickAccessActions?
 
-    public init() {}
+    public override init() { super.init() }
 
     /// Presents the overlay at the given screen origin (Cocoa bottom-left coords).
-    public func present(image: NSImage, at origin: CGPoint,
-                        autoDismissSeconds: Int, actions: QuickAccessActions) {
+    public func present(image: NSImage, at origin: CGPoint, actions: QuickAccessActions) {
         dismiss()
         self.actions = actions
 
@@ -48,58 +54,52 @@ public final class QuickAccessOverlayController {
         thumb.layer?.cornerRadius = 6
         thumb.layer?.masksToBounds = true
         thumb.fileURLProvider = actions.fileURLForDrag
+        // Dragging the thumbnail out makes it a temp file that self-deletes; once
+        // it has been dropped somewhere, the overlay goes away.
+        thumb.onDragEnded = { [weak self] droppedSomewhere in
+            if droppedSomewhere { self?.dismiss() }
+        }
         container.addSubview(thumb)
 
         let stack = NSStackView(frame: NSRect(x: 10, y: 8, width: 200, height: 30))
         stack.orientation = .horizontal
         stack.distribution = .fillEqually
         stack.spacing = 6
-        stack.addArrangedSubview(button("Copy", #selector(copyAction)))
-        stack.addArrangedSubview(button("Save", #selector(saveAction)))
-        stack.addArrangedSubview(button("Edit", #selector(annotateAction)))
-        stack.addArrangedSubview(button("✕", #selector(closeAction)))
+        stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy", #selector(copyAction)))
+        stack.addArrangedSubview(iconButton("pencil.tip.crop.circle", tip: "Edit", #selector(annotateAction)))
+        stack.addArrangedSubview(iconButton("square.and.arrow.down", tip: "Save to screenshots", #selector(saveAction)))
+        stack.addArrangedSubview(iconButton("xmark", tip: "Close", #selector(closeAction)))
         container.addSubview(stack)
 
         panel.contentView = container
         panel.orderFrontRegardless()
         self.panel = panel
-
-        // Auto-dismiss unless hovered.
-        let tracking = NSTrackingArea(rect: container.bounds,
-            options: [.mouseEnteredAndExited, .activeAlways], owner: self, userInfo: nil)
-        container.addTrackingArea(tracking)
-        scheduleDismiss(after: autoDismissSeconds)
+        // No auto-dismiss timer and no tracking area: the overlay is persistent.
     }
 
     public func dismiss() {
-        dismissTimer?.invalidate(); dismissTimer = nil
         panel?.orderOut(nil); panel = nil; actions = nil
     }
 
-    private func scheduleDismiss(after seconds: Int) {
-        dismissTimer?.invalidate()
-        guard seconds > 0 else { return }
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(seconds),
-                                            repeats: false) { [weak self] _ in self?.dismiss() }
-    }
-
-    public func mouseEntered(with event: NSEvent) { dismissTimer?.invalidate() }
-    public func mouseExited(with event: NSEvent) { scheduleDismiss(after: 3) }
-
-    private func button(_ title: String, _ sel: Selector) -> NSButton {
-        let b = NSButton(title: title, target: self, action: sel)
+    private func iconButton(_ symbol: String, tip: String, _ sel: Selector) -> NSButton {
+        let b = NSButton(title: "", target: self, action: sel)
         b.bezelStyle = .rounded
-        b.font = .systemFont(ofSize: 11)
+        b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tip)
+            ?? NSImage(size: NSSize(width: 1, height: 1))
+        b.imagePosition = .imageOnly
+        b.toolTip = tip
         return b
     }
 
-    @objc private func copyAction() { actions?.onCopy(); dismiss() }
+    // Copy keeps the overlay up (so the user can still save/drag/close it).
+    @objc private func copyAction() { actions?.onCopy() }
+    // Save writes to the screenshot folder, then dismisses.
     @objc private func saveAction() { actions?.onSave(); dismiss() }
-    @objc private func annotateAction() { actions?.onAnnotate(); dismiss() }
+    // Opening the editor takes over from the overlay.
+    @objc private func annotateAction() {
+        let a = actions
+        dismiss()
+        a?.onAnnotate()
+    }
     @objc private func closeAction() { dismiss() }
-}
-
-extension QuickAccessOverlayController {
-    // NSTrackingArea calls require the owner to respond; route via the panel's content view owner.
-    // (mouseEntered/mouseExited above are invoked because this controller is the tracking owner.)
 }

@@ -22,11 +22,6 @@ struct SettingsView: View {
                 Text("Top-right").tag(OverlayCorner.topRight)
                 Text("Top-left").tag(OverlayCorner.topLeft)
             }
-            Stepper("Auto-dismiss after \(store.settings.overlayAutoDismissSeconds)s",
-                    value: Binding(
-                        get: { store.settings.overlayAutoDismissSeconds },
-                        set: { store.settings.overlayAutoDismissSeconds = $0; store.persist() }),
-                    in: 0...30)
             HStack {
                 Text("Save to: \(store.saveDirectory.path)")
                     .truncationMode(.middle).lineLimit(1)

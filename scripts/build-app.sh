@@ -32,8 +32,23 @@ if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 fi
 
-# Ad-hoc sign (non-sandboxed). Entitlements file has no sandbox key.
+# Sign (non-sandboxed; entitlements file has no sandbox key). Prefer the stable
+# self-signed identity from scripts/setup-signing.sh so Screen-Recording (TCC)
+# permission persists across rebuilds; otherwise fall back to ad-hoc.
+SIGN_IDENTITY="BetterScreenshot Code Signing"
+SIGN_KEYCHAIN="$HOME/Library/Keychains/betterscreenshot-signing.keychain-db"
+SIGN_KEYCHAIN_PW="betterscreenshot-local"
+
+if security find-identity -p codesigning "$SIGN_KEYCHAIN" 2>/dev/null | grep -q "$SIGN_IDENTITY"; then
+    security unlock-keychain -p "$SIGN_KEYCHAIN_PW" "$SIGN_KEYCHAIN" 2>/dev/null || true
+    if codesign --force --keychain "$SIGN_KEYCHAIN" --sign "$SIGN_IDENTITY" \
+            --entitlements App/BetterScreenshot.entitlements "$APP" >/dev/null 2>&1; then
+        echo "==> Built $APP (signed with stable identity — permissions persist)"
+        exit 0
+    fi
+    echo "warning: stable signing failed; falling back to ad-hoc" >&2
+fi
+
 codesign --force --sign - --entitlements App/BetterScreenshot.entitlements "$APP" >/dev/null 2>&1 \
     || codesign --force --sign - "$APP" >/dev/null 2>&1
-
-echo "==> Built $APP"
+echo "==> Built $APP (ad-hoc; run scripts/setup-signing.sh for persistent permissions)"

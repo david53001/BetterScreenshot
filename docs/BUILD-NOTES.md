@@ -41,3 +41,22 @@ faithfully; only the *build/test tooling* is adapted. Two deviations:
 
 The assertions, expected values, and the code under test are identical to the
 plans.
+
+## 3. Persistent permissions: stable code signing
+
+Ad-hoc signed apps are identified by their code hash, which changes on every
+rebuild, so macOS resets Screen-Recording (TCC) permission each time. To make
+the grant **permanent across rebuilds**:
+
+- `scripts/setup-signing.sh` (run once, non-interactive) creates a stable
+  self-signed code-signing identity ("BetterScreenshot Code Signing") in a
+  dedicated keychain `~/Library/Keychains/betterscreenshot-signing.keychain-db`
+  (known password, so `codesign` is pre-authorized — no GUI prompt). It only
+  ever creates the cert once, so the identity stays stable.
+- `scripts/build-app.sh` automatically signs with that identity when present
+  (falling back to ad-hoc otherwise). The app's designated requirement
+  (`identifier "com.betterscreenshot.app" and certificate leaf = H"…"`) is then
+  **identical across rebuilds**, so TCC matches it every time.
+- Result: grant Screen Recording **once** after the first signed build; it
+  persists through all future `build-app.sh` rebuilds. The dedicated keychain
+  holds nothing but this local self-signed cert.
