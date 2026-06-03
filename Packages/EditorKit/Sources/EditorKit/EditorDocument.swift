@@ -44,4 +44,17 @@ public struct EditorDocument {
     public func nextCounterNumber() -> Int {
         annotations.filter { $0 is CounterAnnotation }.count + 1
     }
+
+    /// Returns a new document cropped to `rect` (top-left image coords), annotations offset to match.
+    public func cropped(to rect: CGRect) -> EditorDocument? {
+        let r = rect.integral
+        let bounds = CGRect(x: 0, y: 0, width: baseImage.width, height: baseImage.height)
+        let clamped = r.intersection(bounds)
+        guard clamped.width >= 1, clamped.height >= 1,
+              let newBase = baseImage.cropping(to: clamped) else { return nil }
+        var d = EditorDocument(baseImage: newBase)
+        let delta = CGVector(dx: -clamped.minX, dy: -clamped.minY)
+        for a in annotations { d.add(a.moved(by: delta)) }
+        return d
+    }
 }
