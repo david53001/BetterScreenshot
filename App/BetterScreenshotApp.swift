@@ -32,5 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(key: "6", command: true, shift: true, option: false, control: false) {
             [weak self] in Task { @MainActor in self?.coordinator.captureFullscreen() }
         }
+        // Stop macOS's native ⌘⇧4 from also firing (double screenshot). Restored on quit.
+        SystemScreenshotShortcuts.disableNativeAreaScreenshot()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        SystemScreenshotShortcuts.restoreNativeAreaScreenshot()
     }
 }
