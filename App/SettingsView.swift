@@ -6,19 +6,27 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Picker("After capture", selection: Binding(
-                get: { store.settings.afterCapture },
-                set: { store.settings.afterCapture = $0; store.persist() })) {
+            Picker("After capture", selection: bind(\.afterCapture)) {
+                Text("Show overlay").tag(AfterCaptureBehavior.showOverlay)
                 Text("Copy to clipboard").tag(AfterCaptureBehavior.copyOnly)
                 Text("Save to folder").tag(AfterCaptureBehavior.saveOnly)
                 Text("Copy and save").tag(AfterCaptureBehavior.copyAndSave)
             }
-            Picker("Format", selection: Binding(
-                get: { store.settings.format },
-                set: { store.settings.format = $0; store.persist() })) {
+            Picker("Format", selection: bind(\.format)) {
                 Text("PNG").tag(SettingsImageFormat.png)
                 Text("JPG").tag(SettingsImageFormat.jpg)
             }
+            Picker("Overlay corner", selection: bind(\.overlayCorner)) {
+                Text("Bottom-right").tag(OverlayCorner.bottomRight)
+                Text("Bottom-left").tag(OverlayCorner.bottomLeft)
+                Text("Top-right").tag(OverlayCorner.topRight)
+                Text("Top-left").tag(OverlayCorner.topLeft)
+            }
+            Stepper("Auto-dismiss after \(store.settings.overlayAutoDismissSeconds)s",
+                    value: Binding(
+                        get: { store.settings.overlayAutoDismissSeconds },
+                        set: { store.settings.overlayAutoDismissSeconds = $0; store.persist() }),
+                    in: 0...30)
             HStack {
                 Text("Save to: \(store.saveDirectory.path)")
                     .truncationMode(.middle).lineLimit(1)
@@ -27,7 +35,12 @@ struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 420)
+        .frame(width: 440)
+    }
+
+    private func bind<V>(_ keyPath: WritableKeyPath<CaptureSettings, V>) -> Binding<V> {
+        Binding(get: { store.settings[keyPath: keyPath] },
+                set: { store.settings[keyPath: keyPath] = $0; store.persist() })
     }
 
     private func chooseFolder() {
