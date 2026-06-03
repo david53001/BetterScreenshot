@@ -4,8 +4,7 @@ import SwiftUI
 struct BetterScreenshotApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     var body: some Scene {
-        // SettingsView is created in Task 12; use EmptyView until then so this task compiles.
-        Settings { EmptyView() }
+        Settings { SettingsView(store: appDelegate.settings) }
     }
 }
 
