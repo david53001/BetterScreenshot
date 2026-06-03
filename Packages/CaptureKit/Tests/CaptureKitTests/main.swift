@@ -9,5 +9,6 @@ runTests("CaptureKitTests",
     imageEncoderTests +
     fileNamerTests +
     keyCodeTests +
-    captureSettingsTests
+    captureSettingsTests +
+    overlayPositionerTests
 )
