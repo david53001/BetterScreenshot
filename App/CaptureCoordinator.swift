@@ -8,6 +8,10 @@ final class CaptureCoordinator {
     private let service = CaptureService()
     private let settings: SettingsStore
     private let overlay = SelectionOverlayController()
+    private let quickAccess = QuickAccessOverlayController()
+
+    /// Filled in by Plan 3 to present the annotation editor. Nil = stub.
+    var editorPresenter: ((CGImage) -> Void)?
 
     init(settings: SettingsStore) { self.settings = settings }
 
@@ -21,43 +25,66 @@ final class CaptureCoordinator {
 
     func captureFullscreen() {
         guard ensurePermission() else { return }
-        let id = CGMainDisplayID()
-        Task { await run(.fullscreen(displayID: id)) }
+        Task { await run(.fullscreen(displayID: CGMainDisplayID())) }
     }
 
     func captureFrontWindow() {
         guard ensurePermission() else { return }
-        // Minimal v1: capture the frontmost on-screen window.
-        Task {
-            if let id = await frontmostWindowID() { await run(.window(windowID: id)) }
-        }
+        Task { if let id = await frontmostWindowID() { await run(.window(windowID: id)) } }
     }
 
     private func run(_ target: CaptureTarget) async {
         do {
             let image = try await service.capture(target)
-            output(image)
-        } catch {
-            NSLog("Capture failed: \(error)")
+            handle(image)
+        } catch { NSLog("Capture failed: \(error)") }
+    }
+
+    private func handle(_ image: CGImage) {
+        switch settings.settings.afterCapture {
+        case .copyOnly:    copy(image)
+        case .saveOnly:    save(image)
+        case .copyAndSave: copy(image); save(image)
+        case .showOverlay: presentOverlay(image)
         }
     }
 
-    private func output(_ image: CGImage) {
-        let behavior = settings.settings.afterCapture
-        let format: ImageFormat = settings.settings.format == .png ? .png : .jpg(quality: 0.9)
-        if behavior == .copyOnly || behavior == .copyAndSave {
-            let rep = NSBitmapImageRep(cgImage: image)
-            let nsImage = NSImage(); nsImage.addRepresentation(rep)
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.writeObjects([nsImage])
-        }
-        if behavior == .saveOnly || behavior == .copyAndSave {
-            guard let data = ImageEncoder.encode(image, as: format) else { return }
-            let ext = settings.settings.format == .png ? "png" : "jpg"
-            let name = FileNamer.fileName(for: Date(), ext: ext)
-            let url = settings.saveDirectory.appendingPathComponent(name)
-            try? data.write(to: url)
-        }
+    private func presentOverlay(_ image: CGImage) {
+        let nsImage = NSImage(cgImage: image, size: .zero)
+        guard let screen = NSScreen.main else { copy(image); save(image); return }
+        let origin = OverlayPositioner.origin(
+            corner: settings.settings.overlayCorner,
+            overlaySize: CGSize(width: 220, height: 168),
+            screenFrame: screen.frame, margin: 16)
+        let actions = QuickAccessActions(
+            onCopy: { [weak self] in self?.copy(image) },
+            onSave: { [weak self] in self?.save(image) },
+            onAnnotate: { [weak self] in self?.annotate(image) },
+            fileURLForDrag: { TempImageWriter.writePNG(image, fileName: FileNamer.fileName(for: Date(), ext: "png")) })
+        quickAccess.present(image: nsImage, at: origin,
+                            autoDismissSeconds: settings.settings.overlayAutoDismissSeconds,
+                            actions: actions)
+    }
+
+    /// Plan 3 replaces the stub body via `editorPresenter`.
+    func annotate(_ image: CGImage) {
+        if let present = editorPresenter { present(image) }
+        else { NSLog("Annotate requested — editor arrives in Plan 3") }
+    }
+
+    private func copy(_ image: CGImage) {
+        let rep = NSBitmapImageRep(cgImage: image)
+        let nsImage = NSImage(); nsImage.addRepresentation(rep)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.writeObjects([nsImage])
+    }
+
+    private func save(_ image: CGImage) {
+        let isPNG = settings.settings.format == .png
+        let format: ImageFormat = isPNG ? .png : .jpg(quality: 0.9)
+        guard let data = ImageEncoder.encode(image, as: format) else { return }
+        let name = FileNamer.fileName(for: Date(), ext: isPNG ? "png" : "jpg")
+        try? data.write(to: settings.saveDirectory.appendingPathComponent(name))
     }
 
     private func ensurePermission() -> Bool {
