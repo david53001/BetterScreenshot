@@ -2,6 +2,7 @@ import AppKit
 import ScreenCaptureKit
 import CaptureKit
 import OverlayKit
+import EditorKit
 
 @MainActor
 final class CaptureCoordinator {
@@ -12,6 +13,18 @@ final class CaptureCoordinator {
 
     /// Filled in by Plan 3 to present the annotation editor. Nil = stub.
     var editorPresenter: ((CGImage) -> Void)?
+
+    private var editorController: EditorWindowController?
+
+    func presentEditor(_ image: CGImage) {
+        let controller = EditorWindowController(image: image)
+        controller.onCopy = { [weak self] img in self?.copy(img) }
+        controller.onSave = { [weak self] img in self?.save(img) }
+        editorController = controller
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
 
     init(settings: SettingsStore) { self.settings = settings }
 

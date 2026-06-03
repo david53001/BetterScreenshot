@@ -14,6 +14,7 @@ let package = Package(
     dependencies: [
         .package(path: "Packages/CaptureKit"),
         .package(path: "Packages/OverlayKit"),
+        .package(path: "Packages/EditorKit"),
     ],
     targets: [
         .executableTarget(
@@ -21,6 +22,7 @@ let package = Package(
             dependencies: [
                 .product(name: "CaptureKit", package: "CaptureKit"),
                 .product(name: "OverlayKit", package: "OverlayKit"),
+                .product(name: "EditorKit", package: "EditorKit"),
             ],
             path: "App",
             exclude: ["Info.plist", "BetterScreenshot.entitlements"]

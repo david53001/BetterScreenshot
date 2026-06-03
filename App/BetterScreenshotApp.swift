@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         coordinator = CaptureCoordinator(settings: settings)
+        coordinator.editorPresenter = { [weak coordinator] image in
+            coordinator?.presentEditor(image)
+        }
         menuBar = MenuBarController(coordinator: coordinator)
         // Defaults: ⌘⇧4 area, ⌘⇧5 window, ⌘⇧6 fullscreen.
         hotKeys.register(key: "4", command: true, shift: true, option: false, control: false) {
