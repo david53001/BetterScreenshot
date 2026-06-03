@@ -63,7 +63,8 @@ final class CaptureCoordinator {
     }
 
     private func presentOverlay(_ image: CGImage) {
-        let nsImage = NSImage(cgImage: image, size: .zero)
+        let nsImage = NSImage(cgImage: image,
+                              size: NSSize(width: image.width, height: image.height))
         guard let screen = NSScreen.main else { copy(image); save(image); return }
         let origin = OverlayPositioner.origin(
             corner: settings.settings.overlayCorner,

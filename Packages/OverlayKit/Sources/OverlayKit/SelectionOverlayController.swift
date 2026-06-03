@@ -27,12 +27,16 @@ public final class SelectionOverlayController {
     }
 
     private func finish(rect: CGRect?, screen: NSScreen) {
+        // Multiple overlays (one per display) can each call finish; only the
+        // first wins. Clear completion first so it can never fire twice.
+        guard let completion else { return }
+        self.completion = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
-        guard let rect, rect.width >= 1, rect.height >= 1 else { completion?(nil); return }
+        guard let rect, rect.width >= 1, rect.height >= 1 else { completion(nil); return }
         let displayID = (screen.deviceDescription[
             NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
-        completion?(SelectionResult(globalRect: rect, displayID: displayID))
+        completion(SelectionResult(globalRect: rect, displayID: displayID))
     }
 }
 
