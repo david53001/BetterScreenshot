@@ -34,6 +34,13 @@ struct ShortcutRecorderField: NSViewRepresentable {
 
         init(_ parent: ShortcutRecorderField) { self.parent = parent }
 
+        deinit {
+            // Last-resort teardown: SwiftUI may discard the representable while
+            // recording without a final updateNSView(false) pass.
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
+        }
+
         func toggle() { parent.isRecording.toggle() }
 
         func setMonitoring(_ on: Bool, window: NSWindow?) {
@@ -88,6 +95,8 @@ final class RecorderWell: NSView {
     var active: Bool = false { didSet { needsDisplay = true } }
 
     override var intrinsicContentSize: NSSize { NSSize(width: 130, height: 22) }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) { onClick?() }
 

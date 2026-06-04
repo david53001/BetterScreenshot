@@ -97,6 +97,8 @@ private struct ShortcutsTab: View {
     @ObservedObject var store: SettingsStore
     let actions: ShortcutActions
     @State private var status = ""
+    /// Single source of truth: at most one row records at a time; switching rows
+    /// re-renders the previous well with isRecording=false, stopping its monitor.
     @State private var recordingAction: HotkeyAction?
 
     var body: some View {
