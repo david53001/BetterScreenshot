@@ -266,6 +266,7 @@ public final class EditorWindowController: NSWindowController {
         pinBtn.bezelStyle = .rounded
         pinBtn.image = NSImage(systemSymbolName: "pin", accessibilityDescription: "Pin")
         pinBtn.imagePosition = .imageLeading
+        pinBtn.toolTip = "Pin to screen"
 
         let actions = NSStackView(views: [doneBtn, pinBtn, saveBtn, copyBtn])
         actions.orientation = .horizontal
