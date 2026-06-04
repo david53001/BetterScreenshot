@@ -1,6 +1,6 @@
 # BetterScreenshot P2 — Screen Recording Suite
 
-Date: 2026-06-04 · Status: draft
+Date: 2026-06-04 · Status: **shipped 2026-06-04** (tag `v2.0-recording`; see CHANGELOG.md)
 Builds on: v1.4-shortcuts (`main`) · Ends at tag: `v2.0-recording`
 
 ## Goal

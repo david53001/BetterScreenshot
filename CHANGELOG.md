@@ -2,6 +2,20 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.0-recording — 2026-06-04
+
+- **Screen recording (P2).** ⌘⇧5 is a smart toggle: press to open the record strip
+  (full screen or drag an area; MP4/GIF, mic, system audio, camera toggles), press
+  again to stop. Menu bar shows a red stop button with an elapsed timer.
+- **MP4 + GIF output** — H.264 at 30/60 fps; GIF recordings convert automatically
+  (10 fps, ≤960 px) and fall back to MP4 if conversion fails.
+- **Audio** — system audio (ScreenCaptureKit) and microphone (separate track).
+- **Camera bubble** — circular live webcam overlay, drag to move, two sizes.
+- **Click highlights** (no extra permission) and **keystroke display**
+  (Accessibility-gated, off by default).
+- New Settings → Recording tab; "Start/Stop Recording" is rebindable in Shortcuts.
+- Native macOS ⌘⇧5 (screenshot toolbar) is shadowed while the app runs, like ⌘⇧4.
+
 ## v1.4-shortcuts — 2026-06-04
 
 - **Fixed: the Settings window now opens.** macOS 14 silently broke the private

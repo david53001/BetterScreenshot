@@ -33,7 +33,7 @@ Local Swift packages + a menu-bar app target:
 - `CHANGELOG.md` — per-release history.
 
 ## Roadmap (post-v1, each its own spec → plan)
-P2 recording (MP4/GIF, audio, webcam, click/keystroke viz) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · P4 backgrounds/styling, scrolling capture, freeze/self-timer/repeat, history · P5 `betterscreenshot://` URL automation.
+~~P2 recording~~ (shipped v2.0) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · P4 backgrounds/styling, scrolling capture, freeze/self-timer/repeat, history · P5 `betterscreenshot://` URL automation.
 
 ## Executing the plans
 Plans use checkbox steps. Execute task-by-task with the **superpowers:subagent-driven-development** (fresh subagent per task) or **superpowers:executing-plans** skill. Each task ends in a commit; each plan ends in a git tag (`v0.1-capture-core`, `v0.2-quick-access`, `v1.0`). Plan 1 Task 1 runs `git init` and `brew install xcodegen` (prerequisite).
