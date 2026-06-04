@@ -17,6 +17,7 @@ final class MenuBarController: NSObject {
     }
 
     private var actionItems: [HotkeyAction: NSMenuItem] = [:]
+    private var recordItem: NSMenuItem?
 
     private func buildMenu() {
         let menu = NSMenu()
@@ -29,6 +30,10 @@ final class MenuBarController: NSObject {
         add("Capture Window", #selector(window), .captureWindow)
         add("Capture Fullscreen", #selector(full), .captureFullscreen)
         add("Capture Text", #selector(captureText), .captureText)
+        recordItem = menu.addItem(withTitle: "Record Screen…",
+                                  action: #selector(toggleRecording), keyEquivalent: "")
+        recordItem?.target = self
+        if let recordItem { actionItems[.record] = recordItem }
         menu.addItem(.separator())
         add("Pin from Clipboard", #selector(pinClipboard), .pinFromClipboard)
         menu.addItem(.separator())
@@ -56,6 +61,30 @@ final class MenuBarController: NSObject {
     @objc private func full() { coordinator.captureFullscreen() }
     @objc private func captureText() { coordinator.captureText() }
     @objc private func pinClipboard() { coordinator.pinFromClipboard() }
+    var onToggleRecording: (() -> Void)?
+
+    @objc private func toggleRecording() { onToggleRecording?() }
+
+    /// Red stop icon + elapsed timer while recording; normal icon otherwise.
+    func setRecording(_ recording: Bool, elapsed: String?) {
+        if recording {
+            statusItem.button?.image = NSImage(systemSymbolName: "stop.circle.fill",
+                                               accessibilityDescription: "Stop Recording")
+            statusItem.button?.contentTintColor = .systemRed
+            statusItem.button?.title = elapsed.map { " \($0)" } ?? ""
+            statusItem.button?.imagePosition = .imageLeading
+            statusItem.button?.font = .monospacedDigitSystemFont(
+                ofSize: NSFont.systemFontSize, weight: .regular)
+            recordItem?.title = "Stop Recording"
+        } else {
+            statusItem.button?.image = NSImage(systemSymbolName: "camera.viewfinder",
+                                               accessibilityDescription: "BetterScreenshot")
+            statusItem.button?.contentTintColor = nil
+            statusItem.button?.title = ""
+            recordItem?.title = "Record Screen…"
+        }
+    }
+
     @objc private func openSettings() {
         settingsWindow.show()
     }

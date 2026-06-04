@@ -5,6 +5,7 @@ import CaptureKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let settings = SettingsStore()
     private var coordinator: CaptureCoordinator!
+    private var recordingCoordinator: RecordingCoordinator!
     private var menuBar: MenuBarController!
     private var onboarding: OnboardingController!
     private var settingsWindow: SettingsWindowController!
@@ -15,6 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator = CaptureCoordinator(settings: settings)
         coordinator.editorPresenter = { [weak coordinator] image in
             coordinator?.presentEditor(image)
+        }
+        recordingCoordinator = RecordingCoordinator(settings: settings)
+        recordingCoordinator.onStateChange = { [weak self] recording, elapsed in
+            self?.menuBar.setRecording(recording, elapsed: elapsed)
         }
         let shortcuts = ShortcutActions(
             update: { [weak self] combo, action in self?.updateBinding(combo, for: action) },
@@ -29,10 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             })
         settingsWindow = SettingsWindowController(store: settings, shortcuts: shortcuts)
         menuBar = MenuBarController(coordinator: coordinator, settingsWindow: settingsWindow)
+        menuBar.onToggleRecording = { [weak self] in self?.recordingCoordinator.toggle() }
 
         // One-button first-run setup (Screen Recording is the only permission).
         onboarding = OnboardingController()
         coordinator.presentSetup = { [weak self] in self?.onboarding.show(.needsPermission) }
+        recordingCoordinator.presentSetup = { [weak self] in self?.onboarding.show(.needsPermission) }
         if !PermissionManager.hasScreenRecordingPermission {
             onboarding.show(.needsPermission)
         } else if OnboardingController.consumeRelaunchFlag() {
@@ -58,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .captureFullscreen: { [weak self] in Task { @MainActor in self?.coordinator.captureFullscreen() } },
             .captureText:       { [weak self] in Task { @MainActor in self?.coordinator.captureText() } },
             .pinFromClipboard:  { [weak self] in Task { @MainActor in self?.coordinator.pinFromClipboard() } },
+            .record:            { [weak self] in Task { @MainActor in self?.recordingCoordinator.toggle() } },
         ]
         let failed = hotKeys.apply(settings.bindings, handlers: handlers)
         settings.failedActions = failed
@@ -97,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        recordingCoordinator?.stopForTermination()
         SystemScreenshotShortcuts.restoreNativeShortcuts()
     }
 }
