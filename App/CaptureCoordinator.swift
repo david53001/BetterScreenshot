@@ -10,6 +10,7 @@ final class CaptureCoordinator {
     private let settings: SettingsStore
     private let overlay = SelectionOverlayController()
     private let quickAccess = QuickAccessOverlayController()
+    private let hud = HUDController()
 
     /// Filled in by Plan 3 to present the annotation editor. Nil = stub.
     var editorPresenter: ((CGImage) -> Void)?
@@ -47,6 +48,39 @@ final class CaptureCoordinator {
     func captureFrontWindow() {
         guard ensurePermission() else { return }
         Task { if let id = await frontmostWindowID() { await run(.window(windowID: id)) } }
+    }
+
+    /// Capture Text (OCR + QR): drag a region; the recognized text — or a QR
+    /// code's payload, which wins — lands on the clipboard. HUD confirms.
+    func captureText() {
+        guard ensurePermission() else { return }
+        overlay.present { [weak self] result in
+            guard let self, let result else { return }
+            Task { await self.runCaptureText(result) }
+        }
+    }
+
+    private func runCaptureText(_ result: SelectionResult) async {
+        do {
+            let image = try await service.capture(
+                .area(rect: result.globalRect, displayID: result.displayID))
+            // Vision's perform() blocks — keep it off the main actor.
+            let recognition = try await Task.detached {
+                try TextRecognizer.recognize(in: image)
+            }.value
+            if let payload = recognition.clipboardString {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(payload, forType: .string)
+            }
+            hud.show(recognition.hudMessage, on: screen(for: result.displayID))
+        } catch { NSLog("Capture Text failed: \(error)") }
+    }
+
+    private func screen(for displayID: CGDirectDisplayID) -> NSScreen? {
+        NSScreen.screens.first {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?
+                .uint32Value == displayID
+        } ?? NSScreen.main
     }
 
     private func run(_ target: CaptureTarget) async {

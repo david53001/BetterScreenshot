@@ -20,6 +20,8 @@ final class MenuBarController {
             .target = self
         menu.addItem(withTitle: "Capture Fullscreen", action: #selector(full), keyEquivalent: "")
             .target = self
+        menu.addItem(withTitle: "Capture Text", action: #selector(captureText), keyEquivalent: "")
+            .target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
             .target = self
@@ -30,6 +32,7 @@ final class MenuBarController {
     @objc private func area() { coordinator.captureArea() }
     @objc private func window() { coordinator.captureFrontWindow() }
     @objc private func full() { coordinator.captureFullscreen() }
+    @objc private func captureText() { coordinator.captureText() }
     @objc private func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)

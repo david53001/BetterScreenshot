@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLogin.setEnabled(true)
             UserDefaults.standard.set(true, forKey: "didRegisterLaunchAtLogin")
         }
-        // Defaults: ⌘⇧4 area, ⌘⇧5 window, ⌘⇧6 fullscreen.
+        // Defaults: ⌘⇧4 area, ⌘⇧5 window, ⌘⇧6 fullscreen, ⌘⇧7 capture text.
         hotKeys.register(key: "4", command: true, shift: true, option: false, control: false) {
             [weak self] in Task { @MainActor in self?.coordinator.captureArea() }
         }
@@ -47,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotKeys.register(key: "6", command: true, shift: true, option: false, control: false) {
             [weak self] in Task { @MainActor in self?.coordinator.captureFullscreen() }
+        }
+        hotKeys.register(key: "7", command: true, shift: true, option: false, control: false) {
+            [weak self] in Task { @MainActor in self?.coordinator.captureText() }
         }
         // Stop macOS's native ⌘⇧4 from also firing (double screenshot). Restored on quit.
         SystemScreenshotShortcuts.disableNativeAreaScreenshot()
