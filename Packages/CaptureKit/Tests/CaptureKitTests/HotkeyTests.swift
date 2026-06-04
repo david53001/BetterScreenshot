@@ -61,11 +61,12 @@ let hotkeyBindingsTests: [TestCase] = [
         t.equal(b.combo(for: .captureFullscreen), HotkeyCombo(keyCode: 22, modifiers: cmdShift)) // ⌘⇧6
         t.equal(b.combo(for: .captureText), HotkeyCombo(keyCode: 26, modifiers: cmdShift))       // ⌘⇧7
         t.isNil(b.combo(for: .pinFromClipboard))
-        // ⌘⇧5 (keyCode 23) is reserved for recording — nothing may default to it.
-        for action in HotkeyAction.allCases {
+        // ⌘⇧5 (keyCode 23) is now record's default — only non-record actions must not default to it.
+        for action in HotkeyAction.allCases where action != .record {
             t.isTrue(b.combo(for: action) != HotkeyCombo(keyCode: 23, modifiers: cmdShift),
                      "\(action) must not default to ⌘⇧5")
         }
+        t.equal(b.combo(for: .record), HotkeyCombo(keyCode: 23, modifiers: cmdShift))
     },
     TestCase("titles") { t in
         t.equal(HotkeyAction.captureArea.title, "Capture Area")
@@ -82,7 +83,7 @@ let hotkeyBindingsTests: [TestCase] = [
         b.set(combo, for: .pinFromClipboard)
         t.equal(b.combo(for: .pinFromClipboard), combo)
         // bound lists pairs in HotkeyAction.allCases order.
-        t.equal(b.bound.map(\.action), [.captureWindow, .captureFullscreen, .captureText, .pinFromClipboard])
+        t.equal(b.bound.map(\.action), [.captureWindow, .captureFullscreen, .captureText, .pinFromClipboard, .record])
     },
     TestCase("conflictDetection") { t in
         let b = HotkeyBindings.defaults
@@ -91,8 +92,9 @@ let hotkeyBindingsTests: [TestCase] = [
         t.equal(b.conflictingAction(for: area, excluding: .captureText), .captureArea)
         // …but re-typing an action's own combo is not a conflict.
         t.isNil(b.conflictingAction(for: area, excluding: .captureArea))
-        t.isNil(b.conflictingAction(for: HotkeyCombo(keyCode: 23, modifiers: cmdShift),
-                                    excluding: .captureArea))
+        // ⌘⇧5 now belongs to record — conflict detected when binding it to another action.
+        t.equal(b.conflictingAction(for: HotkeyCombo(keyCode: 23, modifiers: cmdShift),
+                                    excluding: .captureArea), .record)
     },
     TestCase("bindingsDictionaryRoundTrip") { t in
         var b = HotkeyBindings.defaults
@@ -103,7 +105,30 @@ let hotkeyBindingsTests: [TestCase] = [
         // Unknown action keys and malformed values are skipped, not fatal.
         let messy = HotkeyBindings(dictionary: ["nonsense": "1,2", "captureArea": "garbage",
                                                 "captureText": "26,768"])
-        t.isNil(messy.combo(for: .captureArea))
+        t.equal(messy.combo(for: .captureArea), HotkeyCombo(keyCode: 21, modifiers: 768)) // garbage → default
         t.equal(messy.combo(for: .captureText), HotkeyCombo(keyCode: 26, modifiers: 768))
+    },
+    TestCase("recordActionDefaults") { t in
+        t.equal(HotkeyAction.record.title, "Start/Stop Recording")
+        t.equal(HotkeyAction.record.defaultCombo, HotkeyCombo(keyCode: 23, modifiers: cmdShift)) // ⌘⇧5
+        t.equal(HotkeyBindings.defaults.combo(for: .record),
+                HotkeyCombo(keyCode: 23, modifiers: cmdShift))
+        // record comes last in allCases (menu/settings row order).
+        t.equal(HotkeyAction.allCases.last, .record)
+    },
+    TestCase("unboundSentinelPersistence") { t in
+        // Explicit clear persists as "unbound" so it survives upgrades…
+        var b = HotkeyBindings.defaults
+        b.clear(.captureArea)
+        t.equal(b.dictionary["captureArea"], "unbound")
+        let restored = HotkeyBindings(dictionary: b.dictionary)
+        t.isNil(restored.combo(for: .captureArea))
+        t.equal(restored, b)
+        // …while a MISSING key means "never customized → use the default".
+        // A v1.4 dict (no "record" key) picks up ⌘⇧5 automatically.
+        let v14 = HotkeyBindings(dictionary: ["captureArea": "21,768", "captureWindow": "28,768",
+                                              "captureFullscreen": "22,768", "captureText": "26,768"])
+        t.equal(v14.combo(for: .record), HotkeyCombo(keyCode: 23, modifiers: cmdShift))
+        t.equal(v14.combo(for: .captureArea), HotkeyCombo(keyCode: 21, modifiers: 768))
     },
 ]

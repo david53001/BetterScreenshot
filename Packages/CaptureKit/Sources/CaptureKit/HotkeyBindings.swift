@@ -1,12 +1,18 @@
 import Foundation
 
 /// The user's action → hotkey map. Pure model; persisted as a string dictionary
-/// (action rawValue → "keyCode,modifiers") following CaptureSettings conventions.
-/// A missing key means "unbound" — clearing a binding really removes it.
+/// (action rawValue → "keyCode,modifiers" or "unbound") following CaptureSettings
+/// conventions. A missing key means "never customized → use the default".
 public struct HotkeyBindings: Equatable {
     private var map: [HotkeyAction: HotkeyCombo]
+    /// Actions the user explicitly unbound (persisted as "unbound" so the choice
+    /// survives upgrades; a key missing entirely means "use the default").
+    private var cleared: Set<HotkeyAction>
 
-    public init(_ map: [HotkeyAction: HotkeyCombo] = [:]) { self.map = map }
+    public init(_ map: [HotkeyAction: HotkeyCombo] = [:]) {
+        self.map = map
+        self.cleared = []
+    }
 
     public static let defaults: HotkeyBindings = {
         var m: [HotkeyAction: HotkeyCombo] = [:]
@@ -18,10 +24,12 @@ public struct HotkeyBindings: Equatable {
 
     public mutating func set(_ combo: HotkeyCombo, for action: HotkeyAction) {
         map[action] = combo
+        cleared.remove(action)
     }
 
     public mutating func clear(_ action: HotkeyAction) {
         map[action] = nil
+        cleared.insert(action)
     }
 
     /// The *other* action already bound to `combo`, if any.
@@ -42,18 +50,27 @@ public struct HotkeyBindings: Equatable {
         for (action, combo) in map {
             d[action.rawValue] = "\(combo.keyCode),\(combo.modifiers)"
         }
+        for action in cleared { d[action.rawValue] = "unbound" }
         return d
     }
 
     public init(dictionary: [String: String]) {
         var m: [HotkeyAction: HotkeyCombo] = [:]
+        var c: Set<HotkeyAction> = []
         for (key, value) in dictionary {
             guard let action = HotkeyAction(rawValue: key) else { continue }
+            if value == "unbound" { c.insert(action); continue }
             let parts = value.split(separator: ",")
             guard parts.count == 2,
                   let kc = UInt32(parts[0]), let mods = UInt32(parts[1]) else { continue }
             m[action] = HotkeyCombo(keyCode: kc, modifiers: mods)
         }
+        // Actions absent from the stored dict were never customized → defaults.
+        // (This is how pre-record-era bindings pick up ⌘⇧5 on upgrade.)
+        for action in HotkeyAction.allCases where m[action] == nil && !c.contains(action) {
+            m[action] = action.defaultCombo
+        }
         self.map = m
+        self.cleared = c
     }
 }
