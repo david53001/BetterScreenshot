@@ -9,7 +9,7 @@ final class CaptureCoordinator {
     private let service = CaptureService()
     private let settings: SettingsStore
     private let overlay = SelectionOverlayController()
-    private let quickAccess = QuickAccessOverlayController()
+    private let quickAccess = QuickAccessStackController()
     private let hud = HUDController()
     private let pins = PinPanelController()
 
@@ -106,12 +106,6 @@ final class CaptureCoordinator {
         let nsImage = NSImage(cgImage: image,
                               size: NSSize(width: image.width, height: image.height))
         guard let screen = NSScreen.main else { copy(image); save(image); return }
-        // visibleFrame excludes the Dock and menu bar, so the overlay sits above
-        // the Dock instead of being tucked into the very bottom corner behind it.
-        let origin = OverlayPositioner.origin(
-            corner: settings.settings.overlayCorner,
-            overlaySize: CGSize(width: 220, height: 168),
-            screenFrame: screen.visibleFrame, margin: 24)
         let actions = QuickAccessActions(
             onCopy: { [weak self] in self?.copy(image) },
             // The overlay's download button always lands in the macOS screenshot folder.
@@ -119,7 +113,15 @@ final class CaptureCoordinator {
             onAnnotate: { [weak self] in self?.annotate(image) },
             onPin: { [weak self] in self?.pin(image, near: sourceRect) },
             fileURLForDrag: { TempImageWriter.writePNG(image, fileName: FileNamer.fileName(for: Date(), ext: "png")) })
-        quickAccess.present(image: nsImage, at: origin, actions: actions)
+        let corner = settings.settings.overlayCorner
+        // visibleFrame excludes the Dock and menu bar, so the overlay sits above
+        // the Dock instead of being tucked into the very bottom corner behind it.
+        let frame = screen.visibleFrame
+        quickAccess.present(image: nsImage, actions: actions) { index in
+            OverlayPositioner.stackedOrigin(corner: corner,
+                                            overlaySize: CGSize(width: 220, height: 168),
+                                            screenFrame: frame, margin: 24, index: index)
+        }
     }
 
     /// Plan 3 replaces the stub body via `editorPresenter`.

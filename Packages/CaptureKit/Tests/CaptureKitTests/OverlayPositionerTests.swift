@@ -27,4 +27,32 @@ let overlayPositionerTests: [TestCase] = [
         // x = 1440 + 1920 - 200 - 20 = 3140; y = 1080 - 140 - 20 = 920
         t.equal(o, CGPoint(x: 3140, y: 920))
     },
+    TestCase("stackedOriginIndexZeroMatchesOrigin") { t in
+        let size = CGSize(width: 220, height: 168)
+        let frame = CGRect(x: 0, y: 0, width: 1440, height: 875)
+        let base = OverlayPositioner.origin(corner: .bottomRight, overlaySize: size,
+                                            screenFrame: frame, margin: 24)
+        let stacked = OverlayPositioner.stackedOrigin(corner: .bottomRight, overlaySize: size,
+                                                      screenFrame: frame, margin: 24, index: 0)
+        t.equal(stacked, base)
+    },
+    TestCase("bottomCornersStackUpward") { t in
+        let size = CGSize(width: 220, height: 168)
+        let frame = CGRect(x: 0, y: 0, width: 1440, height: 875)
+        let s0 = OverlayPositioner.stackedOrigin(corner: .bottomRight, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 0)
+        let s1 = OverlayPositioner.stackedOrigin(corner: .bottomRight, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 1)
+        t.approxEqual(s1.x, s0.x)
+        t.approxEqual(s1.y, s0.y + CGFloat(168 + 12))   // one slot above, 12 pt gap
+    },
+    TestCase("topCornersStackDownward") { t in
+        let size = CGSize(width: 220, height: 168)
+        let frame = CGRect(x: 0, y: 0, width: 1440, height: 875)
+        let s0 = OverlayPositioner.stackedOrigin(corner: .topLeft, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 0)
+        let s1 = OverlayPositioner.stackedOrigin(corner: .topLeft, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 1)
+        t.approxEqual(s1.y, s0.y - CGFloat(168 + 12))
+    },
 ]

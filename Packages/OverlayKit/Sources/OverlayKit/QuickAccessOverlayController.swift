@@ -27,6 +27,10 @@ public final class QuickAccessOverlayController: NSObject {
     private var panel: NSPanel?
     private var actions: QuickAccessActions?
 
+    /// Fired exactly once whenever a visible overlay goes away (✕, save,
+    /// drag-out, annotate, pin, or eviction) so a stack manager can compact.
+    public var onDismissed: (() -> Void)?
+
     public override init() { super.init() }
 
     /// Presents the overlay at the given screen origin (Cocoa bottom-left coords).
@@ -82,7 +86,14 @@ public final class QuickAccessOverlayController: NSObject {
     }
 
     public func dismiss() {
+        guard panel != nil else { return }
         panel?.orderOut(nil); panel = nil; actions = nil
+        onDismissed?()
+    }
+
+    /// Slides the overlay to a new stack slot.
+    public func move(to origin: CGPoint) {
+        panel?.setFrameOrigin(origin)
     }
 
     private func iconButton(_ symbol: String, tip: String, _ sel: Selector) -> NSButton {
