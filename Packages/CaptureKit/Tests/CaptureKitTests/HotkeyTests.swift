@@ -74,6 +74,7 @@ let hotkeyBindingsTests: [TestCase] = [
         t.equal(HotkeyAction.captureFullscreen.title, "Capture Fullscreen")
         t.equal(HotkeyAction.captureText.title, "Capture Text")
         t.equal(HotkeyAction.pinFromClipboard.title, "Pin from Clipboard")
+        t.equal(HotkeyAction.record.title, "Start/Stop Recording")
     },
     TestCase("setClearAndBoundOrder") { t in
         var b = HotkeyBindings.defaults

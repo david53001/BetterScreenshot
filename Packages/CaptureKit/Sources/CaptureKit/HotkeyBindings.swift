@@ -67,6 +67,9 @@ public struct HotkeyBindings: Equatable {
         }
         // Actions absent from the stored dict were never customized → defaults.
         // (This is how pre-record-era bindings pick up ⌘⇧5 on upgrade.)
+        // NOTE: v1.4 stored clears as absent keys, indistinguishable from "never
+        // set" — those bindings get a one-time restore to defaults on first launch
+        // after upgrading. Accepted tradeoff for this personal tool.
         for action in HotkeyAction.allCases where m[action] == nil && !c.contains(action) {
             m[action] = action.defaultCombo
         }
