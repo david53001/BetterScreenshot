@@ -17,6 +17,8 @@ public struct CaptureSettings: Equatable {
     public var format: SettingsImageFormat
     public var overlayCorner: OverlayCorner
     public var overlayAutoDismissSeconds: Int
+    public var pinCornerRadius: Int
+    public var pinShadow: Bool
 
     public static let `default` = CaptureSettings(
         afterCapture: .showOverlay, format: .png,
@@ -26,15 +28,20 @@ public struct CaptureSettings: Equatable {
         ["afterCapture": afterCapture.rawValue,
          "format": format.rawValue,
          "overlayCorner": overlayCorner.rawValue,
-         "overlayAutoDismissSeconds": String(overlayAutoDismissSeconds)]
+         "overlayAutoDismissSeconds": String(overlayAutoDismissSeconds),
+         "pinCornerRadius": String(pinCornerRadius),
+         "pinShadow": pinShadow ? "true" : "false"]
     }
 
     public init(afterCapture: AfterCaptureBehavior, format: SettingsImageFormat,
-                overlayCorner: OverlayCorner, overlayAutoDismissSeconds: Int) {
+                overlayCorner: OverlayCorner, overlayAutoDismissSeconds: Int,
+                pinCornerRadius: Int = 8, pinShadow: Bool = true) {
         self.afterCapture = afterCapture
         self.format = format
         self.overlayCorner = overlayCorner
         self.overlayAutoDismissSeconds = overlayAutoDismissSeconds
+        self.pinCornerRadius = pinCornerRadius
+        self.pinShadow = pinShadow
     }
 
     public init(dictionary: [String: String]) {
@@ -43,5 +50,7 @@ public struct CaptureSettings: Equatable {
         self.format = SettingsImageFormat(rawValue: dictionary["format"] ?? "") ?? d.format
         self.overlayCorner = OverlayCorner(rawValue: dictionary["overlayCorner"] ?? "") ?? d.overlayCorner
         self.overlayAutoDismissSeconds = Int(dictionary["overlayAutoDismissSeconds"] ?? "") ?? d.overlayAutoDismissSeconds
+        self.pinCornerRadius = Int(dictionary["pinCornerRadius"] ?? "") ?? d.pinCornerRadius
+        self.pinShadow = dictionary["pinShadow"].map { $0 == "true" } ?? d.pinShadow
     }
 }
