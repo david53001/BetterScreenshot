@@ -45,8 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "didRegisterLaunchAtLogin")
         }
         applyBindings()
-        // Stop macOS's native ⌘⇧4 from also firing (double screenshot). Restored on quit.
-        SystemScreenshotShortcuts.disableNativeAreaScreenshot()
+        // Stop macOS's native ⌘⇧4/⌘⇧5 from also firing (double screenshot/recording). Restored on quit.
+        SystemScreenshotShortcuts.disableNativeShortcuts()
     }
 
     /// Register every bound hotkey; record failures and refresh menu shortcuts.
@@ -97,6 +97,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        SystemScreenshotShortcuts.restoreNativeAreaScreenshot()
+        SystemScreenshotShortcuts.restoreNativeShortcuts()
     }
 }

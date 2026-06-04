@@ -12,5 +12,9 @@
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>BetterScreenshot records microphone audio in screen recordings when you enable the mic.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>BetterScreenshot shows your camera as an overlay bubble in screen recordings when you enable it.</string>
 </dict>
 </plist>

@@ -1,36 +1,40 @@
 import Foundation
 
-/// Disables/restores the native macOS ⌘⇧4 ("save picture of selected area as a file")
-/// shortcut so it doesn't fire alongside BetterScreenshot's own ⌘⇧4 hotkey. Edits the
-/// user-level `com.apple.symbolichotkeys` domain (symbolic-hotkey id 30) and reloads via
-/// the private `activateSettings` helper so the change applies without a logout.
+/// Disables/restores native macOS screenshot shortcuts so they don't fire alongside
+/// BetterScreenshot's own hotkeys. Edits the user-level `com.apple.symbolichotkeys`
+/// domain (symbolic-hotkey ids 30, 184) and reloads via the private `activateSettings`
+/// helper so the change applies without a logout.
 enum SystemScreenshotShortcuts {
     private static let domain = "com.apple.symbolichotkeys" as CFString
     private static let topKey = "AppleSymbolicHotKeys" as CFString
-    /// id 30 = "Save picture of selected area as a file" = native ⌘⇧4.
-    private static let areaScreenshotID = "30"
+    /// Native shortcuts we shadow: id 30 = "Save picture of selected area as a
+    /// file" (⌘⇧4), id 184 = "Screenshot and recording options" (⌘⇧5).
+    /// parameters = [ASCII code, virtual key code, modifier mask].
+    private static let shadowed: [(id: String, parameters: [Int])] = [
+        ("30",  [52, 21, 1_179_648]),  // '4', keycode 21, ⌘⇧
+        ("184", [53, 23, 1_179_648]),  // '5', keycode 23, ⌘⇧
+    ]
 
-    /// Disable native ⌘⇧4 by writing the standard ⌘⇧4 binding with `enabled = 0`.
-    static func disableNativeAreaScreenshot() {
+    /// Disable the native shortcuts by writing standard bindings with `enabled = 0`.
+    static func disableNativeShortcuts() {
         var hotKeys = currentHotKeys()
-        hotKeys[areaScreenshotID] = [
-            "enabled": 0,
-            "value": [
-                "parameters": [52, 21, 1_179_648], // ASCII '4', keycode 21, ⌘⇧ mask
-                "type": "standard",
-            ],
-        ]
+        for entry in shadowed {
+            hotKeys[entry.id] = [
+                "enabled": 0,
+                "value": ["parameters": entry.parameters, "type": "standard"],
+            ]
+        }
         write(hotKeys)
         reload()
     }
 
-    /// Restore native ⌘⇧4 by removing our entry, reverting id 30 to its macOS default
-    /// (enabled). Safe across crashes: "restore" always means "revert to default", so a
-    /// run that was killed before this ran simply gets re-disabled on the next launch.
-    static func restoreNativeAreaScreenshot() {
+    /// Restore by removing our entries, reverting to macOS defaults (enabled).
+    /// Safe across crashes: a run killed before this simply re-disables next launch.
+    static func restoreNativeShortcuts() {
         var hotKeys = currentHotKeys()
-        guard hotKeys[areaScreenshotID] != nil else { return }
-        hotKeys.removeValue(forKey: areaScreenshotID)
+        let present = shadowed.filter { hotKeys[$0.id] != nil }
+        guard !present.isEmpty else { return }
+        for entry in present { hotKeys.removeValue(forKey: entry.id) }
         write(hotKeys)
         reload()
     }
