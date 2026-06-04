@@ -18,7 +18,7 @@
 
 - macOS 14+ with Xcode 15+ installed (`xcode-select -p` should print a path).
 - Install XcodeGen: `brew install xcodegen` (verify: `xcodegen --version`).
-- Working directory is the repo root: `/Users/davidghermansteinberg/Desktop/Home/Code/BetterScreenshot`.
+- Working directory is the repo root: `<repo-root>`.
 - This is not yet a git repo. Task 1 initializes it.
 
 ---
@@ -73,7 +73,7 @@ BetterScreenshot/
 
 Run:
 ```bash
-cd /Users/davidghermansteinberg/Desktop/Home/Code/BetterScreenshot
+cd <repo-root>
 git init
 ```
 Expected: `Initialized empty Git repository …`

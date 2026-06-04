@@ -7,3 +7,4 @@ Packages/*/.build/
 xcuserdata/
 /build/
 /dist/
+.vscode/
