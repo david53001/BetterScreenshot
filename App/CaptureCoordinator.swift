@@ -25,6 +25,7 @@ final class CaptureCoordinator {
         let controller = EditorWindowController(image: image)
         controller.onCopy = { [weak self] img in self?.copy(img) }
         controller.onSave = { [weak self] img in self?.save(img) }
+        controller.onPin = { [weak self] img in self?.pin(img) }
         editorController = controller
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)

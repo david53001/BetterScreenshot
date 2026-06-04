@@ -8,6 +8,7 @@ public final class EditorWindowController: NSWindowController {
     private var style = AnnotationStyle.default
     public var onCopy: ((CGImage) -> Void)?
     public var onSave: ((CGImage) -> Void)?
+    public var onPin: ((CGImage) -> Void)?
 
     // Chrome references kept for live updates.
     private var toolButtons: [EditorTool: IconToolButton] = [:]
@@ -261,7 +262,12 @@ public final class EditorWindowController: NSWindowController {
                          .font: NSFont.systemFont(ofSize: 13, weight: .medium)])
         copyBtn.keyEquivalent = "c"; copyBtn.keyEquivalentModifierMask = [.command, .shift]
 
-        let actions = NSStackView(views: [doneBtn, saveBtn, copyBtn])
+        let pinBtn = NSButton(title: "Pin", target: self, action: #selector(pinAction))
+        pinBtn.bezelStyle = .rounded
+        pinBtn.image = NSImage(systemSymbolName: "pin", accessibilityDescription: "Pin")
+        pinBtn.imagePosition = .imageLeading
+
+        let actions = NSStackView(views: [doneBtn, pinBtn, saveBtn, copyBtn])
         actions.orientation = .horizontal
         actions.spacing = 8
         actions.translatesAutoresizingMaskIntoConstraints = false
@@ -507,6 +513,10 @@ public final class EditorWindowController: NSWindowController {
     @objc private func saveAction() {
         guard let img = DocumentRenderer.render(canvas.currentDocument()) else { return }
         onSave?(img)
+    }
+    @objc private func pinAction() {
+        guard let img = DocumentRenderer.render(canvas.currentDocument()) else { return }
+        onPin?(img)
     }
     @objc private func doneAction() { window?.close() }
 
