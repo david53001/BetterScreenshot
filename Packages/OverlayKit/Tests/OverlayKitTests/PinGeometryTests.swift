@@ -56,4 +56,21 @@ let pinGeometryTests: [TestCase] = [
         let small = PinGeometry.zoomedFrame(current: current, naturalSize: natural, factor: 0.001)
         t.equal(small.size, CGSize(width: 50, height: 25))      // 0.25× floor
     },
+    TestCase("nonZeroOriginVisibleFrameStillContains") { t in
+        // A notched/secondary display: visibleFrame does not start at (0,0).
+        let vf = CGRect(x: 500, y: 200, width: 1440, height: 850)
+        let f = PinGeometry.initialFrame(
+            imagePixelSize: CGSize(width: 400, height: 200), backingScale: 2,
+            visibleFrame: vf,
+            sourceRect: CGRect(x: 10, y: 10, width: 50, height: 50))  // far off the frame
+        t.isTrue(vf.contains(f), "frame \(f) escapes \(vf)")
+    },
+    TestCase("clampsHeightLimitedImages") { t in
+        // Tall image on a wide screen: the height ratio is the binding constraint.
+        let vf = CGRect(x: 0, y: 0, width: 2000, height: 500)
+        let f = PinGeometry.initialFrame(imagePixelSize: CGSize(width: 1000, height: 2000),
+                                         backingScale: 1, visibleFrame: vf, sourceRect: nil)
+        t.approxEqual(f.height, 400)   // 80% of 500 tall
+        t.approxEqual(f.width, 200)    // aspect preserved
+    },
 ]

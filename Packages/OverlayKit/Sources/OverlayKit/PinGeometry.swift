@@ -9,6 +9,7 @@ public enum PinGeometry {
     public static func initialFrame(imagePixelSize: CGSize, backingScale: CGFloat,
                                     visibleFrame: CGRect, sourceRect: CGRect?,
                                     maxFraction: CGFloat = 0.8) -> CGRect {
+        guard imagePixelSize.width > 0, imagePixelSize.height > 0, backingScale > 0 else { return .zero }
         var size = CGSize(width: imagePixelSize.width / backingScale,
                           height: imagePixelSize.height / backingScale)
         let scale = min(1, (visibleFrame.width * maxFraction) / size.width,
