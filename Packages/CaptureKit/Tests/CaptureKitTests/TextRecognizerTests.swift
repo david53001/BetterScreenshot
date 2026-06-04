@@ -42,25 +42,42 @@ private func composite(_ left: CGImage, _ right: CGImage) -> CGImage {
 
 let textRecognizerTests: [TestCase] = [
     TestCase("recognizesRenderedText") { t in
-        let result = try? TextRecognizer.recognize(
-            in: renderTextImage("Hello BetterScreenshot 12345"))
-        guard case .text(let s)? = result else {
-            t.fail("expected .text, got \(String(describing: result))"); return
+        do {
+            let result = try TextRecognizer.recognize(
+                in: renderTextImage("Hello BetterScreenshot 12345"))
+            guard case .text(let s) = result else {
+                t.fail("expected .text, got \(result)"); return
+            }
+            t.isTrue(s.contains("BetterScreenshot"), "recognized: \(s)")
+            t.isTrue(s.contains("12345"), "recognized: \(s)")
+        } catch {
+            t.fail("TextRecognizer threw: \(error)")
         }
-        t.isTrue(s.contains("BetterScreenshot"), "recognized: \(s)")
-        t.isTrue(s.contains("12345"), "recognized: \(s)")
     },
     TestCase("decodesQRPayload") { t in
-        let result = try? TextRecognizer.recognize(
-            in: renderQRImage("https://github.com/david53001/BetterScreenshot"))
-        t.equal(result, RecognitionResult.qr("https://github.com/david53001/BetterScreenshot"))
+        do {
+            let result = try TextRecognizer.recognize(
+                in: renderQRImage("https://github.com/david53001/BetterScreenshot"))
+            t.equal(result, RecognitionResult.qr("https://github.com/david53001/BetterScreenshot"))
+        } catch {
+            t.fail("TextRecognizer threw: \(error)")
+        }
     },
     TestCase("qrBeatsTextInMixedImage") { t in
-        let mixed = composite(renderTextImage("plain words"), renderQRImage("qr-payload"))
-        t.equal(try? TextRecognizer.recognize(in: mixed), RecognitionResult.qr("qr-payload"))
+        do {
+            let mixed = composite(renderTextImage("plain words"), renderQRImage("qr-payload"))
+            let result = try TextRecognizer.recognize(in: mixed)
+            t.equal(result, RecognitionResult.qr("qr-payload"))
+        } catch {
+            t.fail("TextRecognizer threw: \(error)")
+        }
     },
     TestCase("blankImageIsNone") { t in
-        t.equal(try? TextRecognizer.recognize(in: renderTextImage("")),
-                RecognitionResult.none)
+        do {
+            let result = try TextRecognizer.recognize(in: renderTextImage(""))
+            t.equal(result, RecognitionResult.none)
+        } catch {
+            t.fail("TextRecognizer threw: \(error)")
+        }
     },
 ]
