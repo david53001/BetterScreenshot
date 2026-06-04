@@ -17,6 +17,8 @@ final class RecordingCoordinator {
     private let hud = HUDController()
     private var state = RecorderState.idle
     private var timer: Timer?
+    private var isTerminating = false
+    private var tempOutputURL: URL?
 
     /// Set by the app delegate; presents the one-button permission setup window.
     var presentSetup: (() -> Void)?
@@ -59,6 +61,8 @@ final class RecordingCoordinator {
     }
 
     private func cancelStrip() {
+        // ⌘⇧5 while the area-selection overlay is up: tear it down too.
+        selection.cancel()
         strip.hide()
         state.transition(.reset)
     }
@@ -93,6 +97,9 @@ final class RecordingCoordinator {
 
     /// Start the engine for `globalRect` (nil = full screen) on `screen`.
     private func begin(globalRect: CGRect?, screen: NSScreen) async {
+        // A ⌘⇧5 cancel can land while the selection overlay or permission prompts
+        // were up — only proceed if we're still armed.
+        guard case .armed = state else { return }
         let config = settings.recording
         guard let displayID = screen.deviceDescription[
                 NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else {
@@ -138,10 +145,18 @@ final class RecordingCoordinator {
             let url = config.format == .gif
                 ? FileManager.default.temporaryDirectory.appendingPathComponent(name)
                 : settings.saveDirectory.appendingPathComponent(name)
+            tempOutputURL = config.format == .gif ? url : nil
 
             try await recorder.start(filter: filter, pixelSize: pixelSize,
                                      sourceRect: sourceRect, config: config, outputURL: url)
-            state.transition(.begin(Date()))
+            guard state.transition(.begin(Date())) else {
+                // Cancelled (⌘⇧5) during engine startup: stop and discard.
+                _ = try? await recorder.stop()
+                try? FileManager.default.removeItem(at: url)
+                tearDownPanels()
+                notify()
+                return
+            }
             startTimer()
             notify()
         } catch {
@@ -160,7 +175,7 @@ final class RecordingCoordinator {
         do {
             let mp4 = try await recorder.stop()
             tearDownPanels()
-            if config.format == .gif {
+            if config.format == .gif, !isTerminating {
                 hud.show("Converting to GIF…")
                 let gifName = FileNamer.fileName(for: Date(), ext: "gif", prefix: "Recording")
                 let gifURL = settings.saveDirectory.appendingPathComponent(gifName)
@@ -175,14 +190,21 @@ final class RecordingCoordinator {
                     try? FileManager.default.moveItem(at: mp4, to: dest)
                     hud.show("Saved as MP4 (GIF conversion failed)")
                 }
+            } else if config.format == .gif {
+                // Quitting: no time for conversion — keep the MP4 so nothing is lost.
+                let mp4Name = FileNamer.fileName(for: Date(), ext: "mp4", prefix: "Recording")
+                try? FileManager.default.moveItem(
+                    at: mp4, to: settings.saveDirectory.appendingPathComponent(mp4Name))
             } else {
                 hud.show("Recording saved")
             }
         } catch {
+            if let tempOutputURL { try? FileManager.default.removeItem(at: tempOutputURL) }
             tearDownPanels()
             hud.show("Recording failed")
         }
         state.transition(.reset)
+        tempOutputURL = nil
         notify()
     }
 
@@ -191,6 +213,7 @@ final class RecordingCoordinator {
     /// async finalize can complete before the process exits.
     func stopForTermination() {
         guard isRecording else { return }
+        isTerminating = true
         var done = false
         Task { @MainActor in
             await self.stop()

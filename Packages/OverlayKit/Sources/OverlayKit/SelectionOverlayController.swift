@@ -38,6 +38,16 @@ public final class SelectionOverlayController {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// Dismisses an in-flight selection (if any), firing its completion with nil.
+    /// No-op when nothing is being presented.
+    public func cancel() {
+        guard let completion else { return }
+        self.completion = nil
+        windows.forEach { $0.orderOut(nil) }
+        windows.removeAll()
+        completion(nil)
+    }
+
     private func finish(rect: CGRect?, screen: NSScreen) {
         // Multiple overlays (one per display) can each call finish; only the
         // first wins. Clear completion first so it can never fire twice.
