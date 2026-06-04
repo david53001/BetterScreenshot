@@ -8,16 +8,17 @@ import SwiftUI
 final class SettingsWindowController {
     private var window: NSWindow?
     private let store: SettingsStore
+    private let shortcuts: ShortcutActions
 
-    init(store: SettingsStore) {
+    init(store: SettingsStore, shortcuts: ShortcutActions) {
         self.store = store
+        self.shortcuts = shortcuts
     }
 
     func show() {
-        NSApp.activate(ignoringOtherApps: true)
         if window == nil {
-            let hosting = NSHostingController(rootView: SettingsView(store: store))
-            let w = NSWindow(contentViewController: hosting)
+            let view = SettingsView(store: store, shortcuts: shortcuts)
+            let w = NSWindow(contentViewController: NSHostingController(rootView: view))
             w.styleMask = [.titled, .closable, .miniaturizable]
             w.title = "Settings"
             w.isReleasedWhenClosed = false
@@ -25,5 +26,6 @@ final class SettingsWindowController {
             window = w
         }
         window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)   // ★ after makeKey, matching OnboardingController
     }
 }

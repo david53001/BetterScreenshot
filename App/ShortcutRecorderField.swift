@@ -1,0 +1,110 @@
+import AppKit
+import SwiftUI
+import CaptureKit
+
+/// Click-to-record shortcut well. Active state captures the next keypress with a
+/// local NSEvent monitor: a combo containing ⌘/⌥/⌃ is reported, Esc cancels,
+/// ⌫ clears the binding. Events are swallowed while recording.
+struct ShortcutRecorderField: NSViewRepresentable {
+    var combo: HotkeyCombo?
+    @Binding var isRecording: Bool
+    /// nil = clear the binding (⌫ pressed while recording).
+    var onCombo: (HotkeyCombo?) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> RecorderWell {
+        let well = RecorderWell()
+        well.onClick = { context.coordinator.toggle() }
+        return well
+    }
+
+    func updateNSView(_ well: RecorderWell, context: Context) {
+        context.coordinator.parent = self
+        well.label = isRecording ? "Type shortcut…" : (combo?.displayString ?? "—")
+        well.active = isRecording
+        context.coordinator.setMonitoring(isRecording, window: well.window)
+    }
+
+    @MainActor
+    final class Coordinator {
+        var parent: ShortcutRecorderField
+        private var monitor: Any?
+        private var closeObserver: NSObjectProtocol?
+
+        init(_ parent: ShortcutRecorderField) { self.parent = parent }
+
+        func toggle() { parent.isRecording.toggle() }
+
+        func setMonitoring(_ on: Bool, window: NSWindow?) {
+            if on, monitor == nil {
+                monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                    MainActor.assumeIsolated { self?.handle(event) }
+                    return nil   // swallow every keypress while recording
+                }
+                if let window {
+                    closeObserver = NotificationCenter.default.addObserver(
+                        forName: NSWindow.willCloseNotification, object: window, queue: .main
+                    ) { [weak self] _ in
+                        Task { @MainActor in self?.parent.isRecording = false }
+                    }
+                }
+            } else if !on, monitor != nil {
+                stopMonitoring()
+            }
+        }
+
+        private func stopMonitoring() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+            if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
+            closeObserver = nil
+        }
+
+        private func handle(_ event: NSEvent) {
+            let plain = event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty
+            if event.keyCode == 53, plain {            // Esc — cancel
+                parent.isRecording = false
+                return
+            }
+            if event.keyCode == 51, plain {            // ⌫ — clear binding
+                parent.isRecording = false
+                parent.onCombo(nil)
+                return
+            }
+            let combo = HotkeyCombo(keyCode: UInt32(event.keyCode),
+                                    cocoaModifierFlagsRaw: UInt(event.modifierFlags.rawValue))
+            guard combo.isValid else { return }        // keep waiting for ⌘/⌥/⌃
+            parent.isRecording = false
+            parent.onCombo(combo)
+        }
+    }
+}
+
+/// The visual well: rounded rect + centered label; click reports to the field.
+final class RecorderWell: NSView {
+    var onClick: (() -> Void)?
+    var label: String = "—" { didSet { needsDisplay = true } }
+    var active: Bool = false { didSet { needsDisplay = true } }
+
+    override var intrinsicContentSize: NSSize { NSSize(width: 130, height: 22) }
+
+    override func mouseDown(with event: NSEvent) { onClick?() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let r = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5),
+                             xRadius: 5, yRadius: 5)
+        (active ? NSColor.controlAccentColor.withAlphaComponent(0.15)
+                : NSColor.controlBackgroundColor).setFill()
+        r.fill()
+        (active ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
+        r.stroke()
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: active ? NSColor.controlAccentColor : NSColor.labelColor,
+        ]
+        let size = label.size(withAttributes: attrs)
+        label.draw(at: NSPoint(x: (bounds.width - size.width) / 2,
+                               y: (bounds.height - size.height) / 2), withAttributes: attrs)
+    }
+}

@@ -16,7 +16,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator.editorPresenter = { [weak coordinator] image in
             coordinator?.presentEditor(image)
         }
-        settingsWindow = SettingsWindowController(store: settings)
+        let shortcuts = ShortcutActions(
+            update: { [weak self] combo, action in self?.updateBinding(combo, for: action) },
+            restoreDefaults: { [weak self] in self?.restoreDefaultBindings() },
+            recordingChanged: { [weak self] recording in
+                guard let self else { return }
+                if recording {
+                    self.hotKeys.suspend()
+                } else {
+                    self.settings.failedActions = self.hotKeys.resume()
+                }
+            })
+        settingsWindow = SettingsWindowController(store: settings, shortcuts: shortcuts)
         menuBar = MenuBarController(coordinator: coordinator, settingsWindow: settingsWindow)
 
         // One-button first-run setup (Screen Recording is the only permission).
@@ -56,6 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Rebind transaction for the Shortcuts tab: validate, apply, revert on failure.
     /// Returns a user-facing error message, or nil on success.
+    /// Guarantees only the edited action; a collateral registration failure of another action surfaces via `settings.failedActions`, not the return value.
     func updateBinding(_ combo: HotkeyCombo?, for action: HotkeyAction) -> String? {
         var candidate = settings.bindings
         if let combo {
