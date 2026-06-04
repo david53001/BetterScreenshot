@@ -4,9 +4,11 @@ import AppKit
 final class MenuBarController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let coordinator: CaptureCoordinator
+    private let settingsWindow: SettingsWindowController
 
-    init(coordinator: CaptureCoordinator) {
+    init(coordinator: CaptureCoordinator, settingsWindow: SettingsWindowController) {
         self.coordinator = coordinator
+        self.settingsWindow = settingsWindow
         super.init()
         statusItem.button?.image = NSImage(systemSymbolName: "camera.viewfinder",
                                            accessibilityDescription: "BetterScreenshot")
@@ -39,8 +41,7 @@ final class MenuBarController: NSObject {
     @objc private func captureText() { coordinator.captureText() }
     @objc private func pinClipboard() { coordinator.pinFromClipboard() }
     @objc private func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        settingsWindow.show()
     }
     @objc private func quit() { NSApp.terminate(nil) }
 }

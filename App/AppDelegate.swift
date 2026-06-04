@@ -1,12 +1,5 @@
-import SwiftUI
-
-@main
-struct BetterScreenshotApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    var body: some Scene {
-        Settings { SettingsView(store: appDelegate.settings) }
-    }
-}
+import AppKit
+import CaptureKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -14,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var coordinator: CaptureCoordinator!
     private var menuBar: MenuBarController!
     private var onboarding: OnboardingController!
+    private var settingsWindow: SettingsWindowController!
     private let hotKeys = HotKeyManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -22,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator.editorPresenter = { [weak coordinator] image in
             coordinator?.presentEditor(image)
         }
-        menuBar = MenuBarController(coordinator: coordinator)
+        settingsWindow = SettingsWindowController(store: settings)
+        menuBar = MenuBarController(coordinator: coordinator, settingsWindow: settingsWindow)
 
         // One-button first-run setup (Screen Recording is the only permission).
         onboarding = OnboardingController()
