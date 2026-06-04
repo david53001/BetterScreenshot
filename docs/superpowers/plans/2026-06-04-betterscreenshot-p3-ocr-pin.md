@@ -1,5 +1,7 @@
 # BetterScreenshot P3 — OCR (Capture Text) + Pin to Screen Implementation Plan
 
+> **Status: EXECUTED & SHIPPED 2026-06-04** — all 12 tasks done via subagent-driven development (one implementer + spec/quality review per task), tagged `v1.3-ocr-pin`. Review fixes beyond the plan: selection re-entrancy guard, pin double-click on mouse-up, HUD deinit cancel, PinGeometry degenerate-input guard, stale-screen HUD re-resolve. See CHANGELOG.md.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship Capture Text (⌘⇧7: drag a region → recognized text or QR payload on the clipboard, with a HUD), Pin to Screen (floating always-on-top image panels from the Quick Access overlay, editor, and clipboard), and a Quick Access stack (up to 3 post-capture thumbnails stacked at the overlay corner instead of replacing each other).

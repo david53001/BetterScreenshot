@@ -29,6 +29,8 @@ Local Swift packages + a menu-bar app target:
   - `…-plan-1-foundation-capture.md` — scaffold, hotkeys, permission, capture, save/copy.
   - `…-plan-2-quick-access-overlay.md` — post-capture floating thumbnail.
   - `…-plan-3-annotation-editor.md` — the editor (model, canvas, tools, export).
+- P3 (shipped v1.3): `docs/superpowers/specs/2026-06-04-betterscreenshot-p3-ocr-pin-design.md` + `docs/superpowers/plans/2026-06-04-betterscreenshot-p3-ocr-pin.md` — Capture Text (OCR/QR, ⌘⇧7), Pin to Screen, Quick Access stack.
+- `CHANGELOG.md` — per-release history.
 
 ## Roadmap (post-v1, each its own spec → plan)
 P2 recording (MP4/GIF, audio, webcam, click/keystroke viz) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · P4 backgrounds/styling, scrolling capture, freeze/self-timer/repeat, history · P5 `betterscreenshot://` URL automation.

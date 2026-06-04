@@ -43,10 +43,11 @@ Run the tests:
 
 ```sh
 swift run --package-path Packages/CaptureKit CaptureKitTests
+swift run --package-path Packages/OverlayKit OverlayKitTests
 swift run --package-path Packages/EditorKit EditorKitTests
 ```
 
-The design docs and implementation plans the app was built from live in [`docs/`](docs/).
+The design docs and implementation plans the app was built from live in [`docs/`](docs/); release history is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Privacy
 

@@ -1,6 +1,6 @@
 # BetterScreenshot P3 — OCR (Capture Text) + Pin to Screen
 
-Date: 2026-06-04 · Status: approved scope (user picked all recommended options; remaining decisions delegated)
+Date: 2026-06-04 · Status: **shipped 2026-06-04** (tag `v1.3-ocr-pin`; see CHANGELOG.md)
 Builds on: v1.2 (`main`) · Ends at tag: `v1.3-ocr-pin`
 
 ## Goal
