@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship Capture Text (⌘⇧7: drag a region → recognized text or QR payload on the clipboard, with a HUD) and Pin to Screen (floating always-on-top image panels from the Quick Access overlay, editor, and clipboard).
+**Goal:** Ship Capture Text (⌘⇧7: drag a region → recognized text or QR payload on the clipboard, with a HUD), Pin to Screen (floating always-on-top image panels from the Quick Access overlay, editor, and clipboard), and a Quick Access stack (up to 3 post-capture thumbnails stacked at the overlay corner instead of replacing each other).
 
 **Architecture:** Recognition logic (pure resolver + Vision wrapper) goes in `CaptureKit` where TestKit tests already live. Pin panels, pin geometry, and the confirmation HUD go in `OverlayKit`, which gains a TestKit executable test target mirroring CaptureKit's. The app target wires the hotkey, menu items, coordinator flows, and settings. Spec: `docs/superpowers/specs/2026-06-04-betterscreenshot-p3-ocr-pin-design.md`.
 
@@ -1269,7 +1269,195 @@ git commit -m "feat(app): pin appearance settings UI (shadow toggle + corner rad
 
 ---
 
-### Task 11: Full verification, docs, tag
+### Task 11: Quick Access stack — up to 3 overlays at the corner
+
+**Files:**
+- Modify: `Packages/CaptureKit/Sources/CaptureKit/OverlayPositioner.swift`
+- Modify: `Packages/CaptureKit/Tests/CaptureKitTests/OverlayPositionerTests.swift`
+- Modify: `Packages/OverlayKit/Sources/OverlayKit/QuickAccessOverlayController.swift`
+- Create: `Packages/OverlayKit/Sources/OverlayKit/QuickAccessStackController.swift`
+- Modify: `App/CaptureCoordinator.swift`
+
+New captures stack at the configured corner (newest at the corner slot, index 0), 12 pt apart; a 4th capture evicts the oldest; dismissing any overlay compacts the stack.
+
+- [ ] **Step 1: Write the failing tests for the slot math**
+
+In `Packages/CaptureKit/Tests/CaptureKitTests/OverlayPositionerTests.swift`, append three cases to the existing `overlayPositionerTests` array:
+
+```swift
+    TestCase("stackedOriginIndexZeroMatchesOrigin") { t in
+        let size = CGSize(width: 220, height: 168)
+        let frame = CGRect(x: 0, y: 0, width: 1440, height: 875)
+        let base = OverlayPositioner.origin(corner: .bottomRight, overlaySize: size,
+                                            screenFrame: frame, margin: 24)
+        let stacked = OverlayPositioner.stackedOrigin(corner: .bottomRight, overlaySize: size,
+                                                      screenFrame: frame, margin: 24, index: 0)
+        t.equal(stacked, base)
+    },
+    TestCase("bottomCornersStackUpward") { t in
+        let size = CGSize(width: 220, height: 168)
+        let frame = CGRect(x: 0, y: 0, width: 1440, height: 875)
+        let s0 = OverlayPositioner.stackedOrigin(corner: .bottomRight, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 0)
+        let s1 = OverlayPositioner.stackedOrigin(corner: .bottomRight, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 1)
+        t.approxEqual(s1.x, s0.x)
+        t.approxEqual(s1.y, s0.y + 168 + 12)   // one slot above, 12 pt gap
+    },
+    TestCase("topCornersStackDownward") { t in
+        let size = CGSize(width: 220, height: 168)
+        let frame = CGRect(x: 0, y: 0, width: 1440, height: 875)
+        let s0 = OverlayPositioner.stackedOrigin(corner: .topLeft, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 0)
+        let s1 = OverlayPositioner.stackedOrigin(corner: .topLeft, overlaySize: size,
+                                                 screenFrame: frame, margin: 24, index: 1)
+        t.approxEqual(s1.y, s0.y - (168 + 12))
+    },
+```
+
+- [ ] **Step 2: Run tests to verify they fail to compile**
+
+Run: `swift run --package-path Packages/CaptureKit CaptureKitTests`
+Expected: compile error — `type 'OverlayPositioner' has no member 'stackedOrigin'`
+
+- [ ] **Step 3: Implement stackedOrigin**
+
+In `Packages/CaptureKit/Sources/CaptureKit/OverlayPositioner.swift`, add inside the enum:
+
+```swift
+    /// Origin for the overlay at stack position `index` (0 = at the corner;
+    /// higher indexes step away from the screen edge so overlays pile up
+    /// one over the other with `spacing` between them).
+    public static func stackedOrigin(corner: OverlayCorner, overlaySize: CGSize,
+                                     screenFrame: CGRect, margin: CGFloat,
+                                     index: Int, spacing: CGFloat = 12) -> CGPoint {
+        var o = origin(corner: corner, overlaySize: overlaySize,
+                       screenFrame: screenFrame, margin: margin)
+        let offset = CGFloat(index) * (overlaySize.height + spacing)
+        switch corner {
+        case .bottomLeft, .bottomRight: o.y += offset   // stack upward
+        case .topLeft, .topRight:       o.y -= offset   // stack downward
+        }
+        return o
+    }
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `swift run --package-path Packages/CaptureKit CaptureKitTests`
+Expected: all ✓, `PASS — CaptureKitTests:` (0 failures)
+
+- [ ] **Step 5: Give QuickAccessOverlayController a dismissal hook and a move**
+
+In `Packages/OverlayKit/Sources/OverlayKit/QuickAccessOverlayController.swift`, add below the `actions` property:
+
+```swift
+    /// Fired exactly once whenever a visible overlay goes away (✕, save,
+    /// drag-out, annotate, pin, or eviction) so a stack manager can compact.
+    public var onDismissed: (() -> Void)?
+```
+
+Replace `dismiss()` with (the `guard` keeps `present()`'s defensive first-line `dismiss()` from firing the hook when nothing was showing):
+
+```swift
+    public func dismiss() {
+        guard panel != nil else { return }
+        panel?.orderOut(nil); panel = nil; actions = nil
+        onDismissed?()
+    }
+```
+
+And add:
+
+```swift
+    /// Slides the overlay to a new stack slot.
+    public func move(to origin: CGPoint) {
+        panel?.setFrameOrigin(origin)
+    }
+```
+
+- [ ] **Step 6: Create the stack controller**
+
+Create `Packages/OverlayKit/Sources/OverlayKit/QuickAccessStackController.swift`:
+
+```swift
+import AppKit
+
+/// Manages up to `maxCount` post-capture overlays stacked at a screen corner.
+/// Index 0 is the newest capture and sits at the corner slot; older overlays
+/// step away from the screen edge. A capture beyond the limit evicts the
+/// oldest; dismissing any overlay compacts the stack. Slot positions are
+/// injected via `originForIndex` so OverlayKit needs no positioning logic.
+@MainActor
+public final class QuickAccessStackController {
+    public let maxCount = 3
+    private var entries: [QuickAccessOverlayController] = []   // index 0 = newest
+    private var originForIndex: ((Int) -> CGPoint)?
+
+    public init() {}
+
+    public func present(image: NSImage, actions: QuickAccessActions,
+                        originForIndex: @escaping (Int) -> CGPoint) {
+        self.originForIndex = originForIndex
+        if entries.count == maxCount, let oldest = entries.last {
+            entries.removeLast()
+            oldest.dismiss()   // its onDismissed no-ops: already removed
+        }
+        let controller = QuickAccessOverlayController()
+        controller.onDismissed = { [weak self, weak controller] in
+            guard let self, let controller else { return }
+            self.entries.removeAll { $0 === controller }
+            self.restack()
+        }
+        entries.insert(controller, at: 0)
+        controller.present(image: image, at: originForIndex(0), actions: actions)
+        restack()
+    }
+
+    private func restack() {
+        guard let originForIndex else { return }
+        for (i, c) in entries.enumerated() { c.move(to: originForIndex(i)) }
+    }
+}
+```
+
+- [ ] **Step 7: Swap the coordinator over to the stack**
+
+In `App/CaptureCoordinator.swift`, replace the `quickAccess` property:
+
+```swift
+    private let quickAccess = QuickAccessStackController()
+```
+
+In `presentOverlay(_:sourceRect:)`, delete the `let origin = OverlayPositioner.origin(...)` statement and replace the final `quickAccess.present(image: nsImage, at: origin, actions: actions)` call with:
+
+```swift
+        let corner = settings.settings.overlayCorner
+        let frame = screen.visibleFrame
+        quickAccess.present(image: nsImage, actions: actions) { index in
+            OverlayPositioner.stackedOrigin(corner: corner,
+                                            overlaySize: CGSize(width: 220, height: 168),
+                                            screenFrame: frame, margin: 24, index: index)
+        }
+```
+
+(Everything else in the method — the `QuickAccessActions` with `onPin` etc. from Task 8 — stays as is.)
+
+- [ ] **Step 8: Build + run all package tests**
+
+Run: `swift build && swift run --package-path Packages/CaptureKit CaptureKitTests && swift run --package-path Packages/OverlayKit OverlayKitTests`
+Expected: `Build complete!` and two `PASS` lines, 0 failures
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add App Packages/CaptureKit Packages/OverlayKit
+git commit -m "feat(overlay): Quick Access stack — up to 3 captures pile at the corner"
+```
+
+---
+
+### Task 12: Full verification, docs, tag
 
 **Files:**
 - Modify: `README.md` (feature list)
@@ -1310,6 +1498,10 @@ open /Applications/BetterScreenshot.app
 - [ ] Pin floats over other apps and survives Space switches; no focus stealing
 - [ ] Settings: corner radius + shadow apply to newly created pins
 - [ ] Multiple pins at once; closing one leaves the others
+- [ ] Three quick captures stack on the right, newest at the corner, 12 pt gaps
+- [ ] A 4th capture evicts the oldest (farthest-from-corner) overlay
+- [ ] Closing/saving/dragging-out a middle overlay slides the rest to fill the gap
+- [ ] Stack follows the overlay-corner setting (top corners stack downward)
 
 - [ ] **Step 4: Update docs**
 
@@ -1328,6 +1520,7 @@ git tag v1.3-ocr-pin
 
 ## Self-review notes (already applied)
 
-- Spec coverage: OCR core+QR (Tasks 1–2, 7), HUD (4), pin geometry/panel/full UX (3, 5, 8), three entry points (8, 9), settings styling (6, 10), manual checklist + tag (11). The spec's "menu item disabled when clipboard empty" is Task 8 Step 3 with a documented fallback.
-- Type consistency: `RecognitionResult`/`RecognitionResolver`/`TextRecognizer` (Tasks 1→2→7); `PinGeometry.initialFrame/zoomedFrame` (3→5); `PinStyle`/`PinActions` (5→8); `QuickAccessActions.onPin` (8); `CaptureSettings.pinCornerRadius/pinShadow` (6→8→10) — names match across tasks.
+- Spec coverage: OCR core+QR (Tasks 1–2, 7), HUD (4), pin geometry/panel/full UX (3, 5, 8), three entry points (8, 9), settings styling (6, 10), Quick Access stack (11), manual checklist + tag (12). The spec's "menu item disabled when clipboard empty" is Task 8 Step 3 with a documented fallback.
+- Type consistency: `RecognitionResult`/`RecognitionResolver`/`TextRecognizer` (Tasks 1→2→7); `PinGeometry.initialFrame/zoomedFrame` (3→5); `PinStyle`/`PinActions` (5→8); `QuickAccessActions.onPin` (8); `CaptureSettings.pinCornerRadius/pinShadow` (6→8→10); `OverlayPositioner.stackedOrigin`/`QuickAccessStackController`/`onDismissed`/`move(to:)` (11) — names match across tasks.
+- Task-11 note: it edits the same `presentOverlay` and `QuickAccessOverlayController` that Task 8 touches, so it must run after Task 8 (the plan order already guarantees this).
 - All test code, commands, and expected outputs are concrete; no placeholders.
