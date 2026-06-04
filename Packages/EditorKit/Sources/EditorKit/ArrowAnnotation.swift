@@ -21,10 +21,15 @@ public struct ArrowAnnotation: Annotation {
     }
     public func draw() {
         let headLen = max(12, style.lineWidth * 3)
+        let halfAngle: CGFloat = 28
         let (left, right) = ArrowGeometry.headWings(start: start, end: end,
-                                                    length: headLen, halfAngleDegrees: 28)
+                                                    length: headLen, halfAngleDegrees: halfAngle)
+        // End the shaft at the arrowhead's base so a thick round cap can't bleed
+        // out past the tip; the filled triangle covers the join.
+        let shaftEnd = ArrowGeometry.shaftEnd(start: start, end: end,
+                                              headLength: headLen, halfAngleDegrees: halfAngle)
         let shaft = NSBezierPath()
-        shaft.move(to: start); shaft.line(to: end)
+        shaft.move(to: start); shaft.line(to: shaftEnd)
         style.strokeColor.nsColor.setStroke()
         shaft.lineWidth = style.lineWidth; shaft.lineCapStyle = .round; shaft.stroke()
 

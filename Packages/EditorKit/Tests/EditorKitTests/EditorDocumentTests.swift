@@ -50,4 +50,23 @@ let editorDocumentTests: [TestCase] = [
         doc.remove(id: b.id)
         t.equal(doc.annotations.count, 1)
     },
+    TestCase("idsIntersectingReturnsOnlyOverlapping") { t in
+        // Marquee drag-select: only annotations whose box overlaps the rect.
+        var doc = EditorDocument(baseImage: makeBase())
+        let a = StubAnnotation(box: CGRect(x: 0, y: 0, width: 4, height: 4))
+        let b = StubAnnotation(box: CGRect(x: 20, y: 20, width: 4, height: 4))
+        doc.add(a); doc.add(b)
+        let hit = doc.ids(intersecting: CGRect(x: 0, y: 0, width: 10, height: 10))
+        t.equal(hit.count, 1)
+        t.isTrue(hit.contains(a.id))
+        t.isTrue(!hit.contains(b.id))
+    },
+    TestCase("idsIntersectingReturnsAllWhenMarqueeCoversEverything") { t in
+        var doc = EditorDocument(baseImage: makeBase())
+        let a = StubAnnotation(box: CGRect(x: 0, y: 0, width: 4, height: 4))
+        let b = StubAnnotation(box: CGRect(x: 20, y: 20, width: 4, height: 4))
+        doc.add(a); doc.add(b)
+        let hit = doc.ids(intersecting: CGRect(x: 0, y: 0, width: 100, height: 100))
+        t.equal(hit.count, 2)
+    },
 ]

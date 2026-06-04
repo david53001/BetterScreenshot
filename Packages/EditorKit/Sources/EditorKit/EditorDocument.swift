@@ -41,6 +41,12 @@ public struct EditorDocument {
         return nil
     }
 
+    /// IDs of every annotation whose bounding box overlaps `rect` — used by the
+    /// select tool's marquee (rubber-band) drag to pick multiple objects.
+    public func ids(intersecting rect: CGRect) -> [UUID] {
+        annotations.filter { $0.boundingBox().intersects(rect) }.map(\.id)
+    }
+
     public func nextCounterNumber() -> Int {
         annotations.filter { $0 is CounterAnnotation }.count + 1
     }

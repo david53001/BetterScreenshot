@@ -6,15 +6,46 @@ public final class EditorCanvasView: NSView {
     public var style = AnnotationStyle.default { didSet { needsDisplay = true } }
     public var onTextRequested: ((CGPoint) -> Void)?   // Task 11 wires inline editing
 
-    private var selectedID: UUID?
+    // MARK: - Selection (supports multiple objects)
+    private var selectedIDs: Set<UUID> = []
+    /// The single selected annotation, or nil when zero or several are selected
+    /// (resize handles only make sense for exactly one).
+    private var soleSelectedID: UUID? { selectedIDs.count == 1 ? selectedIDs.first : nil }
     private var dragStartImagePoint: CGPoint?
     private var inProgress: (any Annotation)?
+    /// Live drag rectangle (image coords) for region tools (blur/pixelate/crop),
+    /// which have no committable preview shape — shown as a dashed marquee.
+    private var regionMarquee: CGRect?
+    /// Live rubber-band rectangle (image coords) for the select tool's marquee.
+    private var marqueeRect: CGRect?
 
     // MARK: - Task 14: Resize handles
     // Handle index: 0=TL 1=TC 2=TR 3=ML 4=MR 5=BL 6=BC 7=BR
     private var activeHandleIndex: Int? = nil
     private var handleOriginalFrame: CGRect = .zero
     private let handleSize: CGFloat = 8
+
+    // MARK: - Undo / redo history (document snapshots)
+    // EditorDocument is a value type, so a snapshot is just a copy of the struct.
+    private var undoStack: [EditorDocument] = []
+    private var redoStack: [EditorDocument] = []
+    /// Pre-drag snapshot, pushed on mouseUp only if the drag actually mutated.
+    private var pendingDragSnapshot: EditorDocument?
+    private var didDragMutate = false
+
+    /// Fired after any change affecting the dimensions readout, selection, or
+    /// undo/redo availability, so the window chrome can refresh itself.
+    public var onStateChange: (() -> Void)?
+
+    public var hasSelection: Bool { !selectedIDs.isEmpty }
+    public var canUndo: Bool { !undoStack.isEmpty }
+    public var canRedo: Bool { !redoStack.isEmpty }
+
+    private func snapshot() {
+        undoStack.append(document)
+        if undoStack.count > 50 { undoStack.removeFirst() }
+        redoStack.removeAll()
+    }
 
     public init(document: EditorDocument) {
         self.document = document
@@ -79,7 +110,7 @@ public final class EditorCanvasView: NSView {
 
     /// True when the selected annotation is a rect-based type that exposes a mutable frame.
     private func selectedViewRect() -> NSRect? {
-        guard let id = selectedID, let i = document.index(of: id) else { return nil }
+        guard let id = soleSelectedID, let i = document.index(of: id) else { return nil }
         let a = document.annotations[i]
         guard a is RectangleAnnotation || a is FilledRectangleAnnotation
            || a is EllipseAnnotation   || a is BlurAnnotation
@@ -91,7 +122,7 @@ public final class EditorCanvasView: NSView {
 
     /// Replace the frame on a rect-based annotation by building a copy with the new frame.
     private func replaceFrame(_ newImageFrame: CGRect) {
-        guard let id = selectedID, let i = document.index(of: id) else { return }
+        guard let id = soleSelectedID, let i = document.index(of: id) else { return }
         let a = document.annotations[i]
         let updated: (any Annotation)?
         switch a {
@@ -113,25 +144,49 @@ public final class EditorCanvasView: NSView {
 
     // MARK: - Rendering
     public override func draw(_ dirtyRect: NSRect) {
-        guard let flat = DocumentRenderer.render(document) else { return }
+        // The in-progress shape is drawn on top of the flattened doc so the
+        // user sees the annotation live as they drag (e.g. a rectangle growing).
+        guard let flat = DocumentRenderer.render(document, preview: inProgress) else { return }
         NSImage(cgImage: flat, size: bounds.size).draw(in: bounds)
-        // Selection outline + resize handles.
-        if let id = selectedID, let i = document.index(of: id) {
+
+        // Live marquee for region tools (blur/pixelate/crop) that have no shape preview.
+        if let m = regionMarquee {
+            let vr = NSRect(x: m.minX / scale, y: m.minY / scale,
+                            width: m.width / scale, height: m.height / scale)
+            NSColor.systemBlue.setStroke()
+            let p = NSBezierPath(rect: vr)
+            p.lineWidth = 1; p.setLineDash([4, 3], count: 2, phase: 0); p.stroke()
+        }
+
+        // Live rubber-band marquee for the select tool.
+        if let m = marqueeRect {
+            let vr = NSRect(x: m.minX / scale, y: m.minY / scale,
+                            width: m.width / scale, height: m.height / scale)
+            NSColor.systemBlue.withAlphaComponent(0.12).setFill()
+            NSBezierPath(rect: vr).fill()
+            NSColor.systemBlue.setStroke()
+            let p = NSBezierPath(rect: vr)
+            p.lineWidth = 1; p.setLineDash([4, 3], count: 2, phase: 0); p.stroke()
+        }
+
+        // Selection outline(s) — one dashed box per selected annotation.
+        for id in selectedIDs {
+            guard let i = document.index(of: id) else { continue }
             let bb = document.annotations[i].boundingBox()
             let viewRect = NSRect(x: bb.minX / scale, y: bb.minY / scale,
                                   width: bb.width / scale, height: bb.height / scale)
             NSColor.systemBlue.setStroke()
             let p = NSBezierPath(rect: viewRect.insetBy(dx: -2, dy: -2))
             p.lineWidth = 1; p.setLineDash([4, 3], count: 2, phase: 0); p.stroke()
+        }
 
-            // Draw resize handles for rect-based shapes.
-            if selectedViewRect() != nil {
-                NSColor.white.setFill()
-                NSColor.systemBlue.setStroke()
-                for r in handleRects(for: viewRect) {
-                    let path = NSBezierPath(rect: r)
-                    path.fill(); path.lineWidth = 1; path.stroke()
-                }
+        // Resize handles only for a single rect-based selection.
+        if let vr = selectedViewRect() {
+            NSColor.white.setFill()
+            NSColor.systemBlue.setStroke()
+            for r in handleRects(for: vr) {
+                let path = NSBezierPath(rect: r)
+                path.fill(); path.lineWidth = 1; path.stroke()
             }
         }
     }
@@ -142,22 +197,34 @@ public final class EditorCanvasView: NSView {
         let p = imagePoint(viewPt)
         dragStartImagePoint = p
         activeHandleIndex = nil
+        regionMarquee = nil
+        marqueeRect = nil
 
         switch tool {
         case .select:
-            // Check handle hit first.
+            // Resize handle (single selection) first, then an object hit, then
+            // an empty-space drag starts a rubber-band marquee.
             if let vr = selectedViewRect(), let hi = hitHandle(at: viewPt, viewRect: vr) {
                 activeHandleIndex = hi
-                handleOriginalFrame = document.annotations[document.index(of: selectedID!)!].boundingBox()
+                handleOriginalFrame = document.annotations[document.index(of: soleSelectedID!)!].boundingBox()
+                pendingDragSnapshot = document; didDragMutate = false
+            } else if let hit = document.topmostHit(at: p) {
+                // Clicking an object outside the current selection selects just
+                // it; clicking one already selected keeps the group (drag = move).
+                if !selectedIDs.contains(hit) { selectedIDs = [hit] }
+                pendingDragSnapshot = document; didDragMutate = false
             } else {
-                selectedID = document.topmostHit(at: p)
+                selectedIDs = []
+                marqueeRect = CGRect(origin: p, size: .zero)
             }
-            needsDisplay = true
+            onStateChange?(); needsDisplay = true
         case .text:
             onTextRequested?(p)
         case .counter:
+            snapshot()
             document.add(CounterAnnotation(number: document.nextCounterNumber(),
-                                           origin: p, style: style)); needsDisplay = true
+                                           origin: p, style: style))
+            onStateChange?(); needsDisplay = true
         default:
             inProgress = nil // shape creation happens on drag
         }
@@ -172,10 +239,14 @@ public final class EditorCanvasView: NSView {
                 // Resize via handle.
                 let delta = CGVector(dx: p.x - start.x, dy: p.y - start.y)
                 let newFrame = resizedFrame(original: handleOriginalFrame, handleIdx: hi, delta: delta)
-                replaceFrame(newFrame)
-            } else if let id = selectedID {
-                document.move(id: id, by: CGVector(dx: (p.x - start.x), dy: (p.y - start.y)))
-                dragStartImagePoint = p
+                replaceFrame(newFrame); didDragMutate = true
+            } else if marqueeRect != nil {
+                marqueeRect = rect(start, p)
+            } else if !selectedIDs.isEmpty {
+                // Move the whole selection together.
+                let delta = CGVector(dx: p.x - start.x, dy: p.y - start.y)
+                for id in selectedIDs { document.move(id: id, by: delta) }
+                dragStartImagePoint = p; didDragMutate = true
             }
         case .arrow:
             inProgress = ArrowAnnotation(start: start, end: p, style: style)
@@ -187,6 +258,8 @@ public final class EditorCanvasView: NSView {
             inProgress = FilledRectangleAnnotation(frame: rect(start, p), style: style)
         case .ellipse:
             inProgress = EllipseAnnotation(frame: rect(start, p), style: style)
+        case .blur, .pixelate, .crop:
+            regionMarquee = rect(start, p)
         default: break
         }
         needsDisplay = true
@@ -198,12 +271,18 @@ public final class EditorCanvasView: NSView {
         let r = rect(start, p)
         if activeHandleIndex != nil {
             // Resize complete — update the stored original frame for next drag.
-            if let id = selectedID, let i = document.index(of: id) {
+            if let id = soleSelectedID, let i = document.index(of: id) {
                 handleOriginalFrame = document.annotations[i].boundingBox()
             }
             activeHandleIndex = nil
         } else {
             switch tool {
+            case .select:
+                // Resolve a marquee drag into the set of enclosed objects.
+                if let m = marqueeRect {
+                    selectedIDs = Set(document.ids(intersecting: m))
+                    marqueeRect = nil
+                }
             case .blur:
                 if r.width >= 2, r.height >= 2,
                    let patch = Redactor.blur(document.baseImage, region: r, radius: 12) {
@@ -217,44 +296,105 @@ public final class EditorCanvasView: NSView {
             case .crop:
                 if r.width >= 4, r.height >= 4 { applyCrop(to: r) }
             default:
-                if let a = inProgress { document.add(a); selectedID = a.id; inProgress = nil }
+                if let a = inProgress { inProgress = nil; insert(a) }  // insert() snapshots
             }
         }
-        dragStartImagePoint = nil; needsDisplay = true
+        // Commit a single undo step for a completed move/resize drag.
+        if didDragMutate, let snap = pendingDragSnapshot {
+            undoStack.append(snap)
+            if undoStack.count > 50 { undoStack.removeFirst() }
+            redoStack.removeAll()
+        }
+        pendingDragSnapshot = nil; didDragMutate = false
+        dragStartImagePoint = nil; regionMarquee = nil; marqueeRect = nil
+        onStateChange?(); needsDisplay = true
     }
 
-    // Live preview of the in-progress shape on top of the flattened doc.
-    public override func updateLayer() {}
     private func rect(_ a: CGPoint, _ b: CGPoint) -> CGRect {
         CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
     }
 
-    // MARK: - Keyboard (delete, z-order)
+    // MARK: - Keyboard (undo/redo, delete, z-order)
     public override var acceptsFirstResponder: Bool { true }
+
+    public override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if handleUndoRedo(event) { return true }
+        return super.performKeyEquivalent(with: event)
+    }
+
     public override func keyDown(with event: NSEvent) {
-        guard let id = selectedID else { return super.keyDown(with: event) }
+        if handleUndoRedo(event) { return }
+        guard !selectedIDs.isEmpty else { return super.keyDown(with: event) }
         switch event.keyCode {
-        case 51, 117: document.remove(id: id); selectedID = nil   // Delete / Fwd-Delete
+        case 51, 117: deleteSelected()                                  // Delete / Fwd-Delete
         default:
-            if event.charactersIgnoringModifiers == "]" { document.bringToFront(id: id) }
-            else if event.charactersIgnoringModifiers == "[" { document.sendToBack(id: id) }
-            else { super.keyDown(with: event); return }
+            if event.charactersIgnoringModifiers == "]" { bringSelectedToFront() }
+            else if event.charactersIgnoringModifiers == "[" { sendSelectedToBack() }
+            else { super.keyDown(with: event) }
         }
-        needsDisplay = true
+    }
+
+    /// ⌘/⌃Z = undo, ⌘/⌃⇧Z or ⌘/⌃Y = redo. Returns true when consumed.
+    private func handleUndoRedo(_ event: NSEvent) -> Bool {
+        if activeField != nil { return false }   // let the text editor own ⌘Z while typing
+        let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard mods.contains(.command) || mods.contains(.control) else { return false }
+        switch event.keyCode {
+        case 6:  mods.contains(.shift) ? redo() : undo(); return true    // Z / ⇧Z
+        case 16: redo(); return true                                     // Y
+        default: return false
+        }
     }
 
     // MARK: - Mutation entry points for the window controller / inline editor
     public func insert(_ annotation: any Annotation) {
-        document.add(annotation); selectedID = annotation.id; needsDisplay = true
+        snapshot(); document.add(annotation); selectedIDs = [annotation.id]
+        onStateChange?(); needsDisplay = true
     }
     public func applyCrop(to imageRect: CGRect) {
-        if let cropped = document.cropped(to: imageRect) {
-            document = cropped
-            frame = NSRect(origin: .zero, size: document.size)
-            selectedID = nil; needsDisplay = true
-        }
+        guard let cropped = document.cropped(to: imageRect) else { return }
+        snapshot()
+        document = cropped
+        frame = NSRect(origin: .zero, size: document.size)
+        selectedIDs = []; onStateChange?(); needsDisplay = true
     }
     public func currentDocument() -> EditorDocument { document }
+
+    // MARK: - Undo / redo + object actions (driven by the window chrome)
+    public func undo() {
+        guard let prev = undoStack.popLast() else { return }
+        redoStack.append(document); document = prev
+        selectedIDs = []; onStateChange?(); needsDisplay = true
+    }
+    public func redo() {
+        guard let next = redoStack.popLast() else { return }
+        undoStack.append(document); document = next
+        selectedIDs = []; onStateChange?(); needsDisplay = true
+    }
+    public func deleteSelected() {
+        guard !selectedIDs.isEmpty else { return }
+        snapshot()
+        for id in selectedIDs { document.remove(id: id) }
+        selectedIDs = []
+        onStateChange?(); needsDisplay = true
+    }
+    public func bringSelectedToFront() {
+        guard !selectedIDs.isEmpty else { return }
+        snapshot()
+        // Walk in document order so the selected objects keep their relative stacking.
+        for id in document.annotations.map(\.id) where selectedIDs.contains(id) {
+            document.bringToFront(id: id)
+        }
+        onStateChange?(); needsDisplay = true
+    }
+    public func sendSelectedToBack() {
+        guard !selectedIDs.isEmpty else { return }
+        snapshot()
+        for id in document.annotations.map(\.id).reversed() where selectedIDs.contains(id) {
+            document.sendToBack(id: id)
+        }
+        onStateChange?(); needsDisplay = true
+    }
 
     // MARK: - Inline text editing (Task 11)
     private var activeField: NSTextField?

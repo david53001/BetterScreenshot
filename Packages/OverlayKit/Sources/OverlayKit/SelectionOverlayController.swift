@@ -13,14 +13,17 @@ public final class SelectionOverlayController {
             let view = SelectionView(frame: screen.frame)
             view.onComplete = { [weak self] rect in self?.finish(rect: rect, screen: screen) }
             view.onCancel = { [weak self] in self?.finish(rect: nil, screen: screen) }
-            let window = NSWindow(contentRect: screen.frame, styleMask: .borderless,
-                                  backing: .buffered, defer: false, screen: screen)
+            let window = KeyableOverlayWindow(contentRect: screen.frame, styleMask: .borderless,
+                                              backing: .buffered, defer: false, screen: screen)
             window.level = .screenSaver
             window.backgroundColor = .clear
             window.isOpaque = false
             window.ignoresMouseEvents = false
             window.contentView = view
             window.makeKeyAndOrderFront(nil)
+            // Borderless windows can't become key by default; KeyableOverlayWindow
+            // overrides that, so make the view first responder to receive Escape.
+            window.makeFirstResponder(view)
             windows.append(window)
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -38,6 +41,12 @@ public final class SelectionOverlayController {
             NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
         completion(SelectionResult(globalRect: rect, displayID: displayID))
     }
+}
+
+/// A borderless window that can still become key, so its view receives key
+/// events (Escape to cancel). Plain borderless NSWindows return false here.
+final class KeyableOverlayWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
 }
 
 final class SelectionView: NSView {
