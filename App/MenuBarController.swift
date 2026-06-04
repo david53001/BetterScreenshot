@@ -1,12 +1,13 @@
 import AppKit
 
 @MainActor
-final class MenuBarController {
+final class MenuBarController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let coordinator: CaptureCoordinator
 
     init(coordinator: CaptureCoordinator) {
         self.coordinator = coordinator
+        super.init()
         statusItem.button?.image = NSImage(systemSymbolName: "camera.viewfinder",
                                            accessibilityDescription: "BetterScreenshot")
         buildMenu()
@@ -23,6 +24,9 @@ final class MenuBarController {
         menu.addItem(withTitle: "Capture Text", action: #selector(captureText), keyEquivalent: "")
             .target = self
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Pin from Clipboard", action: #selector(pinClipboard), keyEquivalent: "")
+            .target = self
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
             .target = self
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q").target = self
@@ -33,9 +37,19 @@ final class MenuBarController {
     @objc private func window() { coordinator.captureFrontWindow() }
     @objc private func full() { coordinator.captureFullscreen() }
     @objc private func captureText() { coordinator.captureText() }
+    @objc private func pinClipboard() { coordinator.pinFromClipboard() }
     @objc private func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
     @objc private func quit() { NSApp.terminate(nil) }
+}
+
+extension MenuBarController: NSMenuItemValidation {
+    nonisolated func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        MainActor.assumeIsolated {
+            if menuItem.action == #selector(pinClipboard) { return coordinator.clipboardHasImage }
+            return true
+        }
+    }
 }

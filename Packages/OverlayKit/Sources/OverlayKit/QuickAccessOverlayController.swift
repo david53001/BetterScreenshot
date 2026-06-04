@@ -4,11 +4,14 @@ public struct QuickAccessActions {
     public let onCopy: () -> Void
     public let onSave: () -> Void
     public let onAnnotate: () -> Void
+    public let onPin: () -> Void
     public let fileURLForDrag: () -> URL?
     public init(onCopy: @escaping () -> Void, onSave: @escaping () -> Void,
-                onAnnotate: @escaping () -> Void, fileURLForDrag: @escaping () -> URL?) {
+                onAnnotate: @escaping () -> Void, onPin: @escaping () -> Void,
+                fileURLForDrag: @escaping () -> URL?) {
         self.onCopy = onCopy; self.onSave = onSave
-        self.onAnnotate = onAnnotate; self.fileURLForDrag = fileURLForDrag
+        self.onAnnotate = onAnnotate; self.onPin = onPin
+        self.fileURLForDrag = fileURLForDrag
     }
 }
 
@@ -67,6 +70,7 @@ public final class QuickAccessOverlayController: NSObject {
         stack.spacing = 6
         stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy", #selector(copyAction)))
         stack.addArrangedSubview(iconButton("pencil.tip.crop.circle", tip: "Edit", #selector(annotateAction)))
+        stack.addArrangedSubview(iconButton("pin", tip: "Pin to screen", #selector(pinAction)))
         stack.addArrangedSubview(iconButton("square.and.arrow.down", tip: "Save to screenshots", #selector(saveAction)))
         stack.addArrangedSubview(iconButton("xmark", tip: "Close", #selector(closeAction)))
         container.addSubview(stack)
@@ -100,6 +104,12 @@ public final class QuickAccessOverlayController: NSObject {
         let a = actions
         dismiss()
         a?.onAnnotate()
+    }
+    // Pinning replaces the overlay with a floating pin.
+    @objc private func pinAction() {
+        let a = actions
+        dismiss()
+        a?.onPin()
     }
     @objc private func closeAction() { dismiss() }
 }

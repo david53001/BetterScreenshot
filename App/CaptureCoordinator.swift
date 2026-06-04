@@ -11,6 +11,7 @@ final class CaptureCoordinator {
     private let overlay = SelectionOverlayController()
     private let quickAccess = QuickAccessOverlayController()
     private let hud = HUDController()
+    private let pins = PinPanelController()
 
     /// Filled in by Plan 3 to present the annotation editor. Nil = stub.
     var editorPresenter: ((CGImage) -> Void)?
@@ -36,7 +37,8 @@ final class CaptureCoordinator {
         guard ensurePermission() else { return }
         overlay.present { [weak self] result in
             guard let self, let result else { return }
-            Task { await self.run(.area(rect: result.globalRect, displayID: result.displayID)) }
+            Task { await self.run(.area(rect: result.globalRect, displayID: result.displayID),
+                                  sourceRect: result.globalRect) }
         }
     }
 
@@ -83,23 +85,23 @@ final class CaptureCoordinator {
         } ?? NSScreen.main
     }
 
-    private func run(_ target: CaptureTarget) async {
+    private func run(_ target: CaptureTarget, sourceRect: CGRect? = nil) async {
         do {
             let image = try await service.capture(target)
-            handle(image)
+            handle(image, sourceRect: sourceRect)
         } catch { NSLog("Capture failed: \(error)") }
     }
 
-    private func handle(_ image: CGImage) {
+    private func handle(_ image: CGImage, sourceRect: CGRect?) {
         switch settings.settings.afterCapture {
         case .copyOnly:    copy(image)
         case .saveOnly:    save(image)
         case .copyAndSave: copy(image); save(image)
-        case .showOverlay: presentOverlay(image)
+        case .showOverlay: presentOverlay(image, sourceRect: sourceRect)
         }
     }
 
-    private func presentOverlay(_ image: CGImage) {
+    private func presentOverlay(_ image: CGImage, sourceRect: CGRect?) {
         let nsImage = NSImage(cgImage: image,
                               size: NSSize(width: image.width, height: image.height))
         guard let screen = NSScreen.main else { copy(image); save(image); return }
@@ -114,6 +116,7 @@ final class CaptureCoordinator {
             // The overlay's download button always lands in the macOS screenshot folder.
             onSave: { [weak self] in self?.save(image, to: SettingsStore.systemScreenshotLocation()) },
             onAnnotate: { [weak self] in self?.annotate(image) },
+            onPin: { [weak self] in self?.pin(image, near: sourceRect) },
             fileURLForDrag: { TempImageWriter.writePNG(image, fileName: FileNamer.fileName(for: Date(), ext: "png")) })
         quickAccess.present(image: nsImage, at: origin, actions: actions)
     }
@@ -122,6 +125,42 @@ final class CaptureCoordinator {
     func annotate(_ image: CGImage) {
         if let present = editorPresenter { present(image) }
         else { NSLog("Annotate requested — editor arrives in Plan 3") }
+    }
+
+    /// Pins the image as a floating panel — at its original on-screen location
+    /// when known, else centered on the main screen.
+    func pin(_ image: CGImage, near sourceRect: CGRect? = nil) {
+        guard image.width > 0, image.height > 0 else { return }
+        let screen = sourceRect.flatMap { r in NSScreen.screens.first { $0.frame.intersects(r) } }
+            ?? NSScreen.main
+        guard let screen else { return }
+        let nsImage = NSImage(cgImage: image,
+                              size: NSSize(width: image.width, height: image.height))
+        let style = PinStyle(cornerRadius: CGFloat(settings.settings.pinCornerRadius),
+                             shadow: settings.settings.pinShadow)
+        let actions = PinActions(
+            onCopy: { [weak self] in
+                self?.copy(image)
+                self?.hud.show("Copied", on: screen)
+            },
+            onSave: { [weak self] in self?.save(image) })
+        pins.pin(image: nsImage,
+                 pixelSize: CGSize(width: image.width, height: image.height),
+                 sourceRect: sourceRect, on: screen, style: style, actions: actions)
+    }
+
+    func pinFromClipboard() {
+        guard let ns = NSPasteboard.general.readObjects(forClasses: [NSImage.self],
+                                                        options: nil)?.first as? NSImage,
+              let cg = ns.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            hud.show("No image on clipboard", on: NSScreen.main)
+            return
+        }
+        pin(cg)
+    }
+
+    var clipboardHasImage: Bool {
+        NSPasteboard.general.canReadObject(forClasses: [NSImage.self], options: nil)
     }
 
     private func copy(_ image: CGImage) {
