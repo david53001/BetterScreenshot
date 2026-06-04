@@ -29,6 +29,18 @@ struct SettingsView: View {
                 Text("Top-right").tag(OverlayCorner.topRight)
                 Text("Top-left").tag(OverlayCorner.topLeft)
             }
+            Toggle("Pin shadow", isOn: bind(\.pinShadow))
+            HStack {
+                Text("Pin corner radius")
+                Slider(value: Binding(
+                    get: { Double(store.settings.pinCornerRadius) },
+                    set: { store.settings.pinCornerRadius = Int($0); store.persist() }),
+                    in: 0...20, step: 1)
+                Text("\(store.settings.pinCornerRadius) pt")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(width: 40, alignment: .trailing)
+            }
             HStack {
                 Text("Save to: \(store.saveDirectory.path)")
                     .truncationMode(.middle).lineLimit(1)
