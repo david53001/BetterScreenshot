@@ -52,3 +52,58 @@ let hotkeyComboTests: [TestCase] = [
         t.isNil(HotkeyCombo(dictionary: ["keyCode": "x", "modifiers": "768"]))
     },
 ]
+
+let hotkeyBindingsTests: [TestCase] = [
+    TestCase("defaultsTable") { t in
+        let b = HotkeyBindings.defaults
+        t.equal(b.combo(for: .captureArea), HotkeyCombo(keyCode: 21, modifiers: cmdShift))       // ⌘⇧4
+        t.equal(b.combo(for: .captureWindow), HotkeyCombo(keyCode: 28, modifiers: cmdShift))     // ⌘⇧8
+        t.equal(b.combo(for: .captureFullscreen), HotkeyCombo(keyCode: 22, modifiers: cmdShift)) // ⌘⇧6
+        t.equal(b.combo(for: .captureText), HotkeyCombo(keyCode: 26, modifiers: cmdShift))       // ⌘⇧7
+        t.isNil(b.combo(for: .pinFromClipboard))
+        // ⌘⇧5 (keyCode 23) is reserved for recording — nothing may default to it.
+        for action in HotkeyAction.allCases {
+            t.isTrue(b.combo(for: action) != HotkeyCombo(keyCode: 23, modifiers: cmdShift),
+                     "\(action) must not default to ⌘⇧5")
+        }
+    },
+    TestCase("titles") { t in
+        t.equal(HotkeyAction.captureArea.title, "Capture Area")
+        t.equal(HotkeyAction.captureWindow.title, "Capture Window")
+        t.equal(HotkeyAction.captureFullscreen.title, "Capture Fullscreen")
+        t.equal(HotkeyAction.captureText.title, "Capture Text")
+        t.equal(HotkeyAction.pinFromClipboard.title, "Pin from Clipboard")
+    },
+    TestCase("setClearAndBoundOrder") { t in
+        var b = HotkeyBindings.defaults
+        b.clear(.captureArea)
+        t.isNil(b.combo(for: .captureArea))
+        let combo = HotkeyCombo(keyCode: 35, modifiers: cmdShift) // ⌘⇧P
+        b.set(combo, for: .pinFromClipboard)
+        t.equal(b.combo(for: .pinFromClipboard), combo)
+        // bound lists pairs in HotkeyAction.allCases order.
+        t.equal(b.bound.map(\.action), [.captureWindow, .captureFullscreen, .captureText, .pinFromClipboard])
+    },
+    TestCase("conflictDetection") { t in
+        let b = HotkeyBindings.defaults
+        let area = HotkeyCombo(keyCode: 21, modifiers: cmdShift)
+        // ⌘⇧4 belongs to captureArea → conflict when binding it to another action…
+        t.equal(b.conflictingAction(for: area, excluding: .captureText), .captureArea)
+        // …but re-typing an action's own combo is not a conflict.
+        t.isNil(b.conflictingAction(for: area, excluding: .captureArea))
+        t.isNil(b.conflictingAction(for: HotkeyCombo(keyCode: 23, modifiers: cmdShift),
+                                    excluding: .captureArea))
+    },
+    TestCase("bindingsDictionaryRoundTrip") { t in
+        var b = HotkeyBindings.defaults
+        b.clear(.captureFullscreen)
+        b.set(HotkeyCombo(keyCode: 35, modifiers: cmdShift), for: .pinFromClipboard)
+        let restored = HotkeyBindings(dictionary: b.dictionary)
+        t.equal(restored, b)
+        // Unknown action keys and malformed values are skipped, not fatal.
+        let messy = HotkeyBindings(dictionary: ["nonsense": "1,2", "captureArea": "garbage",
+                                                "captureText": "26,768"])
+        t.isNil(messy.combo(for: .captureArea))
+        t.equal(messy.combo(for: .captureText), HotkeyCombo(keyCode: 26, modifiers: 768))
+    },
+]

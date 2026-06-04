@@ -10,6 +10,7 @@ runTests("CaptureKitTests",
     fileNamerTests +
     keyCodeTests +
     hotkeyComboTests +
+    hotkeyBindingsTests +
     captureSettingsTests +
     overlayPositionerTests +
     tempImageWriterTests +
