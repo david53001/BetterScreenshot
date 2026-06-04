@@ -10,16 +10,16 @@ let hotkeyComboTests: [TestCase] = [
         let all = HotkeyCombo.commandMask | HotkeyCombo.shiftMask
                 | HotkeyCombo.optionMask | HotkeyCombo.controlMask
         t.equal(HotkeyCombo(keyCode: 21, modifiers: all).displayString, "⌃⌥⇧⌘4")
-        t.equal(HotkeyCombo(keyCode: 21, modifiers: cmdShift).displayString, "⌘⇧4")
+        t.equal(HotkeyCombo(keyCode: 21, modifiers: cmdShift).displayString, "⇧⌘4")
     },
     TestCase("displayStringKeyNames") { t in
-        t.equal(HotkeyCombo(keyCode: 28, modifiers: cmdShift).displayString, "⌘⇧8")
-        t.equal(HotkeyCombo(keyCode: 49, modifiers: cmdShift).displayString, "⌘⇧Space")
-        t.equal(HotkeyCombo(keyCode: 122, modifiers: cmdShift).displayString, "⌘⇧F1")
-        t.equal(HotkeyCombo(keyCode: 126, modifiers: cmdShift).displayString, "⌘⇧↑")
-        t.equal(HotkeyCombo(keyCode: 0, modifiers: cmdShift).displayString, "⌘⇧A")
+        t.equal(HotkeyCombo(keyCode: 28, modifiers: cmdShift).displayString, "⇧⌘8")
+        t.equal(HotkeyCombo(keyCode: 49, modifiers: cmdShift).displayString, "⇧⌘Space")
+        t.equal(HotkeyCombo(keyCode: 122, modifiers: cmdShift).displayString, "⇧⌘F1")
+        t.equal(HotkeyCombo(keyCode: 126, modifiers: cmdShift).displayString, "⇧⌘↑")
+        t.equal(HotkeyCombo(keyCode: 0, modifiers: cmdShift).displayString, "⇧⌘A")
         // Unknown codes fall back instead of crashing or showing nothing.
-        t.equal(HotkeyCombo(keyCode: 999, modifiers: cmdShift).displayString, "⌘⇧(key 999)")
+        t.equal(HotkeyCombo(keyCode: 999, modifiers: cmdShift).displayString, "⇧⌘(key 999)")
     },
     TestCase("validityRequiresCmdOptOrCtrl") { t in
         t.isTrue(HotkeyCombo(keyCode: 21, modifiers: cmdShift).isValid)

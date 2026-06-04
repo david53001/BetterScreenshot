@@ -43,21 +43,13 @@ public struct HotkeyCombo: Equatable, Hashable {
         modifiers & (Self.commandMask | Self.optionMask | Self.controlMask) != 0
     }
 
-    /// "⌃⌥⇧⌘X" — standard macOS modifier glyph order.
+    /// "⌃⌥⇧⌘X" — standard macOS modifier glyph order (⌃⌥⇧⌘ always in this order).
     public var displayString: String {
         var s = ""
-        // Order: ⌘ ⇧ ⌥ ⌃ for partial combos, but full "⌃⌥⇧⌘" for all four.
-        // This is achieved by checking in reverse order (⌃ ⌥ ⇧ ⌘) when building the string.
         if modifiers & Self.controlMask != 0 { s += "⌃" }
         if modifiers & Self.optionMask  != 0 { s += "⌥" }
         if modifiers & Self.shiftMask   != 0 { s += "⇧" }
         if modifiers & Self.commandMask != 0 { s += "⌘" }
-        // For partial combos, we need to reorder: move ⌘ to the front if present without ⌃⌥
-        if s.count > 1 && s.contains("⌘") && !s.contains("⌃") && !s.contains("⌥") {
-            // Just ⌘⇧ or other ⌘-led combos: put ⌘ first
-            s.removeAll { $0 == "⌘" }
-            s = "⌘" + s
-        }
         return s + Self.keyName(for: keyCode)
     }
 
@@ -97,8 +89,9 @@ public struct HotkeyCombo: Equatable, Hashable {
         120: "F2", 121: "Page Down", 122: "F1", 123: "←", 124: "→", 125: "↓", 126: "↑",
     ]
 
-    /// Lowercase characters for NSMenuItem.keyEquivalent. Function/arrow/etc. keys are
-    /// omitted on purpose — menus simply show no shortcut for those.
+    /// Lowercase characters for NSMenuItem.keyEquivalent. Function/arrow/Return/Tab/etc.
+    /// keys are omitted on purpose — NSMenuItem would need control characters for those,
+    /// and menus simply show no shortcut for function/arrow keys.
     private static let keyEquivalents: [UInt32: String] = [
         0: "a", 1: "s", 2: "d", 3: "f", 4: "h", 5: "g", 6: "z", 7: "x", 8: "c", 9: "v",
         11: "b", 12: "q", 13: "w", 14: "e", 15: "r", 16: "y", 17: "t",
