@@ -1,6 +1,6 @@
 # BetterScreenshot — Settings window fix + customizable shortcuts
 
-Date: 2026-06-04 · Status: draft
+Date: 2026-06-04 · Status: **shipped 2026-06-04** (tag `v1.4-shortcuts`; see CHANGELOG.md)
 Builds on: v1.3-ocr-pin (`main`) · Ends at tag: `v1.4-shortcuts`
 
 ## Goal

@@ -2,6 +2,17 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v1.4-shortcuts — 2026-06-04
+
+- **Fixed: the Settings window now opens.** macOS 14 silently broke the private
+  selector the menu item relied on; the app now owns its settings window directly.
+- **Customizable shortcuts.** New Settings → Shortcuts tab: click a shortcut well,
+  type a new combo, it applies immediately and persists. Conflicts inside the app
+  and combos owned by other apps/macOS are refused with an explanation.
+- **New defaults:** Capture Window moved ⌘⇧5 → **⌘⇧8**; **⌘⇧5 is now reserved for
+  Start/Stop Recording** (next release). Pin from Clipboard can be given a shortcut
+  (unbound by default). Menu-bar items now display their current shortcuts.
+
 ## v1.3 — 2026-06-04 · OCR, Pin to Screen, Quick Access stack
 
 The P3 release ([spec](docs/superpowers/specs/2026-06-04-betterscreenshot-p3-ocr-pin-design.md) · [plan](docs/superpowers/plans/2026-06-04-betterscreenshot-p3-ocr-pin.md)).
