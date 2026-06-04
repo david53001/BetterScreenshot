@@ -8,6 +8,15 @@ public final class SelectionOverlayController {
 
     /// Presents selection overlays on all screens; calls completion with the result (or nil if cancelled).
     public func present(completion: @escaping (SelectionResult?) -> Void) {
+        // Re-entry guard: a second capture hotkey (e.g. ⌘⇧7 during ⌘⇧4's
+        // selection) cancels the open selection instead of stacking windows
+        // and orphaning the first completion.
+        if self.completion != nil {
+            self.completion?(nil)
+            self.completion = nil
+            windows.forEach { $0.orderOut(nil) }
+            windows.removeAll()
+        }
         self.completion = completion
         for screen in NSScreen.screens {
             let view = SelectionView(frame: screen.frame)
