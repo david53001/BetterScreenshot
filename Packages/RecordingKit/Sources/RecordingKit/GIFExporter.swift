@@ -36,11 +36,20 @@ public enum GIFExporter {
         CGImageDestinationSetProperties(dest, gifProps as CFDictionary)
         let frameProps = [kCGImagePropertyGIFDictionary:
                             [kCGImagePropertyGIFDelayTime: 1.0 / Double(fps)]]
-        for t in times {
-            let cm = CMTime(seconds: t, preferredTimescale: 600)
-            let image = try await generator.image(at: cm).image
-            CGImageDestinationAddImage(dest, image, frameProps as CFDictionary)
+        do {
+            for t in times {
+                let cm = CMTime(seconds: t, preferredTimescale: 600)
+                let image = try await generator.image(at: cm).image
+                CGImageDestinationAddImage(dest, image, frameProps as CFDictionary)
+            }
+        } catch {
+            // Don't leave a half-written GIF behind; the caller keeps the MP4.
+            try? FileManager.default.removeItem(at: gifURL)
+            throw error
         }
-        guard CGImageDestinationFinalize(dest) else { throw GIFExportError.destinationFailed }
+        guard CGImageDestinationFinalize(dest) else {
+            try? FileManager.default.removeItem(at: gifURL)
+            throw GIFExportError.destinationFailed
+        }
     }
 }
