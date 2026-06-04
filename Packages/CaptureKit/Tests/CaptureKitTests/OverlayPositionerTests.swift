@@ -53,6 +53,7 @@ let overlayPositionerTests: [TestCase] = [
                                                  screenFrame: frame, margin: 24, index: 0)
         let s1 = OverlayPositioner.stackedOrigin(corner: .topLeft, overlaySize: size,
                                                  screenFrame: frame, margin: 24, index: 1)
+        t.approxEqual(s1.x, s0.x)
         t.approxEqual(s1.y, s0.y - CGFloat(168 + 12))
     },
 ]

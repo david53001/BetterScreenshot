@@ -32,6 +32,9 @@ public final class QuickAccessStackController {
     }
 
     private func restack() {
+        // Uses the closure captured by the most recent present(): if the
+        // corner setting changed since, existing overlays adopt the new
+        // corner on the next compaction. Accepted in the spec.
         guard let originForIndex else { return }
         for (i, c) in entries.enumerated() { c.move(to: originForIndex(i)) }
     }
