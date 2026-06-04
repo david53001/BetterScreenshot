@@ -30,7 +30,9 @@ public final class MicCapturer: NSObject, AVCaptureAudioDataOutputSampleBufferDe
         }
         session.addInput(input)
         session.addOutput(output)
-        session.startRunning()
+        DispatchQueue.global(qos: .userInitiated).async { [session] in
+            session.startRunning()
+        }
     }
 
     public func stop() {

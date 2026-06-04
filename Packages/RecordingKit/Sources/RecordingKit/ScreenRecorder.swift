@@ -19,6 +19,7 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var micCapturer: MicCapturer?
     private let sampleQueue = DispatchQueue(label: "betterscreenshot.recorder.samples")
     private var sessionStarted = false
+    private var sessionStartPTS: CMTime?
     private var outputURL: URL?
 
     /// Stream died underneath us (display unplugged, etc.). Fired on sampleQueue.
@@ -101,7 +102,15 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
             }
         }
 
-        try await stream.startCapture()
+        do {
+            try await stream.startCapture()
+        } catch {
+            // Don't leak a running mic session / half-configured writer.
+            micCapturer?.stop()
+            writer.cancelWriting()
+            reset()
+            throw error
+        }
     }
 
     /// Stop and finalize; returns the finished file URL.
@@ -125,7 +134,7 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private func reset() {
         stream = nil; writer = nil; videoInput = nil
         systemAudioInput = nil; micInput = nil; micCapturer = nil
-        outputURL = nil; sessionStarted = false
+        outputURL = nil; sessionStarted = false; sessionStartPTS = nil
     }
 
     // MARK: - SCStreamOutput (called on sampleQueue)
@@ -141,7 +150,9 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
                   let statusRaw = attachments.first?[.status] as? Int,
                   SCFrameStatus(rawValue: statusRaw) == .complete else { return }
             if !sessionStarted {
-                writer?.startSession(atSourceTime: sampleBuffer.presentationTimeStamp)
+                let pts = sampleBuffer.presentationTimeStamp
+                writer?.startSession(atSourceTime: pts)
+                sessionStartPTS = pts
                 sessionStarted = true
             }
             if let videoInput, videoInput.isReadyForMoreMediaData {
@@ -157,7 +168,9 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     private func appendMic(_ buffer: CMSampleBuffer) {
-        guard sessionStarted, let micInput, micInput.isReadyForMoreMediaData else { return }
+        guard sessionStarted, let sessionStartPTS,
+              buffer.presentationTimeStamp >= sessionStartPTS,
+              let micInput, micInput.isReadyForMoreMediaData else { return }
         micInput.append(buffer)
     }
 
