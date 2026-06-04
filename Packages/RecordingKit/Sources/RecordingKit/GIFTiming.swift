@@ -5,7 +5,9 @@ public enum GIFTiming {
     /// Sample timestamps (seconds) for converting a clip to GIF at `fps`.
     /// Always at least one frame.
     public static func frameTimes(duration: Double, fps: Int) -> [Double] {
-        guard duration > 0, fps > 0 else { return [0] }
+        // isFinite guards NaN/∞ (a failed recording can report an invalid CMTime
+        // duration, whose .seconds is NaN — Int(NaN) would trap).
+        guard duration.isFinite, duration > 0, fps > 0 else { return [0] }
         let step = 1.0 / Double(fps)
         let count = max(1, Int(duration * Double(fps)))
         return (0..<count).map { Double($0) * step }
