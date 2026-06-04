@@ -33,21 +33,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLogin.setEnabled(true)
             UserDefaults.standard.set(true, forKey: "didRegisterLaunchAtLogin")
         }
-        // Defaults: ⌘⇧4 area, ⌘⇧5 window, ⌘⇧6 fullscreen, ⌘⇧7 capture text.
-        hotKeys.register(key: "4", command: true, shift: true, option: false, control: false) {
-            [weak self] in Task { @MainActor in self?.coordinator.captureArea() }
-        }
-        hotKeys.register(key: "5", command: true, shift: true, option: false, control: false) {
-            [weak self] in Task { @MainActor in self?.coordinator.captureFrontWindow() }
-        }
-        hotKeys.register(key: "6", command: true, shift: true, option: false, control: false) {
-            [weak self] in Task { @MainActor in self?.coordinator.captureFullscreen() }
-        }
-        hotKeys.register(key: "7", command: true, shift: true, option: false, control: false) {
-            [weak self] in Task { @MainActor in self?.coordinator.captureText() }
-        }
+        applyBindings()
         // Stop macOS's native ⌘⇧4 from also firing (double screenshot). Restored on quit.
         SystemScreenshotShortcuts.disableNativeAreaScreenshot()
+    }
+
+    /// Register every bound hotkey; record failures and refresh menu shortcuts.
+    @discardableResult
+    private func applyBindings() -> Set<HotkeyAction> {
+        let handlers: [HotkeyAction: () -> Void] = [
+            .captureArea:       { [weak self] in Task { @MainActor in self?.coordinator.captureArea() } },
+            .captureWindow:     { [weak self] in Task { @MainActor in self?.coordinator.captureFrontWindow() } },
+            .captureFullscreen: { [weak self] in Task { @MainActor in self?.coordinator.captureFullscreen() } },
+            .captureText:       { [weak self] in Task { @MainActor in self?.coordinator.captureText() } },
+            .pinFromClipboard:  { [weak self] in Task { @MainActor in self?.coordinator.pinFromClipboard() } },
+        ]
+        let failed = hotKeys.apply(settings.bindings, handlers: handlers)
+        settings.failedActions = failed
+        menuBar.refreshKeyEquivalents(settings.bindings)
+        return failed
+    }
+
+    /// Rebind transaction for the Shortcuts tab: validate, apply, revert on failure.
+    /// Returns a user-facing error message, or nil on success.
+    func updateBinding(_ combo: HotkeyCombo?, for action: HotkeyAction) -> String? {
+        var candidate = settings.bindings
+        if let combo {
+            if let other = candidate.conflictingAction(for: combo, excluding: action) {
+                return "Already used by \(other.title)"
+            }
+            candidate.set(combo, for: action)
+        } else {
+            candidate.clear(action)
+        }
+        let previous = settings.bindings
+        settings.bindings = candidate
+        let failed = applyBindings()
+        if combo != nil, failed.contains(action) {
+            settings.bindings = previous
+            applyBindings()
+            return "That shortcut is in use by another app or macOS."
+        }
+        settings.persist()
+        return nil
+    }
+
+    func restoreDefaultBindings() {
+        settings.bindings = .defaults
+        applyBindings()
+        settings.persist()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

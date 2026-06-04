@@ -4,6 +4,9 @@ import CaptureKit
 final class SettingsStore: ObservableObject {
     @Published var settings: CaptureSettings
     @Published var saveDirectory: URL
+    @Published var bindings: HotkeyBindings
+    /// Actions whose combo macOS refused to register (not persisted).
+    @Published var failedActions: Set<HotkeyAction> = []
 
     private let defaults = UserDefaults.standard
 
@@ -17,11 +20,17 @@ final class SettingsStore: ObservableObject {
             // com.apple.screencapture `location`), falling back to ~/Desktop.
             self.saveDirectory = SettingsStore.systemScreenshotLocation()
         }
+        if let dict = defaults.dictionary(forKey: "hotkeyBindings") as? [String: String] {
+            self.bindings = HotkeyBindings(dictionary: dict)
+        } else {
+            self.bindings = .defaults
+        }
     }
 
     func persist() {
         defaults.set(settings.dictionary, forKey: "captureSettings")
         defaults.set(saveDirectory, forKey: "saveDirectory")
+        defaults.set(bindings.dictionary, forKey: "hotkeyBindings")
     }
 
     /// The user's macOS screenshot folder, or ~/Desktop if it isn't customized.

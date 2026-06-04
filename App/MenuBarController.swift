@@ -1,4 +1,5 @@
 import AppKit
+import CaptureKit
 
 @MainActor
 final class MenuBarController: NSObject {
@@ -15,24 +16,39 @@ final class MenuBarController: NSObject {
         buildMenu()
     }
 
+    private var actionItems: [HotkeyAction: NSMenuItem] = [:]
+
     private func buildMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Capture Area", action: #selector(area), keyEquivalent: "")
-            .target = self
-        menu.addItem(withTitle: "Capture Window", action: #selector(window), keyEquivalent: "")
-            .target = self
-        menu.addItem(withTitle: "Capture Fullscreen", action: #selector(full), keyEquivalent: "")
-            .target = self
-        menu.addItem(withTitle: "Capture Text", action: #selector(captureText), keyEquivalent: "")
-            .target = self
+        func add(_ title: String, _ sel: Selector, _ action: HotkeyAction?) {
+            let item = menu.addItem(withTitle: title, action: sel, keyEquivalent: "")
+            item.target = self
+            if let action { actionItems[action] = item }
+        }
+        add("Capture Area", #selector(area), .captureArea)
+        add("Capture Window", #selector(window), .captureWindow)
+        add("Capture Fullscreen", #selector(full), .captureFullscreen)
+        add("Capture Text", #selector(captureText), .captureText)
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Pin from Clipboard", action: #selector(pinClipboard), keyEquivalent: "")
-            .target = self
+        add("Pin from Clipboard", #selector(pinClipboard), .pinFromClipboard)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
             .target = self
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q").target = self
         statusItem.menu = menu
+    }
+
+    /// Display-only: firing stays Carbon. Menus just show the current combos.
+    func refreshKeyEquivalents(_ bindings: HotkeyBindings) {
+        for (action, item) in actionItems {
+            if let combo = bindings.combo(for: action) {
+                item.keyEquivalent = combo.keyEquivalent
+                item.keyEquivalentModifierMask = NSEvent.ModifierFlags(rawValue: combo.cocoaModifierFlags)
+            } else {
+                item.keyEquivalent = ""
+                item.keyEquivalentModifierMask = []
+            }
+        }
     }
 
     @objc private func area() { coordinator.captureArea() }
