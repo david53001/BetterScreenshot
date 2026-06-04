@@ -10,6 +10,8 @@ public final class HUDController {
 
     public init() {}
 
+    deinit { dismissTask?.cancel() }
+
     public func show(_ message: String, on screen: NSScreen? = NSScreen.main) {
         dismissTask?.cancel()
         panel?.orderOut(nil); panel = nil
