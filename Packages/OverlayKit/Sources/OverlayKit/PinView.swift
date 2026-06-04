@@ -62,7 +62,6 @@ final class PinView: NSView {
     override func mouseExited(with event: NSEvent) { closeButton.isHidden = true }
 
     override func mouseDown(with event: NSEvent) {
-        if event.clickCount == 2 { actions.onCopy(); return }
         guard let window else { return }
         dragStartMouse = NSEvent.mouseLocation
         dragStartFrame = window.frame
@@ -91,13 +90,17 @@ final class PinView: NSView {
             window.setFrame(NSRect(x: dragStartFrame.minX,
                                    y: dragStartFrame.maxY - f.height,
                                    width: f.width, height: f.height), display: true)
-            needsDisplay = true
         case .none:
             break
         }
     }
 
-    override func mouseUp(with event: NSEvent) { dragMode = .none }
+    override func mouseUp(with event: NSEvent) {
+        // Double-click on mouseUp (standard NSView pattern) so a tiny drift
+        // between the two clicks doesn't turn into a window micro-drag.
+        if event.clickCount == 2 { actions.onCopy() }
+        dragMode = .none
+    }
 
     override func scrollWheel(with event: NSEvent) {
         guard let window else { return }
@@ -106,7 +109,6 @@ final class PinView: NSView {
         let f = PinGeometry.zoomedFrame(current: window.frame,
                                         naturalSize: naturalSize, factor: factor)
         window.setFrame(f, display: true)
-        needsDisplay = true
     }
 
     override func rightMouseDown(with event: NSEvent) {

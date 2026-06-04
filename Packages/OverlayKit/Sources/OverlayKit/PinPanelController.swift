@@ -56,8 +56,8 @@ public final class PinPanelController {
             self.panels.removeAll { $0 === panel }
         })
         view.frame = NSRect(origin: .zero, size: frame.size)
-        view.layer?.cornerRadius = style.cornerRadius
         panel.contentView = view
+        view.layer?.cornerRadius = style.cornerRadius
         panel.orderFrontRegardless()
         panels.append(panel)
     }
