@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let settings = SettingsStore()
     private var coordinator: CaptureCoordinator!
     private var menuBar: MenuBarController!
+    private var onboarding: OnboardingController!
     private let hotKeys = HotKeyManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -22,6 +23,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             coordinator?.presentEditor(image)
         }
         menuBar = MenuBarController(coordinator: coordinator)
+
+        // One-button first-run setup (Screen Recording is the only permission).
+        onboarding = OnboardingController()
+        coordinator.presentSetup = { [weak self] in self?.onboarding.show(.needsPermission) }
+        if !PermissionManager.hasScreenRecordingPermission {
+            onboarding.show(.needsPermission)
+        } else if OnboardingController.consumeRelaunchFlag() {
+            onboarding.show(.allSet)   // just relaunched after the grant
+        }
         // Defaults: ⌘⇧4 area, ⌘⇧5 window, ⌘⇧6 fullscreen.
         hotKeys.register(key: "4", command: true, shift: true, option: false, control: false) {
             [weak self] in Task { @MainActor in self?.coordinator.captureArea() }

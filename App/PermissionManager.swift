@@ -7,23 +7,27 @@ enum PermissionManager {
         CGPreflightScreenCaptureAccess()
     }
 
-    /// Triggers the system permission prompt (first call) — returns immediately.
+    /// Triggers the system permission prompt (first call ever) — returns immediately.
     @discardableResult
     static func requestScreenRecordingPermission() -> Bool {
         CGRequestScreenCaptureAccess()
     }
 
-    /// Shown when permission is missing: explains and deep-links to System Settings.
-    static func presentDeniedAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Screen Recording permission needed"
-        alert.informativeText = "BetterScreenshot needs Screen Recording access to capture your screen. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch."
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn {
-            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
-            NSWorkspace.shared.open(url)
-        }
+    /// Deep-link straight to Privacy & Security → Screen Recording.
+    static func openScreenRecordingSettings() {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
+        NSWorkspace.shared.open(url)
+    }
+
+    /// Screen-recording grants only take effect at process start, so the
+    /// onboarding flow relaunches the app once the permission lands. Plain
+    /// `open` (no -n) just activates if a new instance is already starting,
+    /// avoiding duplicates when macOS's own "Quit & Reopen" raced us.
+    static func relaunchApp() {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "sleep 0.5; /usr/bin/open '\(Bundle.main.bundlePath)'"]
+        try? task.run()
+        NSApp.terminate(nil)
     }
 }

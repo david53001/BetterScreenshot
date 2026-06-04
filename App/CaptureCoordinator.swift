@@ -14,6 +14,9 @@ final class CaptureCoordinator {
     /// Filled in by Plan 3 to present the annotation editor. Nil = stub.
     var editorPresenter: ((CGImage) -> Void)?
 
+    /// Set by the app delegate; presents the one-button permission setup window.
+    var presentSetup: (() -> Void)?
+
     private var editorController: EditorWindowController?
 
     func presentEditor(_ image: CGImage) {
@@ -105,11 +108,8 @@ final class CaptureCoordinator {
 
     private func ensurePermission() -> Bool {
         if PermissionManager.hasScreenRecordingPermission { return true }
-        PermissionManager.requestScreenRecordingPermission()
-        if !PermissionManager.hasScreenRecordingPermission {
-            PermissionManager.presentDeniedAlert(); return false
-        }
-        return true
+        presentSetup?()   // one-button setup window owns the whole grant flow
+        return false
     }
 
     private func frontmostWindowID() async -> CGWindowID? {
