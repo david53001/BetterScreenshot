@@ -1,5 +1,6 @@
 import Foundation
 import CaptureKit
+import RecordingKit
 
 final class SettingsStore: ObservableObject {
     @Published var settings: CaptureSettings
@@ -7,6 +8,7 @@ final class SettingsStore: ObservableObject {
     @Published var bindings: HotkeyBindings
     /// Actions whose combo macOS refused to register (not persisted).
     @Published var failedActions: Set<HotkeyAction> = []
+    @Published var recording: RecordingConfig
 
     private let defaults = UserDefaults.standard
 
@@ -25,12 +27,15 @@ final class SettingsStore: ObservableObject {
         } else {
             self.bindings = .defaults
         }
+        let recDict = defaults.dictionary(forKey: "recordingConfig") as? [String: String] ?? [:]
+        self.recording = recDict.isEmpty ? .default : RecordingConfig(dictionary: recDict)
     }
 
     func persist() {
         defaults.set(settings.dictionary, forKey: "captureSettings")
         defaults.set(saveDirectory, forKey: "saveDirectory")
         defaults.set(bindings.dictionary, forKey: "hotkeyBindings")
+        defaults.set(recording.dictionary, forKey: "recordingConfig")
     }
 
     /// The user's macOS screenshot folder, or ~/Desktop if it isn't customized.

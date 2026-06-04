@@ -1,5 +1,6 @@
 import SwiftUI
 import CaptureKit
+import RecordingKit
 
 /// Closures the Shortcuts tab needs from the app layer (AppDelegate owns the
 /// rebind transaction because it touches HotKeyManager + menu + persistence).
@@ -21,6 +22,8 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             ShortcutsTab(store: store, actions: shortcuts)
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
+            RecordingTab(store: store)
+                .tabItem { Label("Recording", systemImage: "record.circle") }
         }
         .frame(width: 480)
         .padding(20)
@@ -129,8 +132,6 @@ private struct ShortcutsTab: View {
                 }
             }
             Divider().padding(.vertical, 4)
-            Text("⇧⌘5 is reserved for Start/Stop Recording (coming soon).")
-                .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Button("Restore Defaults") {
                     actions.restoreDefaults()
@@ -149,5 +150,50 @@ private struct ShortcutsTab: View {
         recordingAction = action
         let isRecording = action != nil
         if wasRecording != isRecording { actions.recordingChanged(isRecording) }
+    }
+}
+
+private struct RecordingTab: View {
+    @ObservedObject var store: SettingsStore
+
+    var body: some View {
+        Form {
+            Picker("Format", selection: bind(\.format)) {
+                Text("MP4 video").tag(RecordingFormat.mp4)
+                Text("GIF").tag(RecordingFormat.gif)
+            }
+            Picker("Frame rate", selection: bind(\.fps)) {
+                Text("30 fps").tag(30)
+                Text("60 fps").tag(60)
+            }
+            Toggle("Record system audio", isOn: bind(\.systemAudio))
+            Toggle("Record microphone", isOn: bind(\.microphone))
+            Toggle("Show camera bubble", isOn: bind(\.camera))
+            Picker("Camera size", selection: bind(\.cameraSize)) {
+                Text("Small").tag(CameraSize.small)
+                Text("Medium").tag(CameraSize.medium)
+            }
+            .disabled(!store.recording.camera)
+            Toggle("Highlight mouse clicks", isOn: bind(\.clickHighlights))
+            Toggle("Show keystrokes", isOn: Binding(
+                get: { store.recording.keystrokeOverlay },
+                set: { newValue in
+                    if newValue && !KeystrokeOverlayController.hasPermission {
+                        KeystrokeOverlayController.requestPermission()
+                        // Stays off until Accessibility is actually granted.
+                        store.recording.keystrokeOverlay = KeystrokeOverlayController.hasPermission
+                    } else {
+                        store.recording.keystrokeOverlay = newValue
+                    }
+                    store.persist()
+                }))
+            Text("Showing keystrokes needs the Accessibility permission.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func bind<V>(_ keyPath: WritableKeyPath<RecordingConfig, V>) -> Binding<V> {
+        Binding(get: { store.recording[keyPath: keyPath] },
+                set: { store.recording[keyPath: keyPath] = $0; store.persist() })
     }
 }
