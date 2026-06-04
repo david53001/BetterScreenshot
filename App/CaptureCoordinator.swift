@@ -141,7 +141,9 @@ final class CaptureCoordinator {
         let actions = PinActions(
             onCopy: { [weak self] in
                 self?.copy(image)
-                self?.hud.show("Copied", on: screen)
+                // Re-resolve at click time: the original display may be gone.
+                let liveScreen = NSScreen.screens.first { $0 === screen } ?? NSScreen.main
+                self?.hud.show("Copied", on: liveScreen)
             },
             onSave: { [weak self] in self?.save(image) })
         pins.pin(image: nsImage,
