@@ -92,8 +92,9 @@ final class OnboardingController: NSWindowController {
                 "BetterScreenshot lives in your menu bar. Capture any time with:"))
             stack.setCustomSpacing(14, after: stack.arrangedSubviews.last!)
             stack.addArrangedSubview(hotkeyRow("⌘⇧4", "Capture an area"))
-            stack.addArrangedSubview(hotkeyRow("⌘⇧5", "Capture a window"))
+            stack.addArrangedSubview(hotkeyRow("⌘⇧5", "Record the screen"))
             stack.addArrangedSubview(hotkeyRow("⌘⇧6", "Capture the full screen"))
+            stack.addArrangedSubview(hotkeyRow("⌘⇧8", "Capture a window"))
             stack.setCustomSpacing(18, after: stack.arrangedSubviews.last!)
             stack.addArrangedSubview(primaryButton("Start Capturing",
                                                    action: #selector(startCapturing)))
