@@ -11,5 +11,6 @@ runTests("CaptureKitTests",
     keyCodeTests +
     captureSettingsTests +
     overlayPositionerTests +
-    tempImageWriterTests
+    tempImageWriterTests +
+    recognitionResolverTests
 )
