@@ -32,6 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else if OnboardingController.consumeRelaunchFlag() {
             onboarding.show(.allSet)   // just relaunched after the grant
         }
+        // Register as a login item once, by default. One-time so we never
+        // fight a user who later disables it (Settings or System Settings).
+        if !UserDefaults.standard.bool(forKey: "didRegisterLaunchAtLogin") {
+            LaunchAtLogin.setEnabled(true)
+            UserDefaults.standard.set(true, forKey: "didRegisterLaunchAtLogin")
+        }
         // Defaults: ⌘⇧4 area, ⌘⇧5 window, ⌘⇧6 fullscreen.
         hotKeys.register(key: "4", command: true, shift: true, option: false, control: false) {
             [weak self] in Task { @MainActor in self?.coordinator.captureArea() }

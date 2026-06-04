@@ -3,9 +3,16 @@ import CaptureKit
 
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
+    @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
     var body: some View {
         Form {
+            Toggle("Launch at login", isOn: $launchAtLogin)
+                .onChange(of: launchAtLogin) { _, newValue in
+                    guard newValue != LaunchAtLogin.isEnabled else { return }
+                    LaunchAtLogin.setEnabled(newValue)
+                    launchAtLogin = LaunchAtLogin.isEnabled  // revert if it failed
+                }
             Picker("After capture", selection: bind(\.afterCapture)) {
                 Text("Show overlay").tag(AfterCaptureBehavior.showOverlay)
                 Text("Copy to clipboard").tag(AfterCaptureBehavior.copyOnly)
@@ -31,6 +38,7 @@ struct SettingsView: View {
         }
         .padding(20)
         .frame(width: 440)
+        .onAppear { launchAtLogin = LaunchAtLogin.isEnabled }
     }
 
     private func bind<V>(_ keyPath: WritableKeyPath<CaptureSettings, V>) -> Binding<V> {
