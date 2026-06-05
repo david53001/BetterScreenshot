@@ -273,9 +273,10 @@ final class RecordingCoordinator {
             return
         }
         let actions = QuickAccessActions(
-            onCopy: {
+            onCopy: { [weak self] in
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.writeObjects([url as NSURL])
+                self?.hud.show("File copied")
             },
             onOpen: { NSWorkspace.shared.open(url) },
             onReveal: { NSWorkspace.shared.activateFileViewerSelecting([url]) },

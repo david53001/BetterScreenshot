@@ -61,6 +61,7 @@ public final class QuickAccessOverlayController: NSObject {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
         let container = NSView(frame: NSRect(origin: .zero, size: size))
         container.wantsLayer = true
@@ -91,7 +92,7 @@ public final class QuickAccessOverlayController: NSObject {
 
         let stack = NSStackView(frame: NSRect(x: 10, y: 8, width: 200, height: 30))
         stack.orientation = .horizontal
-        stack.distribution = .fillEqually
+        stack.distribution = .equalCentering
         stack.spacing = 6
         switch kind {
         case .screenshot:
@@ -132,6 +133,7 @@ public final class QuickAccessOverlayController: NSObject {
         b.imagePosition = .imageOnly
         b.toolTip = tip
         b.setAccessibilityLabel(tip)
+        b.widthAnchor.constraint(equalToConstant: 36).isActive = true
         return b
     }
 

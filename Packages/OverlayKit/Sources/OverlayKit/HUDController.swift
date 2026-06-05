@@ -37,6 +37,7 @@ public final class HUDController {
         panel.hasShadow = true
         panel.ignoresMouseEvents = true
         panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
         let container = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
         container.appearance = NSAppearance(named: .vibrantDark)

@@ -118,7 +118,7 @@ final class CaptureCoordinator {
                               size: NSSize(width: image.width, height: image.height))
         guard let screen = NSScreen.main else { copy(image); save(image); return }
         let actions = QuickAccessActions(
-            onCopy: { [weak self] in self?.copy(image) },
+            onCopy: { [weak self] in self?.copy(image); self?.hud.show("Copied") },
             // The overlay's download button always lands in the macOS screenshot folder.
             onSave: { [weak self] in self?.save(image, to: SettingsStore.systemScreenshotLocation()) },
             onAnnotate: { [weak self] in self?.annotate(image) },
