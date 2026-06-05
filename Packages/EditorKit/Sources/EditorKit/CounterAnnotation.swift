@@ -8,6 +8,13 @@ public struct CounterAnnotation: Annotation {
     public init(number: Int, origin: CGPoint, style: AnnotationStyle = .default) {
         self.number = number; self.origin = origin; self.style = style
     }
+    /// A badge centered on `point` (clicks feel anchored to the cursor).
+    public static func centered(on point: CGPoint, number: Int,
+                                style: AnnotationStyle = .default) -> CounterAnnotation {
+        var c = CounterAnnotation(number: number, origin: point, style: style)
+        c.origin = CGPoint(x: point.x - c.diameter / 2, y: point.y - c.diameter / 2)
+        return c
+    }
     public var diameter: CGFloat { max(28, style.fontSize * 1.6) }
     public func boundingBox() -> CGRect {
         CGRect(origin: origin, size: CGSize(width: diameter, height: diameter))

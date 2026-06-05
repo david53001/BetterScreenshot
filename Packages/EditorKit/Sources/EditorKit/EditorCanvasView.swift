@@ -244,8 +244,9 @@ public final class EditorCanvasView: NSView {
             onTextRequested?(p)
         case .counter:
             snapshot()
-            document.add(CounterAnnotation(number: document.nextCounterNumber(),
-                                           origin: p, style: style))
+            document.add(CounterAnnotation.centered(on: p,
+                                                    number: document.nextCounterNumber(),
+                                                    style: style))
             onStateChange?(); needsDisplay = true
         default:
             inProgress = nil // shape creation happens on drag

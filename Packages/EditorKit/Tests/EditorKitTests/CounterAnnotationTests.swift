@@ -19,4 +19,12 @@ let counterAnnotationTests: [TestCase] = [
         doc.add(CounterAnnotation(number: 1, origin: .zero))
         t.equal(doc.nextCounterNumber(), 2)
     },
+    TestCase("centeredFactoryCentersBadgeOnPoint") { t in
+        let p = CGPoint(x: 100, y: 80)
+        let c = CounterAnnotation.centered(on: p, number: 3)
+        let bb = c.boundingBox()
+        t.approxEqual(Double(bb.midX), 100)
+        t.approxEqual(Double(bb.midY), 80)
+        t.equal(c.number, 3)
+    },
 ]
