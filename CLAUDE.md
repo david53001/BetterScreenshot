@@ -18,6 +18,7 @@ Local Swift packages + a menu-bar app target:
 - `CaptureKit` — ScreenCaptureKit wrapper + pure geometry/crop/encode/filename logic.
 - `OverlayKit` — area-selection overlay + Quick Access thumbnail (`NSPanel`).
 - `EditorKit` — annotation document model + custom `NSView` canvas + tools + flatten-to-image renderer.
+- `HistoryKit` — capture history index/store + restore stack (pure logic + file IO).
 - `App/` (target) — hotkeys, menu bar, settings, and capture→overlay→editor→output orchestration.
 
 **Coordinate convention:** annotations live in base-image pixel space, top-left origin; rendering uses a flipped `NSGraphicsContext` so AppKit drawing (incl. text) is right-side-up.
@@ -37,12 +38,11 @@ Local Swift packages + a menu-bar app target:
 - `CHANGELOG.md` — per-release history.
 
 ## Roadmap (post-v1, each its own spec → plan)
-~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added).
+~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added) · ~~v2.3 capture history~~ (shipped 2026-06-05).
 
 **Next up — specs ready, implement in this order** (for each: `superpowers:writing-plans` from the spec, then execute with `superpowers:subagent-driven-development`; each spec lists its own probes/risks — run probe tasks first, and verify named symbols against live code before planning):
-1. **v2.3 Capture History** — `docs/superpowers/specs/2026-06-05-betterscreenshot-capture-history-design.md`
-2. **v2.4 Recording Controls** (countdown · window target · pause/resume) — `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
-3. **v2.5 Trim Editor** — `docs/superpowers/specs/2026-06-05-betterscreenshot-trim-editor-design.md`
+1. **v2.4 Recording Controls** (countdown · window target · pause/resume) — `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
+2. **v2.5 Trim Editor** — `docs/superpowers/specs/2026-06-05-betterscreenshot-trim-editor-design.md`
 
 **Background/wallpaper styling: dropped by owner decision (2026-06-05) — do not build or re-propose.**
 

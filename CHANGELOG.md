@@ -2,6 +2,22 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.3.0 — 2026-06-05 · Capture history
+
+- **Capture History.** Every screenshot (including copy-only captures that used
+  to vanish with the clipboard) and every finished recording is remembered
+  locally — browse them in the new **History…** window from the menu bar:
+  thumbnail grid, copy / annotate / pin / show-in-Finder / delete per item,
+  double-click to edit (screenshots) or play (recordings).
+- **Restore Recently Closed.** Accidentally ✕-closed (or stack-evicted) Quick
+  Access thumbnails can be brought back from the menu bar; deliberate actions
+  (save, annotate, pin, drag-out) don't count as accidental.
+- **Settings → General → History:** keep-history toggle, 10/50/200 item cap,
+  and Clear History. Retention also prunes entries older than 30 days. All
+  local — history lives in `~/Library/Application Support/BetterScreenshot/History/`.
+- Both new commands are bindable hotkeys (unbound by default) in
+  Settings → Shortcuts.
+
 ## v2.2.0 — 2026-06-05 · Reliability + infra
 
 ### Fixed

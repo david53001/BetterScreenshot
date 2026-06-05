@@ -7,6 +7,7 @@ A free, open-source screenshot and annotation tool for macOS, living in your men
 - **Capture** an area (`⌘⇧4`), a window (`⌘⇧5`), or the full screen (`⌘⇧6`) — the native `⌘⇧4` is disabled while the app runs and restored on quit
 - **Capture Text (`⌘⇧7`)** — on-device OCR + QR decode straight to the clipboard
 - **Quick Access overlay** after capture: drag the thumbnail anywhere, copy, save, or jump into the editor; the last 3 captures stack at the screen corner
+- **Capture History** — every capture and recording is remembered locally (capped + 30-day prune); browse, copy, annotate, pin, or delete from the History window, and restore an accidentally closed thumbnail with Restore Recently Closed
 - **Pin to screen** — float any capture always-on-top (drag, resize, multi-pin)
 - **Annotation editor**: arrow, line, rectangle, ellipse, text, numbered counters, blur & pixelate redaction, crop
   - Undo/redo (`⌘Z` / `⌘⇧Z` / `⌘Y`), drag to select multiple objects, resize handles, bring-to-front / send-to-back
@@ -42,7 +43,7 @@ Optional: run `./scripts/setup-signing.sh` once before building to create a stab
 Run the tests:
 
 ```sh
-./scripts/test.sh    # all four suites: CaptureKit, OverlayKit, EditorKit, RecordingKit
+./scripts/test.sh    # all five suites: CaptureKit, OverlayKit, EditorKit, RecordingKit, HistoryKit
 ```
 
 The design docs and implementation plans the app was built from live in [`docs/`](docs/); release history is in [`CHANGELOG.md`](CHANGELOG.md).
