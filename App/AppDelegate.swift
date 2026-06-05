@@ -1,5 +1,6 @@
 import AppKit
 import CaptureKit
+import OverlayKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -13,11 +14,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        coordinator = CaptureCoordinator(settings: settings)
+        // One stack for screenshot AND recording thumbnails so they never overlap.
+        let quickAccess = QuickAccessStackController()
+        coordinator = CaptureCoordinator(settings: settings, quickAccess: quickAccess)
         coordinator.editorPresenter = { [weak coordinator] image in
             coordinator?.presentEditor(image)
         }
-        recordingCoordinator = RecordingCoordinator(settings: settings)
+        recordingCoordinator = RecordingCoordinator(settings: settings, quickAccess: quickAccess)
         recordingCoordinator.onStateChange = { [weak self] recording, elapsed in
             self?.menuBar.setRecording(recording, elapsed: elapsed)
         }

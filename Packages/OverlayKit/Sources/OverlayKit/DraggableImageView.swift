@@ -8,6 +8,9 @@ public final class DraggableImageView: NSImageView, NSDraggingSource {
     public var fileURLProvider: (() -> URL?)?
     /// Called when a drag finishes. `true` if it was actually dropped somewhere.
     public var onDragEnded: ((Bool) -> Void)?
+    /// Temp-PNG drags clean up after themselves; set false when the dragged
+    /// URL is a real saved file (e.g. a recording) that must survive.
+    public var deletesFileAfterDrag = true
 
     private var mouseDownPoint: NSPoint?
     private var draggedTempDir: URL?
@@ -40,7 +43,7 @@ public final class DraggableImageView: NSImageView, NSDraggingSource {
         let droppedSomewhere = operation != []
         // Clean up the temp file a few seconds later — long enough for the drop
         // target to have read it.
-        if let dir = draggedTempDir {
+        if deletesFileAfterDrag, let dir = draggedTempDir {
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
                 try? FileManager.default.removeItem(at: dir)
             }

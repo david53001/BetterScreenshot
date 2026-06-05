@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import ScreenCaptureKit
 import CaptureKit
 import OverlayKit
@@ -15,6 +16,9 @@ final class RecordingCoordinator {
     private let clicks = ClickHighlighter()
     private let keystrokes = KeystrokeOverlayController()
     private let hud = HUDController()
+    // Shared with CaptureCoordinator: finished recordings join the same
+    // bottom-corner thumbnail stack that screenshots use.
+    private let quickAccess: QuickAccessStackController
     private var state = RecorderState.idle
     private var timer: Timer?
     private var isTerminating = false
@@ -25,8 +29,9 @@ final class RecordingCoordinator {
     /// Menu-bar state: (recording?, elapsed string). Called on every change/tick.
     var onStateChange: ((Bool, String?) -> Void)?
 
-    init(settings: SettingsStore) {
+    init(settings: SettingsStore, quickAccess: QuickAccessStackController) {
         self.settings = settings
+        self.quickAccess = quickAccess
         self.strip = RecordStripController(store: settings)
         strip.onFullScreen = { [weak self] in self?.beginFullScreen() }
         strip.onArea = { [weak self] in self?.beginAreaSelection() }
@@ -182,7 +187,7 @@ final class RecordingCoordinator {
                 do {
                     try await GIFExporter.export(mp4: mp4, to: gifURL)
                     try? FileManager.default.removeItem(at: mp4)
-                    hud.show("GIF saved")
+                    await presentQuickAccess(for: gifURL)
                 } catch {
                     // Keep the MP4 so the recording isn't lost.
                     let mp4Name = FileNamer.fileName(for: Date(), ext: "mp4", prefix: "Recording")
@@ -195,8 +200,8 @@ final class RecordingCoordinator {
                 let mp4Name = FileNamer.fileName(for: Date(), ext: "mp4", prefix: "Recording")
                 try? FileManager.default.moveItem(
                     at: mp4, to: settings.saveDirectory.appendingPathComponent(mp4Name))
-            } else {
-                hud.show("Recording saved")
+            } else if !isTerminating {
+                await presentQuickAccess(for: mp4)
             }
         } catch {
             if let tempOutputURL { try? FileManager.default.removeItem(at: tempOutputURL) }
@@ -249,5 +254,43 @@ final class RecordingCoordinator {
 
     private func notify() {
         onStateChange?(isRecording, state.elapsedString(now: Date()))
+    }
+
+    /// Post-recording feedback: the same bottom-corner thumbnail screenshots
+    /// get, in its recording variant. Falls back to a HUD if no frame could
+    /// be extracted (e.g. zero-length file).
+    private func presentQuickAccess(for url: URL) async {
+        guard let image = await Self.thumbnail(for: url), let screen = NSScreen.main else {
+            hud.show("Recording saved")
+            return
+        }
+        let actions = QuickAccessActions(
+            onCopy: {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.writeObjects([url as NSURL])
+            },
+            onOpen: { NSWorkspace.shared.open(url) },
+            onReveal: { NSWorkspace.shared.activateFileViewerSelecting([url]) },
+            fileURLForDrag: { url })
+        let corner = settings.settings.overlayCorner
+        // visibleFrame excludes the Dock and menu bar, so the overlay sits above
+        // the Dock instead of being tucked into the very bottom corner behind it.
+        let frame = screen.visibleFrame
+        quickAccess.present(image: image, kind: .recording, actions: actions) { index in
+            OverlayPositioner.stackedOrigin(corner: corner,
+                                            overlaySize: CGSize(width: 220, height: 168),
+                                            screenFrame: frame, margin: 24, index: index)
+        }
+    }
+
+    /// First frame of the saved recording (GIFs decode directly; MP4s via
+    /// AVAssetImageGenerator).
+    private static func thumbnail(for url: URL) async -> NSImage? {
+        if url.pathExtension.lowercased() == "gif" { return NSImage(contentsOf: url) }
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 640, height: 640)
+        guard let cg = try? await generator.image(at: .zero).image else { return nil }
+        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 }

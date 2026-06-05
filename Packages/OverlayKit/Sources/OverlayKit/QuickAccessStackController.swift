@@ -13,7 +13,8 @@ public final class QuickAccessStackController {
 
     public init() {}
 
-    public func present(image: NSImage, actions: QuickAccessActions,
+    public func present(image: NSImage, kind: QuickAccessKind = .screenshot,
+                        actions: QuickAccessActions,
                         originForIndex: @escaping (Int) -> CGPoint) {
         self.originForIndex = originForIndex
         if entries.count == maxCount, let oldest = entries.last {
@@ -27,7 +28,7 @@ public final class QuickAccessStackController {
             self.restack()
         }
         entries.insert(controller, at: 0)
-        controller.present(image: image, at: originForIndex(0), actions: actions)
+        controller.present(image: image, at: originForIndex(0), kind: kind, actions: actions)
         restack()
     }
 

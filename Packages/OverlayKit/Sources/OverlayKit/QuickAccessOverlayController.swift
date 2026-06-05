@@ -5,14 +5,26 @@ public struct QuickAccessActions {
     public let onSave: () -> Void
     public let onAnnotate: () -> Void
     public let onPin: () -> Void
+    public let onOpen: () -> Void
+    public let onReveal: () -> Void
     public let fileURLForDrag: () -> URL?
-    public init(onCopy: @escaping () -> Void, onSave: @escaping () -> Void,
-                onAnnotate: @escaping () -> Void, onPin: @escaping () -> Void,
-                fileURLForDrag: @escaping () -> URL?) {
+    public init(onCopy: @escaping () -> Void = {}, onSave: @escaping () -> Void = {},
+                onAnnotate: @escaping () -> Void = {}, onPin: @escaping () -> Void = {},
+                onOpen: @escaping () -> Void = {}, onReveal: @escaping () -> Void = {},
+                fileURLForDrag: @escaping () -> URL? = { nil }) {
         self.onCopy = onCopy; self.onSave = onSave
         self.onAnnotate = onAnnotate; self.onPin = onPin
+        self.onOpen = onOpen; self.onReveal = onReveal
         self.fileURLForDrag = fileURLForDrag
     }
+}
+
+/// What the overlay represents — drives the button row, background shade, and
+/// drag semantics (screenshots drag disposable temp PNGs; recordings drag the
+/// real saved file).
+public enum QuickAccessKind {
+    case screenshot
+    case recording
 }
 
 /// A floating post-capture thumbnail. It is PERSISTENT: it never auto-dismisses.
@@ -34,7 +46,8 @@ public final class QuickAccessOverlayController: NSObject {
     public override init() { super.init() }
 
     /// Presents the overlay at the given screen origin (Cocoa bottom-left coords).
-    public func present(image: NSImage, at origin: CGPoint, actions: QuickAccessActions) {
+    public func present(image: NSImage, at origin: CGPoint,
+                        kind: QuickAccessKind = .screenshot, actions: QuickAccessActions) {
         dismiss()
         self.actions = actions
 
@@ -51,7 +64,13 @@ public final class QuickAccessOverlayController: NSObject {
 
         let container = NSView(frame: NSRect(origin: .zero, size: size))
         container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        // Recordings get a blue-tinted card so they read differently from
+        // screenshot overlays at a glance.
+        let background = kind == .recording
+            ? NSColor.systemBlue.blended(withFraction: 0.85, of: .windowBackgroundColor)
+                ?? .windowBackgroundColor
+            : NSColor.windowBackgroundColor
+        container.layer?.backgroundColor = background.cgColor
         container.layer?.cornerRadius = 12
 
         let thumb = DraggableImageView(frame: NSRect(x: 10, y: 46, width: 200, height: 112))
@@ -61,8 +80,10 @@ public final class QuickAccessOverlayController: NSObject {
         thumb.layer?.cornerRadius = 6
         thumb.layer?.masksToBounds = true
         thumb.fileURLProvider = actions.fileURLForDrag
-        // Dragging the thumbnail out makes it a temp file that self-deletes; once
-        // it has been dropped somewhere, the overlay goes away.
+        // Screenshots drag a self-deleting temp PNG; recordings drag the real
+        // saved file, which must NOT be cleaned up after the drop.
+        thumb.deletesFileAfterDrag = kind == .screenshot
+        // Once it has been dropped somewhere, the overlay goes away.
         thumb.onDragEnded = { [weak self] droppedSomewhere in
             if droppedSomewhere { self?.dismiss() }
         }
@@ -72,10 +93,17 @@ public final class QuickAccessOverlayController: NSObject {
         stack.orientation = .horizontal
         stack.distribution = .fillEqually
         stack.spacing = 6
-        stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy", #selector(copyAction)))
-        stack.addArrangedSubview(iconButton("pencil.tip.crop.circle", tip: "Edit", #selector(annotateAction)))
-        stack.addArrangedSubview(iconButton("pin", tip: "Pin to screen", #selector(pinAction)))
-        stack.addArrangedSubview(iconButton("square.and.arrow.down", tip: "Save to screenshots", #selector(saveAction)))
+        switch kind {
+        case .screenshot:
+            stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy", #selector(copyAction)))
+            stack.addArrangedSubview(iconButton("pencil.tip.crop.circle", tip: "Edit", #selector(annotateAction)))
+            stack.addArrangedSubview(iconButton("pin", tip: "Pin to screen", #selector(pinAction)))
+            stack.addArrangedSubview(iconButton("square.and.arrow.down", tip: "Save to screenshots", #selector(saveAction)))
+        case .recording:
+            stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy file", #selector(copyAction)))
+            stack.addArrangedSubview(iconButton("play.fill", tip: "Open", #selector(openAction)))
+            stack.addArrangedSubview(iconButton("folder", tip: "Show in Finder", #selector(revealAction)))
+        }
         stack.addArrangedSubview(iconButton("xmark", tip: "Close", #selector(closeAction)))
         container.addSubview(stack)
 
@@ -121,6 +149,18 @@ public final class QuickAccessOverlayController: NSObject {
         let a = actions
         dismiss()
         a?.onPin()
+    }
+    // Opening the recording hands off to the default player.
+    @objc private func openAction() {
+        let a = actions
+        dismiss()
+        a?.onOpen()
+    }
+    // Revealing in Finder is the recording's "I know where it lives now".
+    @objc private func revealAction() {
+        let a = actions
+        dismiss()
+        a?.onReveal()
     }
     @objc private func closeAction() { dismiss() }
 }

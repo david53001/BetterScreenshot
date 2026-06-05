@@ -2,6 +2,16 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.1-recording-feedback — 2026-06-05
+
+- **Recording thumbnail.** Finished recordings now show the same bottom-corner
+  Quick Access thumbnail screenshots get — blue-tinted so it reads as a recording —
+  with Copy file / Open / Show in Finder buttons and drag-out of the saved file.
+  Recording and screenshot overlays share one stack, so they never overlap.
+- **Record strip toggle feedback.** The mic, system-audio, and camera buttons now
+  turn accent-blue while enabled (like the MP4/GIF selector), so you can see at a
+  glance what the recording will include.
+
 ## v2.0-recording — 2026-06-04
 
 - **Screen recording (P2).** ⌘⇧5 is a smart toggle: press to open the record strip

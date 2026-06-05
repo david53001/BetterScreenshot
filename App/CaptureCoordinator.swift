@@ -9,7 +9,9 @@ final class CaptureCoordinator {
     private let service = CaptureService()
     private let settings: SettingsStore
     private let overlay = SelectionOverlayController()
-    private let quickAccess = QuickAccessStackController()
+    // Shared with RecordingCoordinator so screenshot and recording overlays
+    // stack together at the corner instead of overlapping.
+    private let quickAccess: QuickAccessStackController
     private let hud = HUDController()
     private let pins = PinPanelController()
 
@@ -32,7 +34,10 @@ final class CaptureCoordinator {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    init(settings: SettingsStore) { self.settings = settings }
+    init(settings: SettingsStore, quickAccess: QuickAccessStackController) {
+        self.settings = settings
+        self.quickAccess = quickAccess
+    }
 
     func captureArea() {
         guard ensurePermission() else { return }

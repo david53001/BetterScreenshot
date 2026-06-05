@@ -42,6 +42,7 @@ final class RecordStripController {
             b.bezelStyle = .rounded
             b.state = state ? .on : .off
             b.toolTip = tip
+            Self.tint(b)
             return b
         }
         let mic = toggle("mic", "Record microphone", store.recording.microphone,
@@ -90,11 +91,22 @@ final class RecordStripController {
     }
     @objc private func micChanged(_ sender: NSButton) {
         store.recording.microphone = sender.state == .on; store.persist()
+        Self.tint(sender)
     }
     @objc private func sysChanged(_ sender: NSButton) {
         store.recording.systemAudio = sender.state == .on; store.persist()
+        Self.tint(sender)
     }
     @objc private func camChanged(_ sender: NSButton) {
         store.recording.camera = sender.state == .on; store.persist()
+        Self.tint(sender)
+    }
+
+    /// Accent bezel + white glyph while on — mirrors the segmented control's
+    /// selected look so the toggles read at a glance.
+    private static func tint(_ button: NSButton) {
+        let on = button.state == .on
+        button.bezelColor = on ? .controlAccentColor : nil
+        button.contentTintColor = on ? .white : nil
     }
 }
