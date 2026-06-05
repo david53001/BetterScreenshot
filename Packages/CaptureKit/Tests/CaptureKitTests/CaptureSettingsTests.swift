@@ -31,4 +31,16 @@ let captureSettingsTests: [TestCase] = [
         let restored = CaptureSettings(dictionary: s.dictionary)
         t.equal(restored, s)
     },
+    TestCase("historyDefaults") { t in
+        let s = CaptureSettings.default
+        t.isTrue(s.historyEnabled)
+        t.equal(s.historyCap, 50)
+    },
+    TestCase("roundTripsHistoryFields") { t in
+        var s = CaptureSettings.default
+        s.historyEnabled = false
+        s.historyCap = 200
+        let restored = CaptureSettings(dictionary: s.dictionary)
+        t.equal(restored, s)
+    },
 ]

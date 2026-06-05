@@ -114,8 +114,16 @@ let hotkeyBindingsTests: [TestCase] = [
         t.equal(HotkeyAction.record.defaultCombo, HotkeyCombo(keyCode: 23, modifiers: cmdShift)) // ⌘⇧5
         t.equal(HotkeyBindings.defaults.combo(for: .record),
                 HotkeyCombo(keyCode: 23, modifiers: cmdShift))
-        // record comes last in allCases (menu/settings row order).
-        t.equal(HotkeyAction.allCases.last, .record)
+        // history actions come after record in allCases (menu/settings row order).
+        t.equal(HotkeyAction.allCases.last, .restoreRecentlyClosed)
+    },
+    TestCase("historyActionsUnboundByDefault") { t in
+        t.isNil(HotkeyAction.openHistory.defaultCombo)
+        t.isNil(HotkeyAction.restoreRecentlyClosed.defaultCombo)
+        t.equal(HotkeyAction.openHistory.title, "Open History")
+        t.equal(HotkeyAction.restoreRecentlyClosed.title, "Restore Recently Closed")
+        t.isNil(HotkeyBindings.defaults.combo(for: .openHistory))
+        t.isNil(HotkeyBindings.defaults.combo(for: .restoreRecentlyClosed))
     },
     TestCase("unboundSentinelPersistence") { t in
         // Explicit clear persists as "unbound" so it survives upgrades…
