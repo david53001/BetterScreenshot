@@ -11,7 +11,7 @@ A **free, local macOS clone of CleanShot X** (screenshot + screen-recording tool
 - Swift 5.9+, **SwiftUI + AppKit hybrid** (SwiftUI for settings/menus; AppKit `NSPanel`/custom `NSView` for overlays + the editor canvas).
 - ScreenCaptureKit (capture/recording), Vision (OCR, later), CoreImage (blur/pixelate), Carbon `RegisterEventHotKey` (global hotkeys — avoids the Accessibility prompt).
 - **Build:** SwiftPM — `swift build`, with `scripts/build-app.sh` assembling `dist/BetterScreenshot.app` (CLT-only, no Xcode; see `docs/BUILD-NOTES.md`). Library modules are local Swift packages under `Packages/`, tested via TestKit executable runners — run all suites with `scripts/test.sh`.
-- **Testing:** TDD on pure logic (geometry, encode, model, renderer) via XCTest; system/UI behavior is manually verified against checklists in the plans.
+- **Testing:** TDD on pure logic (geometry, encode, model, renderer) via the local TestKit harness; system/UI behavior is manually verified against checklists in the plans.
 
 ## Architecture (v1)
 Local Swift packages + a menu-bar app target:
