@@ -56,6 +56,9 @@ public final class HistoryStore {
             try thumb.write(to: directory.appendingPathComponent(thumbName), options: .atomic)
         } catch {
             NSLog("History: couldn't write files: \(error)")
+            // The PNG may have landed before the thumb write failed — don't
+            // leave a multi-MB orphan behind.
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(imageName))
             return nil
         }
         let entry = HistoryEntry(id: id, kind: .screenshot, date: date,
