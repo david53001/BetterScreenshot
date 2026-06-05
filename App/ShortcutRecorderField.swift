@@ -53,7 +53,11 @@ struct ShortcutRecorderField: NSViewRepresentable {
                     closeObserver = NotificationCenter.default.addObserver(
                         forName: NSWindow.willCloseNotification, object: window, queue: .main
                     ) { [weak self] _ in
-                        Task { @MainActor in self?.parent.isRecording = false }
+                        // Rebind strongly: older Swift compilers (5.10, the CI
+                        // toolchain) reject referencing a weak `var` capture
+                        // inside the nested concurrent Task.
+                        guard let self else { return }
+                        Task { @MainActor in self.parent.isRecording = false }
                     }
                 }
             } else if !on, monitor != nil {
