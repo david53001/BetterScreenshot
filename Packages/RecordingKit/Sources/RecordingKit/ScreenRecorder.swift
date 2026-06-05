@@ -118,11 +118,13 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         guard let writer, let outputURL else { throw RecorderError.notRecording }
         if let stream { try? await stream.stopCapture() }
         micCapturer?.stop()
-        // Let in-flight appends drain before finishing.
-        sampleQueue.sync {}
-        videoInput?.markAsFinished()
-        systemAudioInput?.markAsFinished()
-        micInput?.markAsFinished()
+        // Finish on the sample queue so an in-flight append can't land after
+        // markAsFinished (AVAssetWriterInput.append traps post-finish).
+        sampleQueue.sync {
+            videoInput?.markAsFinished()
+            systemAudioInput?.markAsFinished()
+            micInput?.markAsFinished()
+        }
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             writer.finishWriting { cont.resume() }
         }
