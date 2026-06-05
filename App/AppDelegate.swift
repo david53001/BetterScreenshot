@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController!
     private var onboarding: OnboardingController!
     private var settingsWindow: SettingsWindowController!
+    private var historyWindow: HistoryWindowController!
     private let hotKeys = HotKeyManager()
     private var history: HistoryService!
 
@@ -25,6 +26,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordingCoordinator = RecordingCoordinator(settings: settings, quickAccess: quickAccess)
         coordinator.history = history
         recordingCoordinator.history = history
+        historyWindow = HistoryWindowController(history: history, actions: HistoryWindowActions(
+            annotate: { [weak self] image in self?.coordinator.annotate(image) },
+            pin: { [weak self] image in self?.coordinator.pin(image) }))
         recordingCoordinator.onStateChange = { [weak self] recording, elapsed in
             self?.menuBar.setRecording(recording, elapsed: elapsed)
         }
