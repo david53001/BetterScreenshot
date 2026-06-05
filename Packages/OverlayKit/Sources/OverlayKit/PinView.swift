@@ -31,6 +31,7 @@ final class PinView: NSView {
                                     accessibilityDescription: "Close pin")
         closeButton.isBordered = false
         closeButton.imagePosition = .imageOnly
+        closeButton.setAccessibilityLabel("Close pin")
         closeButton.contentTintColor = .white
         closeButton.target = self
         closeButton.action = #selector(closeTapped)

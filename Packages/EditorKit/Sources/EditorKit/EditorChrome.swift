@@ -28,6 +28,7 @@ final class IconToolButton: NSButton {
             .withSymbolConfiguration(cfg)
         image?.isTemplate = true
         toolTip = tip
+        setAccessibilityLabel(tip)
         self.target = target
         self.action = action
         updateTint()

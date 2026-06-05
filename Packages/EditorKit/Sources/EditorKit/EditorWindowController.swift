@@ -315,6 +315,7 @@ public final class EditorWindowController: NSWindowController {
         b.imagePosition = .imageOnly
         b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tip)
         b.toolTip = tip
+        b.setAccessibilityLabel(tip)
         b.target = self
         b.action = action
         NSLayoutConstraint.activate([

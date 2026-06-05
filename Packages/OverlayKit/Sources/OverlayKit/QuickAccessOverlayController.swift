@@ -131,6 +131,7 @@ public final class QuickAccessOverlayController: NSObject {
             ?? NSImage(size: NSSize(width: 1, height: 1))
         b.imagePosition = .imageOnly
         b.toolTip = tip
+        b.setAccessibilityLabel(tip)
         return b
     }
 

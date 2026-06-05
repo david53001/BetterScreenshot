@@ -42,6 +42,7 @@ final class RecordStripController {
             b.bezelStyle = .rounded
             b.state = state ? .on : .off
             b.toolTip = tip
+            b.setAccessibilityLabel(tip)
             Self.tint(b)
             return b
         }
@@ -56,6 +57,7 @@ final class RecordStripController {
                                              accessibilityDescription: "Cancel")!,
                               target: self, action: #selector(cancelTapped))
         cancel.isBordered = false
+        cancel.setAccessibilityLabel("Cancel")
 
         for v in [full, area, format, mic, sys, cam, cancel] { strip.addArrangedSubview(v) }
 
