@@ -105,7 +105,7 @@ final class RecordingCoordinator {
         // A ⌘⇧5 cancel can land while the selection overlay or permission prompts
         // were up — only proceed if we're still armed.
         guard case .armed = state else { return }
-        let config = settings.recording
+        var config = settings.recording
         guard let displayID = screen.deviceDescription[
                 NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else {
             state.transition(.reset)
@@ -134,8 +134,10 @@ final class RecordingCoordinator {
             pixelSize.width = (pixelSize.width / 2).rounded(.down) * 2
             pixelSize.height = (pixelSize.height / 2).rounded(.down) * 2
 
-            if config.microphone {
-                _ = await MicCapturer.ensurePermission()
+            if config.microphone, await MicCapturer.ensurePermission() == false {
+                // Denied: record without a mic track instead of writing an empty one.
+                config.microphone = false
+                hud.show("Mic access denied — recording without microphone", on: screen)
             }
             if config.camera, await CameraBubbleController.ensurePermission() {
                 bubble.show(near: globalRect ?? screen.frame, on: screen,
@@ -152,6 +154,9 @@ final class RecordingCoordinator {
                 : settings.saveDirectory.appendingPathComponent(name)
             tempOutputURL = config.format == .gif ? url : nil
 
+            // The chosen folder may have been deleted/renamed since it was set.
+            try FileManager.default.createDirectory(at: settings.saveDirectory,
+                                                    withIntermediateDirectories: true)
             try await recorder.start(filter: filter, pixelSize: pixelSize,
                                      sourceRect: sourceRect, config: config, outputURL: url)
             guard state.transition(.begin(Date())) else {
@@ -177,6 +182,9 @@ final class RecordingCoordinator {
         stopTimer()
         notify()
         let config = settings.recording
+        // GIF exports and MP4 fallbacks land in the save folder — make sure it exists.
+        try? FileManager.default.createDirectory(at: settings.saveDirectory,
+                                                 withIntermediateDirectories: true)
         do {
             let mp4 = try await recorder.stop()
             tearDownPanels()
