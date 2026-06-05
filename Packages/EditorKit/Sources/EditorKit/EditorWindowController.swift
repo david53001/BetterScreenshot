@@ -83,6 +83,9 @@ public final class EditorWindowController: NSWindowController {
 
         window.backgroundColor = backdrop
         buildUI()
+        // Delete / [ / ] are handled in the canvas's keyDown — make it the
+        // first responder up front instead of requiring a click first.
+        window.initialFirstResponder = canvas
         canvas.onStateChange = { [weak self] in self?.refreshChrome() }
         selectTool(.arrow)
     }

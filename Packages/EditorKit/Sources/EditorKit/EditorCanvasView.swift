@@ -442,6 +442,7 @@ public final class EditorCanvasView: NSView {
     @objc private func commitText(_ sender: NSTextField) {
         let text = sender.stringValue
         sender.removeFromSuperview(); activeField = nil
+        window?.makeFirstResponder(self)
         guard !text.isEmpty else { needsDisplay = true; return }
         insert(TextAnnotation(text: text, origin: textImageOrigin, style: style))
     }
