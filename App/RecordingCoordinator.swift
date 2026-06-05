@@ -28,6 +28,8 @@ final class RecordingCoordinator {
     var presentSetup: (() -> Void)?
     /// Menu-bar state: (recording?, elapsed string). Called on every change/tick.
     var onStateChange: ((Bool, String?) -> Void)?
+    /// Set by the app delegate; nil until then (history silently skipped).
+    var history: HistoryService?
 
     init(settings: SettingsStore, quickAccess: QuickAccessStackController) {
         self.settings = settings
@@ -195,21 +197,23 @@ final class RecordingCoordinator {
                 do {
                     try await GIFExporter.export(mp4: mp4, to: gifURL)
                     try? FileManager.default.removeItem(at: mp4)
-                    await presentQuickAccess(for: gifURL)
+                    await finishRecording(at: gifURL)
                 } catch {
                     // Keep the MP4 so the recording isn't lost.
                     let mp4Name = FileNamer.fileName(for: Date(), ext: "mp4", prefix: "Recording")
                     let dest = settings.saveDirectory.appendingPathComponent(mp4Name)
                     try? FileManager.default.moveItem(at: mp4, to: dest)
+                    await finishRecording(at: dest, showCard: false)
                     hud.show("Saved as MP4 (GIF conversion failed)")
                 }
             } else if config.format == .gif {
                 // Quitting: no time for conversion — keep the MP4 so nothing is lost.
                 let mp4Name = FileNamer.fileName(for: Date(), ext: "mp4", prefix: "Recording")
-                try? FileManager.default.moveItem(
-                    at: mp4, to: settings.saveDirectory.appendingPathComponent(mp4Name))
-            } else if !isTerminating {
-                await presentQuickAccess(for: mp4)
+                let dest = settings.saveDirectory.appendingPathComponent(mp4Name)
+                try? FileManager.default.moveItem(at: mp4, to: dest)
+                await finishRecording(at: dest, showCard: false)
+            } else {
+                await finishRecording(at: mp4, showCard: !isTerminating)
             }
         } catch {
             if let tempOutputURL { try? FileManager.default.removeItem(at: tempOutputURL) }
@@ -264,14 +268,26 @@ final class RecordingCoordinator {
         onStateChange?(isRecording, state.elapsedString(now: Date()))
     }
 
-    /// Post-recording feedback: the same bottom-corner thumbnail screenshots
-    /// get, in its recording variant. Falls back to a HUD if no frame could
-    /// be extracted (e.g. zero-length file).
-    private func presentQuickAccess(for url: URL) async {
-        guard let image = await Self.thumbnail(for: url), let screen = NSScreen.main else {
-            hud.show("Recording saved")
+    /// Post-save tail for every finished recording: add it to capture history,
+    /// then show the bottom-corner thumbnail card (suppressed while quitting
+    /// and on GIF-fallback saves, which keep their explanatory HUD). Falls
+    /// back to a HUD when no frame could be extracted (e.g. zero-length file).
+    private func finishRecording(at url: URL, showCard: Bool = true) async {
+        guard let image = await Self.thumbnail(for: url) else {
+            if showCard { hud.show("Recording saved") }
             return
         }
+        let historyID = history?.recordRecording(fileURL: url, thumbnailSource: image)
+        if showCard { presentCard(for: url, image: image, historyID: historyID) }
+    }
+
+    /// Re-presents a card for a history entry (Restore Recently Closed).
+    func presentCardFromHistory(url: URL, image: NSImage, historyID: UUID) {
+        presentCard(for: url, image: image, historyID: historyID)
+    }
+
+    private func presentCard(for url: URL, image: NSImage, historyID: UUID?) {
+        guard let screen = NSScreen.main else { return }
         let actions = QuickAccessActions(
             onCopy: { [weak self] in
                 NSPasteboard.general.clearContents()
@@ -285,7 +301,12 @@ final class RecordingCoordinator {
         // visibleFrame excludes the Dock and menu bar, so the overlay sits above
         // the Dock instead of being tucked into the very bottom corner behind it.
         let frame = screen.visibleFrame
-        quickAccess.present(image: image, kind: .recording, actions: actions) { index in
+        quickAccess.present(image: image, kind: .recording, actions: actions,
+                            onDismissed: { [weak self] reason in
+            if reason == .closed || reason == .evicted {
+                self?.history?.noteOverlayClosed(historyID: historyID)
+            }
+        }) { index in
             OverlayPositioner.stackedOrigin(corner: corner,
                                             overlaySize: CGSize(width: 220, height: 168),
                                             screenFrame: frame, margin: 24, index: index)

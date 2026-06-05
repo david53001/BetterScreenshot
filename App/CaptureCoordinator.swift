@@ -21,6 +21,9 @@ final class CaptureCoordinator {
     /// Set by the app delegate; presents the one-button permission setup window.
     var presentSetup: (() -> Void)?
 
+    /// Set by the app delegate; nil until then (history silently skipped).
+    var history: HistoryService?
+
     private var editorController: EditorWindowController?
 
     func presentEditor(_ image: CGImage) {
@@ -105,15 +108,17 @@ final class CaptureCoordinator {
     }
 
     private func handle(_ image: CGImage, sourceRect: CGRect?) {
+        // Silent bookkeeping first, so even copy-only captures are recoverable.
+        let historyID = history?.recordScreenshot(image)
         switch settings.settings.afterCapture {
         case .copyOnly:    copy(image)
         case .saveOnly:    save(image)
         case .copyAndSave: copy(image); save(image)
-        case .showOverlay: presentOverlay(image, sourceRect: sourceRect)
+        case .showOverlay: presentOverlay(image, sourceRect: sourceRect, historyID: historyID)
         }
     }
 
-    private func presentOverlay(_ image: CGImage, sourceRect: CGRect?) {
+    private func presentOverlay(_ image: CGImage, sourceRect: CGRect?, historyID: UUID?) {
         let nsImage = NSImage(cgImage: image,
                               size: NSSize(width: image.width, height: image.height))
         guard let screen = NSScreen.main else { copy(image); save(image); return }
@@ -128,11 +133,21 @@ final class CaptureCoordinator {
         // visibleFrame excludes the Dock and menu bar, so the overlay sits above
         // the Dock instead of being tucked into the very bottom corner behind it.
         let frame = screen.visibleFrame
-        quickAccess.present(image: nsImage, actions: actions) { index in
+        quickAccess.present(image: nsImage, actions: actions, onDismissed: { [weak self] reason in
+            // ✕-close and eviction are "accidental" — deliberate actions aren't restorable.
+            if reason == .closed || reason == .evicted {
+                self?.history?.noteOverlayClosed(historyID: historyID)
+            }
+        }) { index in
             OverlayPositioner.stackedOrigin(corner: corner,
                                             overlaySize: CGSize(width: 220, height: 168),
                                             screenFrame: frame, margin: 24, index: index)
         }
+    }
+
+    /// Re-presents a Quick Access card for a history entry (Restore Recently Closed).
+    func presentOverlayFromHistory(_ image: CGImage, historyID: UUID) {
+        presentOverlay(image, sourceRect: nil, historyID: historyID)
     }
 
     /// Plan 3 replaces the stub body via `editorPresenter`.

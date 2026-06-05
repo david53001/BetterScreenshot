@@ -11,16 +11,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboarding: OnboardingController!
     private var settingsWindow: SettingsWindowController!
     private let hotKeys = HotKeyManager()
+    private var history: HistoryService!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         // One stack for screenshot AND recording thumbnails so they never overlap.
         let quickAccess = QuickAccessStackController()
+        history = HistoryService(settings: settings)
         coordinator = CaptureCoordinator(settings: settings, quickAccess: quickAccess)
         coordinator.editorPresenter = { [weak coordinator] image in
             coordinator?.presentEditor(image)
         }
         recordingCoordinator = RecordingCoordinator(settings: settings, quickAccess: quickAccess)
+        coordinator.history = history
+        recordingCoordinator.history = history
         recordingCoordinator.onStateChange = { [weak self] recording, elapsed in
             self?.menuBar.setRecording(recording, elapsed: elapsed)
         }
