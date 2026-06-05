@@ -2,6 +2,39 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.2.0 — 2026-06-05 · Reliability + infra
+
+### Fixed
+- **Screenshot save failures are now visible.** A HUD toast appears when a save fails
+  (e.g. disk full, permission denied); if the configured save folder is missing the app
+  creates it automatically — previously a moved or deleted folder lost the capture silently.
+- **Capture / Capture Text failures surface a HUD** instead of failing silently.
+- **Recordings: save folder is auto-created** on start. Denied microphone permission now
+  records without a mic track and shows a HUD explaining this — previously it wrote a
+  silent empty audio track.
+- **Fixed a race between recording stop and in-flight frames** that could crash the
+  AVAssetWriter.
+- **App relaunch (onboarding)** no longer breaks when the install path contains
+  quotes or other shell-special characters.
+
+### Improved
+- **Editor performance.** Dragging and annotating large screenshots is much faster;
+  the canvas no longer re-flattens the full-resolution image on every mouse move.
+- **Editor: counter badge** now centers on the click point rather than offset from it.
+- **Editor keyboard focus.** Delete and `[` / `]` keys work immediately without
+  clicking the canvas first; focus returns to the canvas automatically after typing text.
+- **VoiceOver labels** added to all image-only buttons: Quick Access overlay, record
+  strip toggles, editor toolbar, and pin close button.
+- **Quick Access overlay + HUD** now appear over full-screen apps. Copy shows feedback
+  from every surface. Overlay buttons are equal-width on both card types.
+
+### Infrastructure
+- **Tests:** blur/pixelate redaction is now verified to actually obscure content;
+  suite total 87 tests across all packages.
+- **CI:** GitHub Actions workflow + `scripts/test.sh` run all four suites on every
+  push and pull request.
+- **Docs:** build instructions corrected (SwiftPM, not XcodeGen).
+
 ## v2.1-recording-feedback — 2026-06-05
 
 - **Recording thumbnail.** Finished recordings now show the same bottom-corner
