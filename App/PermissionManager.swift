@@ -26,7 +26,9 @@ enum PermissionManager {
     static func relaunchApp() {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
-        task.arguments = ["-c", "sleep 0.5; /usr/bin/open '\(Bundle.main.bundlePath)'"]
+        // The bundle path is passed as $0 — never interpolated into the command
+        // string — so quotes/metacharacters in the install path can't break it.
+        task.arguments = ["-c", "sleep 0.5; /usr/bin/open \"$0\"", Bundle.main.bundlePath]
         try? task.run()
         NSApp.terminate(nil)
     }
