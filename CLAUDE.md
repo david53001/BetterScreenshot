@@ -30,10 +30,23 @@ Local Swift packages + a menu-bar app target:
   - `…-plan-2-quick-access-overlay.md` — post-capture floating thumbnail.
   - `…-plan-3-annotation-editor.md` — the editor (model, canvas, tools, export).
 - P3 (shipped v1.3): `docs/superpowers/specs/2026-06-04-betterscreenshot-p3-ocr-pin-design.md` + `docs/superpowers/plans/2026-06-04-betterscreenshot-p3-ocr-pin.md` — Capture Text (OCR/QR, ⌘⇧7), Pin to Screen, Quick Access stack.
+- Next features (designed 2026-06-05, awaiting plans — see Roadmap below for order):
+  - `docs/superpowers/specs/2026-06-05-betterscreenshot-capture-history-design.md`
+  - `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
+  - `docs/superpowers/specs/2026-06-05-betterscreenshot-trim-editor-design.md`
 - `CHANGELOG.md` — per-release history.
 
 ## Roadmap (post-v1, each its own spec → plan)
-~~P2 recording~~ (shipped v2.0) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · P4 backgrounds/styling, scrolling capture, freeze/self-timer/repeat, history · P5 `betterscreenshot://` URL automation.
+~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added).
+
+**Next up — specs ready, implement in this order** (for each: `superpowers:writing-plans` from the spec, then execute with `superpowers:subagent-driven-development`; each spec lists its own probes/risks — run probe tasks first, and verify named symbols against live code before planning):
+1. **v2.3 Capture History** — `docs/superpowers/specs/2026-06-05-betterscreenshot-capture-history-design.md`
+2. **v2.4 Recording Controls** (countdown · window target · pause/resume) — `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
+3. **v2.5 Trim Editor** — `docs/superpowers/specs/2026-06-05-betterscreenshot-trim-editor-design.md`
+
+**Background/wallpaper styling: dropped by owner decision (2026-06-05) — do not build or re-propose.**
+
+Later (no spec yet): scrolling capture · freeze/self-timer/repeat-area · small quick wins (Repeat Previous Area, editor ⌘D/⌘⇧S bindings, capture sound, JPG-quality + filename settings; details in the local `CODEBASE-SCAN.md` if present) · P5 `betterscreenshot://` URL automation.
 
 ## Executing the plans
 Plans use checkbox steps. Execute task-by-task with the **superpowers:subagent-driven-development** (fresh subagent per task) or **superpowers:executing-plans** skill. Each task ends in a commit; each plan ends in a git tag (`v0.1-capture-core`, `v0.2-quick-access`, `v1.0`). Plan 1 Task 1 runs `git init` and `brew install xcodegen` (prerequisite).
