@@ -81,7 +81,10 @@ final class CaptureCoordinator {
                 NSPasteboard.general.setString(payload, forType: .string)
             }
             hud.show(recognition.hudMessage, on: screen(for: result.displayID))
-        } catch { NSLog("Capture Text failed: \(error)") }
+        } catch {
+            NSLog("Capture Text failed: \(error)")
+            hud.show("Capture Text failed", on: screen(for: result.displayID))
+        }
     }
 
     private func screen(for displayID: CGDirectDisplayID) -> NSScreen? {
@@ -95,7 +98,10 @@ final class CaptureCoordinator {
         do {
             let image = try await service.capture(target)
             handle(image, sourceRect: sourceRect)
-        } catch { NSLog("Capture failed: \(error)") }
+        } catch {
+            NSLog("Capture failed: \(error)")
+            hud.show("Capture failed")
+        }
     }
 
     private func handle(_ image: CGImage, sourceRect: CGRect?) {
@@ -184,9 +190,19 @@ final class CaptureCoordinator {
         let dir = directory ?? settings.saveDirectory
         let isPNG = settings.settings.format == .png
         let format: ImageFormat = isPNG ? .png : .jpg(quality: 0.9)
-        guard let data = ImageEncoder.encode(image, as: format) else { return }
+        guard let data = ImageEncoder.encode(image, as: format) else {
+            hud.show("Couldn't save — image encoding failed")
+            return
+        }
         let name = FileNamer.fileName(for: Date(), ext: isPNG ? "png" : "jpg")
-        try? data.write(to: dir.appendingPathComponent(name))
+        do {
+            // The chosen folder may have been deleted/renamed since it was set.
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try data.write(to: dir.appendingPathComponent(name))
+        } catch {
+            NSLog("Save failed: \(error)")
+            hud.show("Couldn't save screenshot")
+        }
     }
 
     private func ensurePermission() -> Bool {
