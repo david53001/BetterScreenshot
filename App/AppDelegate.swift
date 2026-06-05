@@ -44,7 +44,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.settings.failedActions = self.hotKeys.resume()
                 }
             })
-        settingsWindow = SettingsWindowController(store: settings, shortcuts: shortcuts)
+        settingsWindow = SettingsWindowController(store: settings, shortcuts: shortcuts,
+                                                  clearHistory: { [weak self] in
+            self?.history.clearAll()
+        })
         menuBar = MenuBarController(coordinator: coordinator, settingsWindow: settingsWindow)
         menuBar.onToggleRecording = { [weak self] in self?.recordingCoordinator.toggle() }
         menuBar.onOpenHistory = { [weak self] in self?.historyWindow.show() }

@@ -15,10 +15,11 @@ struct ShortcutActions {
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
     let shortcuts: ShortcutActions
+    let clearHistory: () -> Void
 
     var body: some View {
         TabView {
-            GeneralTab(store: store)
+            GeneralTab(store: store, clearHistory: clearHistory)
                 .tabItem { Label("General", systemImage: "gearshape") }
             ShortcutsTab(store: store, actions: shortcuts)
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
@@ -32,7 +33,9 @@ struct SettingsView: View {
 
 private struct GeneralTab: View {
     @ObservedObject var store: SettingsStore
+    let clearHistory: () -> Void
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
+    @State private var confirmingClear = false
 
     var body: some View {
         Form {
@@ -75,6 +78,26 @@ private struct GeneralTab: View {
                     .truncationMode(.middle).lineLimit(1)
                 Spacer()
                 Button("Change…") { chooseFolder() }
+            }
+            Divider()
+            Toggle("Keep capture history", isOn: bind(\.historyEnabled))
+            Picker("Keep last", selection: bind(\.historyCap)) {
+                Text("10 items").tag(10)
+                Text("50 items").tag(50)
+                Text("200 items").tag(200)
+            }
+            .disabled(!store.settings.historyEnabled)
+            HStack {
+                Text("History keeps full-resolution screenshot copies — they can be several MB each.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Clear History…") { confirmingClear = true }
+            }
+            .confirmationDialog("Clear all capture history?",
+                                isPresented: $confirmingClear, titleVisibility: .visible) {
+                Button("Clear History", role: .destructive) { clearHistory() }
+            } message: {
+                Text("Removes every remembered capture and its stored copies. Saved recording files on disk are not deleted.")
             }
         }
         .onAppear { launchAtLogin = LaunchAtLogin.isEnabled }
