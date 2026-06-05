@@ -5,5 +5,6 @@ import TestKit
 runTests("HistoryKitTests",
     historyIndexTests +
     restoreStackTests +
-    thumbnailRendererTests
+    thumbnailRendererTests +
+    historyStoreTests
 )
