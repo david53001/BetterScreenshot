@@ -1,6 +1,7 @@
 import TestKit
 import AppKit
 import CoreImage
+import Vision
 @testable import CaptureKit
 
 // Headless renderers — same technique as the verified 2026-06-04 probe.
@@ -40,44 +41,65 @@ private func composite(_ left: CGImage, _ right: CGImage) -> CGImage {
     return ctx.makeImage()!
 }
 
-let textRecognizerTests: [TestCase] = [
-    TestCase("recognizesRenderedText") { t in
-        do {
-            let result = try TextRecognizer.recognize(
-                in: renderTextImage("Hello BetterScreenshot 12345"))
-            guard case .text(let s) = result else {
-                t.fail("expected .text, got \(result)"); return
+/// Vision's barcode detector needs GPU/ANE features that virtualized CI
+/// runners lack — it returns no results there while OCR's CPU path still
+/// works. Probe Vision directly (independent of TextRecognizer, so a
+/// regression in our wrapper still fails on real hardware) and skip the QR
+/// cases only where the OS capability is absent.
+private let barcodeDetectionAvailable: Bool = {
+    let request = VNDetectBarcodesRequest()
+    request.symbologies = [.qr]
+    try? VNImageRequestHandler(cgImage: renderQRImage("probe")).perform([request])
+    return !(request.results ?? []).isEmpty
+}()
+
+let textRecognizerTests: [TestCase] = {
+    var cases = [
+        TestCase("recognizesRenderedText") { t in
+            do {
+                let result = try TextRecognizer.recognize(
+                    in: renderTextImage("Hello BetterScreenshot 12345"))
+                guard case .text(let s) = result else {
+                    t.fail("expected .text, got \(result)"); return
+                }
+                t.isTrue(s.contains("BetterScreenshot"), "recognized: \(s)")
+                t.isTrue(s.contains("12345"), "recognized: \(s)")
+            } catch {
+                t.fail("TextRecognizer threw: \(error)")
             }
-            t.isTrue(s.contains("BetterScreenshot"), "recognized: \(s)")
-            t.isTrue(s.contains("12345"), "recognized: \(s)")
-        } catch {
-            t.fail("TextRecognizer threw: \(error)")
-        }
-    },
-    TestCase("decodesQRPayload") { t in
-        do {
-            let result = try TextRecognizer.recognize(
-                in: renderQRImage("https://github.com/david53001/BetterScreenshot"))
-            t.equal(result, RecognitionResult.qr("https://github.com/david53001/BetterScreenshot"))
-        } catch {
-            t.fail("TextRecognizer threw: \(error)")
-        }
-    },
-    TestCase("qrBeatsTextInMixedImage") { t in
-        do {
-            let mixed = composite(renderTextImage("plain words"), renderQRImage("qr-payload"))
-            let result = try TextRecognizer.recognize(in: mixed)
-            t.equal(result, RecognitionResult.qr("qr-payload"))
-        } catch {
-            t.fail("TextRecognizer threw: \(error)")
-        }
-    },
-    TestCase("blankImageIsNone") { t in
-        do {
-            let result = try TextRecognizer.recognize(in: renderTextImage(""))
-            t.equal(result, RecognitionResult.none)
-        } catch {
-            t.fail("TextRecognizer threw: \(error)")
-        }
-    },
-]
+        },
+        TestCase("blankImageIsNone") { t in
+            do {
+                let result = try TextRecognizer.recognize(in: renderTextImage(""))
+                t.equal(result, RecognitionResult.none)
+            } catch {
+                t.fail("TextRecognizer threw: \(error)")
+            }
+        },
+    ]
+    if barcodeDetectionAvailable {
+        cases += [
+            TestCase("decodesQRPayload") { t in
+                do {
+                    let result = try TextRecognizer.recognize(
+                        in: renderQRImage("https://github.com/david53001/BetterScreenshot"))
+                    t.equal(result, RecognitionResult.qr("https://github.com/david53001/BetterScreenshot"))
+                } catch {
+                    t.fail("TextRecognizer threw: \(error)")
+                }
+            },
+            TestCase("qrBeatsTextInMixedImage") { t in
+                do {
+                    let mixed = composite(renderTextImage("plain words"), renderQRImage("qr-payload"))
+                    let result = try TextRecognizer.recognize(in: mixed)
+                    t.equal(result, RecognitionResult.qr("qr-payload"))
+                } catch {
+                    t.fail("TextRecognizer threw: \(error)")
+                }
+            },
+        ]
+    } else {
+        print("⚠ QR decode tests skipped — Vision barcode detection unavailable in this environment")
+    }
+    return cases
+}()
