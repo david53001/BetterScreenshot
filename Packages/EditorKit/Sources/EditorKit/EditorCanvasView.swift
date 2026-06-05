@@ -62,6 +62,17 @@ public final class EditorCanvasView: NSView {
         CGPoint(x: viewPoint.x * scale, y: viewPoint.y * scale)
     }
 
+    // MARK: - Base image cache
+    /// NSImage wrapper for the base, rebuilt only when the base actually
+    /// changes (crop/undo/redo swap in a different CGImage).
+    private var cachedBase: (cg: CGImage, ns: NSImage)?
+    private var baseNSImage: NSImage {
+        if let c = cachedBase, c.cg === document.baseImage { return c.ns }
+        let ns = NSImage(cgImage: document.baseImage, size: document.size)
+        cachedBase = (document.baseImage, ns)
+        return ns
+    }
+
     // MARK: - Resize handle geometry (view coords)
     private func handleRects(for viewRect: NSRect) -> [NSRect] {
         let s = handleSize
@@ -144,10 +155,21 @@ public final class EditorCanvasView: NSView {
 
     // MARK: - Rendering
     public override func draw(_ dirtyRect: NSRect) {
-        // The in-progress shape is drawn on top of the flattened doc so the
-        // user sees the annotation live as they drag (e.g. a rectangle growing).
-        guard let flat = DocumentRenderer.render(document, preview: inProgress) else { return }
-        NSImage(cgImage: flat, size: bounds.size).draw(in: bounds)
+        // Draw base + annotations directly at view scale instead of flattening
+        // the full-resolution document into a new CGImage on every redraw
+        // (which allocated a base-image-sized context per drag tick).
+        // DocumentRenderer still does the full-res flatten for export.
+        baseNSImage.draw(in: bounds)
+        // Annotations (and the live in-progress preview) draw themselves in
+        // image-pixel coordinates; scale the context so image px → view points.
+        // The view is flipped, matching the renderer's top-left convention.
+        NSGraphicsContext.saveGraphicsState()
+        let toView = NSAffineTransform()
+        toView.scale(by: 1 / scale)
+        toView.concat()
+        for a in document.annotations { a.draw() }
+        inProgress?.draw()
+        NSGraphicsContext.restoreGraphicsState()
 
         // Live marquee for region tools (blur/pixelate/crop) that have no shape preview.
         if let m = regionMarquee {
