@@ -1,5 +1,6 @@
 import AppKit
 import CaptureKit
+import HistoryKit
 import OverlayKit
 
 @MainActor
@@ -46,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow = SettingsWindowController(store: settings, shortcuts: shortcuts)
         menuBar = MenuBarController(coordinator: coordinator, settingsWindow: settingsWindow)
         menuBar.onToggleRecording = { [weak self] in self?.recordingCoordinator.toggle() }
+        menuBar.onOpenHistory = { [weak self] in self?.historyWindow.show() }
+        menuBar.onRestoreRecentlyClosed = { [weak self] in self?.restoreRecentlyClosed() }
+        menuBar.canRestore = { [weak self] in self?.history.canRestore ?? false }
 
         // One-button first-run setup (Screen Recording is the only permission).
         onboarding = OnboardingController()
@@ -77,6 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .captureText:       { [weak self] in Task { @MainActor in self?.coordinator.captureText() } },
             .pinFromClipboard:  { [weak self] in Task { @MainActor in self?.coordinator.pinFromClipboard() } },
             .record:            { [weak self] in Task { @MainActor in self?.recordingCoordinator.toggle() } },
+            .openHistory:           { [weak self] in Task { @MainActor in self?.historyWindow.show() } },
+            .restoreRecentlyClosed: { [weak self] in Task { @MainActor in self?.restoreRecentlyClosed() } },
         ]
         let failed = hotKeys.apply(settings.bindings, handlers: handlers)
         settings.failedActions = failed
@@ -113,6 +119,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.bindings = .defaults
         applyBindings()
         settings.persist()
+    }
+
+    /// Re-presents the most recently ✕-closed/evicted Quick Access overlay
+    /// from its history entry (screenshots: stored full-res image; recordings:
+    /// saved file + stored thumbnail).
+    private func restoreRecentlyClosed() {
+        guard let entry = history.popRestorable() else { return }
+        switch entry.kind {
+        case .screenshot:
+            guard let image = history.image(for: entry) else { return }
+            coordinator.presentOverlayFromHistory(image, historyID: entry.id)
+        case .recording:
+            guard let url = history.savedFileURL(for: entry),
+                  let image = history.thumbnail(for: entry) else { return }
+            recordingCoordinator.presentCardFromHistory(url: url, image: image,
+                                                        historyID: entry.id)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

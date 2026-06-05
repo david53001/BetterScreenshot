@@ -37,6 +37,9 @@ final class MenuBarController: NSObject {
         menu.addItem(.separator())
         add("Pin from Clipboard", #selector(pinClipboard), .pinFromClipboard)
         menu.addItem(.separator())
+        add("History…", #selector(openHistory), .openHistory)
+        add("Restore Recently Closed", #selector(restoreClosed), .restoreRecentlyClosed)
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
             .target = self
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q").target = self
@@ -62,8 +65,14 @@ final class MenuBarController: NSObject {
     @objc private func captureText() { coordinator.captureText() }
     @objc private func pinClipboard() { coordinator.pinFromClipboard() }
     var onToggleRecording: (() -> Void)?
+    var onOpenHistory: (() -> Void)?
+    var onRestoreRecentlyClosed: (() -> Void)?
+    /// Menu validation: false disables "Restore Recently Closed".
+    var canRestore: (() -> Bool)?
 
     @objc private func toggleRecording() { onToggleRecording?() }
+    @objc private func openHistory() { onOpenHistory?() }
+    @objc private func restoreClosed() { onRestoreRecentlyClosed?() }
 
     /// Red stop icon + elapsed timer while recording; normal icon otherwise.
     func setRecording(_ recording: Bool, elapsed: String?) {
@@ -95,6 +104,7 @@ extension MenuBarController: NSMenuItemValidation {
     nonisolated func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         MainActor.assumeIsolated {
             if menuItem.action == #selector(pinClipboard) { return coordinator.clipboardHasImage }
+            if menuItem.action == #selector(restoreClosed) { return canRestore?() ?? false }
             return true
         }
     }
