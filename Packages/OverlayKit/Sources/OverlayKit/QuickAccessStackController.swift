@@ -15,14 +15,16 @@ public final class QuickAccessStackController {
 
     public func present(image: NSImage, kind: QuickAccessKind = .screenshot,
                         actions: QuickAccessActions,
+                        onDismissed: ((DismissReason) -> Void)? = nil,
                         originForIndex: @escaping (Int) -> CGPoint) {
         self.originForIndex = originForIndex
         if entries.count == maxCount, let oldest = entries.last {
             entries.removeLast()
-            oldest.dismiss()   // its onDismissed no-ops: already removed
+            oldest.dismiss(reason: .evicted)   // stack bookkeeping no-ops: already removed
         }
         let controller = QuickAccessOverlayController()
-        controller.onDismissed = { [weak self, weak controller] in
+        controller.onDismissed = { [weak self, weak controller] reason in
+            onDismissed?(reason)
             guard let self, let controller else { return }
             self.entries.removeAll { $0 === controller }
             self.restack()

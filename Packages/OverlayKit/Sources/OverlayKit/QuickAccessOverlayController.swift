@@ -27,6 +27,14 @@ public enum QuickAccessKind {
     case recording
 }
 
+/// Why a Quick Access overlay went away. `closed` (✕) and `evicted` (pushed
+/// out by newer captures) are "accidental" — eligible for Restore Recently
+/// Closed. `actionTaken` (save, annotate, pin, open, reveal, drag-out) is
+/// deliberate and is not restorable.
+public enum DismissReason: Equatable {
+    case closed, evicted, actionTaken
+}
+
 /// A floating post-capture thumbnail. It is PERSISTENT: it never auto-dismisses.
 /// It goes away only when the user clicks ✕, clicks Save (download), drags the
 /// thumbnail out to another app, or opens the editor.
@@ -40,15 +48,16 @@ public final class QuickAccessOverlayController: NSObject {
     private var actions: QuickAccessActions?
 
     /// Fired exactly once whenever a visible overlay goes away (✕, save,
-    /// drag-out, annotate, pin, or eviction) so a stack manager can compact.
-    public var onDismissed: (() -> Void)?
+    /// drag-out, annotate, pin, or eviction) so a stack manager can compact
+    /// and the app can track restorable closes.
+    public var onDismissed: ((DismissReason) -> Void)?
 
     public override init() { super.init() }
 
     /// Presents the overlay at the given screen origin (Cocoa bottom-left coords).
     public func present(image: NSImage, at origin: CGPoint,
                         kind: QuickAccessKind = .screenshot, actions: QuickAccessActions) {
-        dismiss()
+        dismiss(reason: .evicted)
         self.actions = actions
 
         let size = NSSize(width: 220, height: 168)
@@ -86,7 +95,7 @@ public final class QuickAccessOverlayController: NSObject {
         thumb.deletesFileAfterDrag = kind == .screenshot
         // Once it has been dropped somewhere, the overlay goes away.
         thumb.onDragEnded = { [weak self] droppedSomewhere in
-            if droppedSomewhere { self?.dismiss() }
+            if droppedSomewhere { self?.dismiss(reason: .actionTaken) }
         }
         container.addSubview(thumb)
 
@@ -114,10 +123,10 @@ public final class QuickAccessOverlayController: NSObject {
         // No auto-dismiss timer and no tracking area: the overlay is persistent.
     }
 
-    public func dismiss() {
+    public func dismiss(reason: DismissReason = .actionTaken) {
         guard panel != nil else { return }
         panel?.orderOut(nil); panel = nil; actions = nil
-        onDismissed?()
+        onDismissed?(reason)
     }
 
     /// Slides the overlay to a new stack slot.
@@ -140,30 +149,30 @@ public final class QuickAccessOverlayController: NSObject {
     // Copy keeps the overlay up (so the user can still save/drag/close it).
     @objc private func copyAction() { actions?.onCopy() }
     // Save writes to the screenshot folder, then dismisses.
-    @objc private func saveAction() { actions?.onSave(); dismiss() }
+    @objc private func saveAction() { actions?.onSave(); dismiss(reason: .actionTaken) }
     // Opening the editor takes over from the overlay.
     @objc private func annotateAction() {
         let a = actions
-        dismiss()
+        dismiss(reason: .actionTaken)
         a?.onAnnotate()
     }
     // Pinning replaces the overlay with a floating pin.
     @objc private func pinAction() {
         let a = actions
-        dismiss()
+        dismiss(reason: .actionTaken)
         a?.onPin()
     }
     // Opening the recording hands off to the default player.
     @objc private func openAction() {
         let a = actions
-        dismiss()
+        dismiss(reason: .actionTaken)
         a?.onOpen()
     }
     // Revealing in Finder is the recording's "I know where it lives now".
     @objc private func revealAction() {
         let a = actions
-        dismiss()
+        dismiss(reason: .actionTaken)
         a?.onReveal()
     }
-    @objc private func closeAction() { dismiss() }
+    @objc private func closeAction() { dismiss(reason: .closed) }
 }
