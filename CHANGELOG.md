@@ -2,6 +2,18 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.3.1 — 2026-06-08 · UI fixes
+
+### Fixed
+- **Selection dimensions label no longer clips off-screen.** When you drag an
+  area selection near the top of a display, the `W × H` label now tucks just
+  inside the selection's top edge instead of drawing past the screen edge where
+  it was cut off.
+- **Quick Access overlay buttons are evenly spaced.** The post-capture button
+  row now sizes to its buttons and centers under the thumbnail, so the 4-button
+  (recording) and 5-button (screenshot) variants are both balanced — the old
+  fixed-width row left the 5-button screenshot variant cramped.
+
 ## v2.3.0 — 2026-06-05 · Capture history
 
 - **Capture History.** Every screenshot (including copy-only captures that used

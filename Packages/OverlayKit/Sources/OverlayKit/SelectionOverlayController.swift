@@ -109,12 +109,19 @@ final class SelectionView: NSView {
         sel.fill(using: .copy)
         NSColor.white.setStroke()
         let path = NSBezierPath(rect: sel); path.lineWidth = 1; path.stroke()
-        // Dimensions label.
+        // Dimensions label — above the selection, but tucked just inside the
+        // top edge when the selection sits too close to the top of the screen,
+        // so it never clips off-screen.
         let label = "\(Int(sel.width)) × \(Int(sel.height))"
         let attrs: [NSAttributedString.Key: Any] = [
             .foregroundColor: NSColor.white,
             .font: NSFont.systemFont(ofSize: 12, weight: .medium)
         ]
-        label.draw(at: NSPoint(x: sel.minX, y: sel.maxY + 4), withAttributes: attrs)
+        let labelSize = (label as NSString).size(withAttributes: attrs)
+        let aboveY = sel.maxY + 4
+        let labelY = aboveY + labelSize.height <= bounds.maxY
+            ? aboveY
+            : sel.maxY - labelSize.height - 4
+        label.draw(at: NSPoint(x: sel.minX, y: labelY), withAttributes: attrs)
     }
 }

@@ -99,9 +99,9 @@ public final class QuickAccessOverlayController: NSObject {
         }
         container.addSubview(thumb)
 
-        let stack = NSStackView(frame: NSRect(x: 10, y: 8, width: 200, height: 30))
+        let stack = NSStackView()
         stack.orientation = .horizontal
-        stack.distribution = .equalCentering
+        stack.distribution = .fill
         stack.spacing = 6
         switch kind {
         case .screenshot:
@@ -115,6 +115,12 @@ public final class QuickAccessOverlayController: NSObject {
             stack.addArrangedSubview(iconButton("folder", tip: "Show in Finder", #selector(revealAction)))
         }
         stack.addArrangedSubview(iconButton("xmark", tip: "Close", #selector(closeAction)))
+        // Size the row to its buttons and centre it under the thumbnail, so the
+        // 4- and 5-button variants are both evenly spaced (the old fixed 200pt
+        // width left the 5-button screenshot row cramped).
+        let rowSize = stack.fittingSize
+        stack.frame = NSRect(x: (size.width - rowSize.width) / 2, y: 8,
+                             width: rowSize.width, height: 30)
         container.addSubview(stack)
 
         panel.contentView = container
