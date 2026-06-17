@@ -1,9 +1,10 @@
 import AppKit
 
 /// An image view that drags out a temporary PNG file. The temp file is treated
-/// as disposable: it is deleted shortly after the drag ends (by which time the
-/// drop target has copied it), so dragging the screenshot into a chat/Finder
-/// leaves nothing behind.
+/// as disposable: it is deleted a few minutes after the drag ends, so dragging
+/// the screenshot into a chat/Finder/terminal leaves nothing behind — but stays
+/// alive long enough for targets that read the file lazily (a terminal you drop
+/// a path into and submit later, a chat you upload-on-send).
 public final class DraggableImageView: NSImageView, NSDraggingSource {
     public var fileURLProvider: (() -> URL?)?
     /// Called when a drag finishes. `true` if it was actually dropped somewhere.
@@ -41,10 +42,11 @@ public final class DraggableImageView: NSImageView, NSDraggingSource {
     public func draggingSession(_ session: NSDraggingSession,
                                 endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         let droppedSomewhere = operation != []
-        // Clean up the temp file a few seconds later — long enough for the drop
-        // target to have read it.
+        // Clean up the temp file 5 minutes later — long enough for a drop target
+        // that reads it lazily (a terminal you paste a path into and submit a
+        // while later) to have read it, short enough not to litter temp.
         if deletesFileAfterDrag, let dir = draggedTempDir {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 300) {
                 try? FileManager.default.removeItem(at: dir)
             }
         }

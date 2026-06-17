@@ -103,7 +103,11 @@ final class HistoryService: ObservableObject {
             let rep = NSBitmapImageRep(cgImage: cg)
             let img = NSImage(); img.addRepresentation(rep)
             NSPasteboard.general.clearContents()
-            NSPasteboard.general.writeObjects([img])
+            // Image data first, plus the persistent stored PNG's file URL so
+            // pasting into a terminal/Claude Code inserts a usable path.
+            var objects: [NSPasteboardWriting] = [img]
+            if let url = store.imageURL(for: entry) { objects.append(url as NSURL) }
+            NSPasteboard.general.writeObjects(objects)
             hud.show("Copied")
         case .recording:
             guard let url = savedFileURL(for: entry) else { return }
