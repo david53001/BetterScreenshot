@@ -42,6 +42,7 @@ struct HistoryView: View {
     @ObservedObject var history: HistoryService
     let actions: HistoryWindowActions
     @State private var selection: UUID?
+    @State private var confirmingClear = false
 
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 12)]
 
@@ -77,6 +78,8 @@ struct HistoryView: View {
         HStack(spacing: 8) {
             Text("\(history.entries.count) item\(history.entries.count == 1 ? "" : "s")")
                 .font(.caption).foregroundStyle(.secondary)
+            Button("Clear All…") { confirmingClear = true }
+                .disabled(history.entries.isEmpty)
             Spacer()
             Button("Copy") { if let e = selected { copy(e) } }
                 .disabled(selected == nil)
@@ -91,6 +94,15 @@ struct HistoryView: View {
         }
         .padding(10)
         .background(.bar)
+        .confirmationDialog("Clear all capture history?",
+                            isPresented: $confirmingClear, titleVisibility: .visible) {
+            Button("Clear All", role: .destructive) {
+                selection = nil
+                history.clearAll()
+            }
+        } message: {
+            Text("Removes every remembered capture and its stored copies. Saved recording files on disk are not deleted.")
+        }
     }
 
     @ViewBuilder

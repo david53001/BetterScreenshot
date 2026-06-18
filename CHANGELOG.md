@@ -2,6 +2,15 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.3.2 — 2026-06-11 · History Clear All
+
+### Added
+- **Clear All in the History window.** The history browser now has a
+  **Clear All…** button (next to the item count) that wipes every remembered
+  capture after a confirmation. Bulk-clearing was previously only reachable from
+  Settings → General → History. As before, saved recording files on disk are
+  not deleted.
+
 ## v2.3.1 — 2026-06-08 · UI fixes
 
 ### Fixed
