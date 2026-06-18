@@ -71,7 +71,7 @@ public final class EditorWindowController: NSWindowController {
         canvas.frame = NSRect(x: 0, y: 0, width: displayW, height: displayH)
 
         let contentW = max(displayW, 600)
-        let contentH = min(displayH, 620) + 112 /*top chrome*/ + 56 /*action bar*/
+        let contentH = min(displayH, 620) + 150 /*reserved top chrome band*/ + 56 /*action bar*/
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: contentW, height: contentH),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -108,7 +108,10 @@ public final class EditorWindowController: NSWindowController {
         scrollView.hasHorizontalScroller = true
         scrollView.scrollerStyle = .overlay
         scrollView.automaticallyAdjustsContentInsets = false
-        scrollView.contentInsets = NSEdgeInsets(top: 104, left: 24, bottom: 24, right: 24)
+        // Toolbar + inspector now live in a reserved band above the scroll view
+        // (the scrollView top is pinned below the inspector), so the canvas can
+        // never slide under the chrome. Only a small breathing inset is needed.
+        scrollView.contentInsets = NSEdgeInsets(top: 20, left: 24, bottom: 24, right: 24)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
         let toolbar = buildToolbar()
@@ -122,7 +125,8 @@ public final class EditorWindowController: NSWindowController {
         content.addSubview(inspectorEffect)
 
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: content.topAnchor),
+            // Canvas starts below the inspector pill — reserved chrome band, no overlap.
+            scrollView.topAnchor.constraint(equalTo: inspectorEffect.bottomAnchor, constant: 12),
             scrollView.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: actionBar.topAnchor),
