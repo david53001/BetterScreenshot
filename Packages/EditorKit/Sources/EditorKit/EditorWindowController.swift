@@ -8,7 +8,7 @@ public final class EditorWindowController: NSWindowController {
     private var style = AnnotationStyle.default
     public var onCopy: ((CGImage) -> Void)?
     public var onSave: ((CGImage) -> Void)?
-    public var onPin: ((CGImage) -> Void)?
+    public var onAddToStack: ((CGImage) -> Void)?
     /// Fired whenever the active color/stroke-weight/font-size changes, so the
     /// host can persist the style as the next session's default.
     public var onStyleChanged: ((AnnotationStyle) -> Void)?
@@ -274,13 +274,13 @@ public final class EditorWindowController: NSWindowController {
                          .font: NSFont.systemFont(ofSize: 13, weight: .medium)])
         copyBtn.keyEquivalent = "c"; copyBtn.keyEquivalentModifierMask = [.command, .shift]
 
-        let pinBtn = NSButton(title: "Pin", target: self, action: #selector(pinAction))
-        pinBtn.bezelStyle = .rounded
-        pinBtn.image = NSImage(systemSymbolName: "pin", accessibilityDescription: "Pin")
-        pinBtn.imagePosition = .imageLeading
-        pinBtn.toolTip = "Pin to screen"
+        let stackBtn = NSButton(title: "Stack", target: self, action: #selector(addToStackAction))
+        stackBtn.bezelStyle = .rounded
+        stackBtn.image = NSImage(systemSymbolName: "square.stack", accessibilityDescription: "Stack")
+        stackBtn.imagePosition = .imageLeading
+        stackBtn.toolTip = "Keep in the bottom-right stack"
 
-        let actions = NSStackView(views: [doneBtn, pinBtn, saveBtn, copyBtn])
+        let actions = NSStackView(views: [doneBtn, stackBtn, saveBtn, copyBtn])
         actions.orientation = .horizontal
         actions.spacing = 8
         actions.translatesAutoresizingMaskIntoConstraints = false
@@ -531,9 +531,10 @@ public final class EditorWindowController: NSWindowController {
         guard let img = DocumentRenderer.render(canvas.currentDocument()) else { return }
         onSave?(img)
     }
-    @objc private func pinAction() {
+    @objc private func addToStackAction() {
         guard let img = DocumentRenderer.render(canvas.currentDocument()) else { return }
-        onPin?(img)
+        onAddToStack?(img)
+        window?.close()
     }
     @objc private func doneAction() { window?.close() }
 

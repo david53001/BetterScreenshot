@@ -30,7 +30,7 @@ final class CaptureCoordinator {
         let controller = EditorWindowController(image: image, defaultStyle: settings.editorStyle)
         controller.onCopy = { [weak self] img in self?.copy(img) }
         controller.onSave = { [weak self] img in self?.save(img) }
-        controller.onPin = { [weak self] img in self?.pin(img) }
+        controller.onAddToStack = { [weak self] img in self?.keepInStack(img) }
         controller.onStyleChanged = { [weak self] style in
             self?.settings.editorStyle = style
             self?.settings.persistEditorStyle()
@@ -39,6 +39,14 @@ final class CaptureCoordinator {
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Drops an edited image into the bottom-right Quick Access stack, treating
+    /// it like a fresh capture: it is recorded to history and shown with the
+    /// normal Copy/Edit/Pin/Save/drag actions.
+    func keepInStack(_ image: CGImage) {
+        let historyID = history?.recordScreenshot(image)
+        presentOverlay(image, sourceRect: nil, historyID: historyID)
     }
 
     init(settings: SettingsStore, quickAccess: QuickAccessStackController) {
