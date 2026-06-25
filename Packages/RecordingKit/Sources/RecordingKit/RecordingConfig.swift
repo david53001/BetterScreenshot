@@ -28,6 +28,7 @@ public struct RecordingConfig: Equatable {
     public var cameraSize: CameraSize
     public var clickHighlights: Bool
     public var keystrokeOverlay: Bool
+    public var countdownSeconds: Int     // 0 = off; otherwise 3 / 5 / 10
 
     public static let gifFPS = 10
     public static let gifMaxWidth: CGFloat = 960
@@ -35,11 +36,11 @@ public struct RecordingConfig: Equatable {
     public static let `default` = RecordingConfig(
         format: .mp4, fps: 30, systemAudio: true, microphone: false,
         camera: false, cameraSize: .small, clickHighlights: true,
-        keystrokeOverlay: false)
+        keystrokeOverlay: false, countdownSeconds: 0)
 
     public init(format: RecordingFormat, fps: Int, systemAudio: Bool, microphone: Bool,
                 camera: Bool, cameraSize: CameraSize, clickHighlights: Bool,
-                keystrokeOverlay: Bool) {
+                keystrokeOverlay: Bool, countdownSeconds: Int) {
         self.format = format
         self.fps = fps
         self.systemAudio = systemAudio
@@ -48,6 +49,7 @@ public struct RecordingConfig: Equatable {
         self.cameraSize = cameraSize
         self.clickHighlights = clickHighlights
         self.keystrokeOverlay = keystrokeOverlay
+        self.countdownSeconds = countdownSeconds
     }
 
     /// H.264 AVAssetWriter video settings. Bitrate heuristic w·h·fps·0.12,
@@ -73,7 +75,8 @@ public struct RecordingConfig: Equatable {
          "camera": camera ? "true" : "false",
          "cameraSize": cameraSize.rawValue,
          "clickHighlights": clickHighlights ? "true" : "false",
-         "keystrokeOverlay": keystrokeOverlay ? "true" : "false"]
+         "keystrokeOverlay": keystrokeOverlay ? "true" : "false",
+         "countdownSeconds": String(countdownSeconds)]
     }
 
     public init(dictionary: [String: String]) {
@@ -87,5 +90,7 @@ public struct RecordingConfig: Equatable {
         self.cameraSize = CameraSize(rawValue: dictionary["cameraSize"] ?? "") ?? d.cameraSize
         self.clickHighlights = (dictionary["clickHighlights"] ?? "\(d.clickHighlights)") == "true"
         self.keystrokeOverlay = (dictionary["keystrokeOverlay"] ?? "\(d.keystrokeOverlay)") == "true"
+        let cd = Int(dictionary["countdownSeconds"] ?? "")
+        self.countdownSeconds = (cd == 3 || cd == 5 || cd == 10) ? cd! : 0
     }
 }
