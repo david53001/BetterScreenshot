@@ -33,6 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordingCoordinator.onStateChange = { [weak self] recording, elapsed in
             self?.menuBar.setRecording(recording, elapsed: elapsed)
         }
+        recordingCoordinator.onPauseStateChange = { [weak self] active, paused in
+            self?.menuBar.setPauseItem(active: active, paused: paused)
+        }
         let shortcuts = ShortcutActions(
             update: { [weak self] combo, action in self?.updateBinding(combo, for: action) },
             restoreDefaults: { [weak self] in self?.restoreDefaultBindings() },
@@ -52,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBar.onToggleRecording = { [weak self] in self?.recordingCoordinator.toggle() }
         menuBar.onOpenHistory = { [weak self] in self?.historyWindow.show() }
         menuBar.onRestoreRecentlyClosed = { [weak self] in self?.restoreRecentlyClosed() }
+        menuBar.onPauseResume = { [weak self] in self?.recordingCoordinator.pauseResume() }
         menuBar.canRestore = { [weak self] in self?.history.canRestore ?? false }
 
         // One-button first-run setup (Screen Recording is the only permission).
@@ -86,6 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .record:            { [weak self] in Task { @MainActor in self?.recordingCoordinator.toggle() } },
             .openHistory:           { [weak self] in Task { @MainActor in self?.historyWindow.show() } },
             .restoreRecentlyClosed: { [weak self] in Task { @MainActor in self?.restoreRecentlyClosed() } },
+            .pauseResumeRecording:  { [weak self] in Task { @MainActor in self?.recordingCoordinator.pauseResume() } },
         ]
         let failed = hotKeys.apply(settings.bindings, handlers: handlers)
         settings.failedActions = failed

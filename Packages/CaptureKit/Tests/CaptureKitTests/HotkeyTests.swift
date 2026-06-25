@@ -115,7 +115,7 @@ let hotkeyBindingsTests: [TestCase] = [
         t.equal(HotkeyBindings.defaults.combo(for: .record),
                 HotkeyCombo(keyCode: 23, modifiers: cmdShift))
         // history actions come after record in allCases (menu/settings row order).
-        t.equal(HotkeyAction.allCases.last, .restoreRecentlyClosed)
+        t.equal(HotkeyAction.allCases.last, .pauseResumeRecording)
     },
     TestCase("historyActionsUnboundByDefault") { t in
         t.isNil(HotkeyAction.openHistory.defaultCombo)

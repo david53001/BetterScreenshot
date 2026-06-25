@@ -15,6 +15,8 @@ final class RecordingCoordinator {
     private let bubble = CameraBubbleController()
     private let clicks = ClickHighlighter()
     private let keystrokes = KeystrokeOverlayController()
+    private let countdown = CountdownOverlayController()
+    private let windowPicker = WindowPickerController()
     private let hud = HUDController()
     // Shared with CaptureCoordinator: finished recordings join the same
     // bottom-corner thumbnail stack that screenshots use.
@@ -28,6 +30,8 @@ final class RecordingCoordinator {
     var presentSetup: (() -> Void)?
     /// Menu-bar state: (recording?, elapsed string). Called on every change/tick.
     var onStateChange: ((Bool, String?) -> Void)?
+    /// Drives the Pause/Resume menu item: (session active?, currently paused?).
+    var onPauseStateChange: ((_ active: Bool, _ paused: Bool) -> Void)?
     /// Set by the app delegate; nil until then (history silently skipped).
     var history: HistoryService?
 
@@ -37,21 +41,43 @@ final class RecordingCoordinator {
         self.strip = RecordStripController(store: settings)
         strip.onFullScreen = { [weak self] in self?.beginFullScreen() }
         strip.onArea = { [weak self] in self?.beginAreaSelection() }
+        strip.onWindow = { [weak self] in self?.beginWindowSelection() }
         strip.onCancel = { [weak self] in self?.cancelStrip() }
         recorder.onStreamError = { [weak self] _ in
             Task { @MainActor in self?.streamFailed() }
         }
     }
 
-    var isRecording: Bool { if case .recording = state { return true }; return false }
+    /// True while a capture session exists (recording OR paused) — keeps the
+    /// menu-bar stop icon + timer visible through a pause.
+    var isRecording: Bool {
+        switch state { case .recording, .paused: return true; default: return false }
+    }
+    var isPaused: Bool { if case .paused = state { return true }; return false }
 
-    /// The smart ⌘⇧5 entry point: idle → strip · armed → cancel · recording → stop.
+    /// The smart ⌘⇧5 entry point: idle → strip · armed → cancel · recording/paused → stop.
     func toggle() {
         switch state {
         case .idle: arm()
         case .armed: cancelStrip()
-        case .recording: Task { await stop() }
+        case .recording, .paused: Task { await stop() }
         case .finishing: break   // busy — ignore
+        }
+    }
+
+    /// Pause/resume the running recording. No-op outside `.recording`/`.paused`.
+    func pauseResume() {
+        switch state {
+        case .recording:
+            guard state.transition(.pause(Date())) else { return }
+            recorder.pause()
+            notify()
+        case .paused:
+            guard state.transition(.resume(Date())) else { return }
+            recorder.resume()
+            notify()
+        default:
+            break
         }
     }
 
@@ -68,8 +94,10 @@ final class RecordingCoordinator {
     }
 
     private func cancelStrip() {
-        // ⌘⇧5 while the area-selection overlay is up: tear it down too.
+        // ⌘⇧5 while the area-selection overlay / countdown is up: tear it down too.
         selection.cancel()
+        countdown.cancel()
+        windowPicker.cancel()
         strip.hide()
         state.transition(.reset)
     }
@@ -77,7 +105,7 @@ final class RecordingCoordinator {
     private func beginFullScreen() {
         guard let screen = stripScreen() else { return }
         strip.hide()
-        Task { await begin(globalRect: nil, screen: screen) }
+        Task { await begin(target: .display(globalRect: nil), screen: screen) }
     }
 
     private func beginAreaSelection() {
@@ -93,43 +121,97 @@ final class RecordingCoordinator {
                     self.state.transition(.reset)
                     return
                 }
-                await self.begin(globalRect: result.globalRect, screen: screen)
+                await self.begin(target: .display(globalRect: result.globalRect), screen: screen)
             }
         }
+    }
+
+    private func beginWindowSelection() {
+        strip.hide()
+        // CGWindowList bounds are top-left global; convert with the primary
+        // display height (the screen whose origin is (0,0)).
+        let primaryHeight = (NSScreen.screens.first { $0.frame.origin == .zero }
+                             ?? NSScreen.main)?.frame.height ?? 0
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let info = (CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
+        let windows: [PickableWindow] = info.compactMap { dict in
+            guard let id = dict[kCGWindowNumber as String] as? UInt32,
+                  let layer = dict[kCGWindowLayer as String] as? Int,
+                  let pidInt = dict[kCGWindowOwnerPID as String] as? Int,
+                  let boundsValue = dict[kCGWindowBounds as String],
+                  let bounds = CGRect(dictionaryRepresentation: boundsValue as! CFDictionary)
+            else { return nil }
+            let title = dict[kCGWindowName as String] as? String
+            return PickableWindow(id: id,
+                                  frame: WindowPicking.cocoaFrame(fromTopLeft: bounds,
+                                                                  primaryHeight: primaryHeight),
+                                  title: title, layer: layer, ownerPID: pid_t(pidInt))
+        }
+        windowPicker.present(hitTest: { point in
+            guard let w = WindowPicking.topmost(at: point, windows: windows,
+                                                excludingPID: ownPID) else { return nil }
+            return (id: w.id, frame: w.frame, title: w.title)
+        }, onPicked: { [weak self] id in
+            guard let self else { return }
+            guard let id, let picked = windows.first(where: { $0.id == id }) else {
+                self.state.transition(.reset); self.notify(); return
+            }
+            let center = CGPoint(x: picked.frame.midX, y: picked.frame.midY)
+            let screen = NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main
+            guard let screen else { self.state.transition(.reset); self.notify(); return }
+            Task { await self.begin(target: .window(id), screen: screen) }
+        })
     }
 
     private func stripScreen() -> NSScreen? {
         NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
     }
 
-    /// Start the engine for `globalRect` (nil = full screen) on `screen`.
-    private func begin(globalRect: CGRect?, screen: NSScreen) async {
+    private enum RecordingTarget {
+        case display(globalRect: CGRect?)   // nil = full screen
+        case window(CGWindowID)
+    }
+
+    /// Start the engine for `target` on `screen`. Single path for full-screen,
+    /// area, and window recording.
+    private func begin(target: RecordingTarget, screen: NSScreen) async {
         // A ⌘⇧5 cancel can land while the selection overlay or permission prompts
         // were up — only proceed if we're still armed.
         guard case .armed = state else { return }
         var config = settings.recording
-        guard let displayID = screen.deviceDescription[
-                NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else {
-            state.transition(.reset)
-            return
-        }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(
                 false, onScreenWindowsOnly: true)
-            guard let display = content.displays.first(where: { $0.displayID == displayID })
-            else { throw RecorderError.writerFailed }
-
             let scale = screen.backingScaleFactor
-            // sourceRect: display-relative, top-left origin, points.
+            let filter: SCContentFilter
             var sourceRect: CGRect?
-            var pixelSize = CGSize(width: CGFloat(display.width) * scale,
+            var pixelSize: CGSize
+            let cameraAnchor: CGRect
+            switch target {
+            case .display(let globalRect):
+                guard let displayID = screen.deviceDescription[
+                        NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                      let display = content.displays.first(where: { $0.displayID == displayID })
+                else { throw RecorderError.writerFailed }
+                pixelSize = CGSize(width: CGFloat(display.width) * scale,
                                    height: CGFloat(display.height) * scale)
-            if let globalRect {
-                let local = CaptureGeometry.pixelRect(forGlobalRect: globalRect,
-                                                      inDisplayFrame: screen.frame,
-                                                      scale: 1)   // points, top-left
-                sourceRect = local
-                pixelSize = CGSize(width: local.width * scale, height: local.height * scale)
+                if let globalRect {
+                    // sourceRect: display-relative, top-left origin, points.
+                    let local = CaptureGeometry.pixelRect(forGlobalRect: globalRect,
+                                                          inDisplayFrame: screen.frame, scale: 1)
+                    sourceRect = local
+                    pixelSize = CGSize(width: local.width * scale, height: local.height * scale)
+                }
+                filter = SCContentFilter(display: display, excludingWindows: [])
+                cameraAnchor = globalRect ?? screen.frame
+            case .window(let windowID):
+                guard let window = content.windows.first(where: { $0.windowID == windowID })
+                else { throw RecorderError.writerFailed }
+                pixelSize = CGSize(width: window.frame.width * scale,
+                                   height: window.frame.height * scale)
+                filter = SCContentFilter(desktopIndependentWindow: window)
+                cameraAnchor = screen.frame   // camera bubble is screen-level (v1)
             }
 
             // Even pixel dimensions keep H.264 encoders happy.
@@ -137,18 +219,22 @@ final class RecordingCoordinator {
             pixelSize.height = (pixelSize.height / 2).rounded(.down) * 2
 
             if config.microphone, await MicCapturer.ensurePermission() == false {
-                // Denied: record without a mic track instead of writing an empty one.
                 config.microphone = false
                 hud.show("Mic access denied — recording without microphone", on: screen)
             }
             if config.camera, await CameraBubbleController.ensurePermission() {
-                bubble.show(near: globalRect ?? screen.frame, on: screen,
-                            diameter: config.cameraSize.diameter)
+                bubble.show(near: cameraAnchor, on: screen, diameter: config.cameraSize.diameter)
             }
             if config.clickHighlights { clicks.start(on: screen) }
             if config.keystrokeOverlay { keystrokes.start(on: screen) }
 
-            let filter = SCContentFilter(display: display, excludingWindows: [])
+            if config.countdownSeconds > 0 {
+                await countdown.run(seconds: config.countdownSeconds, on: screen)
+                // ⌘⇧5 during the countdown cancels (cancelStrip → reset). If we're
+                // no longer armed, tear the panels back down and bail.
+                guard case .armed = state else { tearDownPanels(); notify(); return }
+            }
+
             let ext = "mp4"   // GIF converts after the fact
             let name = FileNamer.fileName(for: Date(), ext: ext, prefix: "Recording")
             let url = config.format == .gif
@@ -266,6 +352,7 @@ final class RecordingCoordinator {
 
     private func notify() {
         onStateChange?(isRecording, state.elapsedString(now: Date()))
+        onPauseStateChange?(isRecording, isPaused)
     }
 
     /// Post-save tail for every finished recording: add it to capture history,

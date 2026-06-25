@@ -4,8 +4,9 @@ A free, open-source screenshot and annotation tool for macOS, living in your men
 
 ## Features
 
-- **Capture** an area (`⌘⇧4`), a window (`⌘⇧5`), or the full screen (`⌘⇧6`) — the native `⌘⇧4` is disabled while the app runs and restored on quit
+- **Capture** an area (`⌘⇧4`), a window (`⌘⇧8`), or the full screen (`⌘⇧6`) — the native `⌘⇧4` is disabled while the app runs and restored on quit
 - **Capture Text (`⌘⇧7`)** — on-device OCR + QR decode straight to the clipboard
+- **Record (`⌘⇧5`)** the full screen, a selected area, or a single window to MP4 or GIF — with system audio, microphone, a camera bubble, click highlights, and a keystroke overlay; an optional 3/5/10-second countdown before recording; and pause/resume that leaves no gap in the saved file
 - **Quick Access overlay** after capture: drag the thumbnail anywhere, copy, save, or jump into the editor; the last 3 captures stack at the screen corner
 - **Capture History** — every capture and recording is remembered locally (capped + 30-day prune); browse, copy, annotate, pin, delete, or clear all from the History window, and restore an accidentally closed thumbnail with Restore Recently Closed
 - **Pin to screen** — float any capture always-on-top (drag, resize, multi-pin)

@@ -1,16 +1,19 @@
 import Foundation
 
-/// Recording lifecycle. Pure state machine: `transition` applies an event only
-/// when legal, so callers (the ⌘⇧5 toggle) can't corrupt the lifecycle.
+/// Pure recording state machine. `recording`/`paused` carry the start time and
+/// the total time spent paused so the elapsed timer can exclude pauses.
 public enum RecorderState: Equatable {
     case idle
-    case armed                       // record strip showing
-    case recording(started: Date)
-    case finishing                   // writer finalizing — new commands rejected
+    case armed                                                   // record strip showing
+    case recording(started: Date, accumulatedPause: TimeInterval)
+    case paused(started: Date, accumulatedPause: TimeInterval, since: Date)
+    case finishing                                              // writer finalizing — new commands rejected
 
     public enum Event: Equatable {
         case arm                     // show the strip
         case begin(Date)             // capture started
+        case pause(Date)             // recording → paused at this time
+        case resume(Date)            // paused → recording at this time
         case finish                  // stop requested
         case reset                   // back to idle (finalized or cancelled)
     }
@@ -19,20 +22,33 @@ public enum RecorderState: Equatable {
     @discardableResult
     public mutating func transition(_ event: Event) -> Bool {
         switch (self, event) {
-        case (.idle, .arm):                self = .armed
-        case (.armed, .begin(let date)):   self = .recording(started: date)
-        case (.armed, .reset):             self = .idle
-        case (.recording, .finish):        self = .finishing
-        case (.finishing, .reset):         self = .idle
-        default:                           return false
+        case (.idle, .arm):                       self = .armed
+        case (.armed, .begin(let date)):          self = .recording(started: date, accumulatedPause: 0)
+        case (.armed, .reset):                    self = .idle
+        case (.recording(let started, let acc), .pause(let at)):
+            self = .paused(started: started, accumulatedPause: acc, since: at)
+        case (.paused(let started, let acc, let since), .resume(let at)):
+            self = .recording(started: started, accumulatedPause: acc + at.timeIntervalSince(since))
+        case (.recording, .finish):               self = .finishing
+        case (.paused, .finish):                  self = .finishing
+        case (.finishing, .reset):                self = .idle
+        default:                                  return false
         }
         return true
     }
 
-    /// "m:ss" while recording; nil otherwise.
+    /// "m:ss" while recording (paused time excluded); "Paused · m:ss" (frozen)
+    /// while paused; nil otherwise.
     public func elapsedString(now: Date) -> String? {
-        guard case .recording(let started) = self else { return nil }
-        let secs = max(0, Int(now.timeIntervalSince(started)))
-        return "\(secs / 60):" + String(format: "%02d", secs % 60)
+        switch self {
+        case .recording(let started, let acc):
+            let secs = max(0, Int(now.timeIntervalSince(started) - acc))
+            return "\(secs / 60):" + String(format: "%02d", secs % 60)
+        case .paused(let started, let acc, let since):
+            let secs = max(0, Int(since.timeIntervalSince(started) - acc))
+            return "Paused · \(secs / 60):" + String(format: "%02d", secs % 60)
+        default:
+            return nil
+        }
     }
 }

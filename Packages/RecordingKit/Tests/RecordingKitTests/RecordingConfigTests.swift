@@ -13,12 +13,16 @@ let recordingConfigTests: [TestCase] = [
         t.equal(d.cameraSize, .small)
         t.isTrue(d.clickHighlights)
         t.isFalse(d.keystrokeOverlay)
+        t.equal(d.countdownSeconds, 0)   // off by default
         var c = d
-        c.format = .gif; c.fps = 60; c.microphone = true; c.cameraSize = .medium
+        c.format = .gif; c.fps = 60; c.microphone = true; c.cameraSize = .medium; c.countdownSeconds = 5
         t.equal(RecordingConfig(dictionary: c.dictionary), c)
         // Malformed/missing keys fall back to defaults.
         t.equal(RecordingConfig(dictionary: [:]), .default)
         t.equal(RecordingConfig(dictionary: ["fps": "999"]).fps, 30) // not 30/60 → default
+        // Countdown: unknown value falls back to 0 (off); valid values round-trip.
+        t.equal(RecordingConfig(dictionary: ["countdownSeconds": "7"]).countdownSeconds, 0)
+        t.equal(RecordingConfig(dictionary: ["countdownSeconds": "10"]).countdownSeconds, 10)
     },
     TestCase("videoSettingsDerivation") { t in
         let s = RecordingConfig.default.videoSettings(width: 1920, height: 1080)

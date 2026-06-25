@@ -212,6 +212,12 @@ private struct RecordingTab: View {
                 }))
             Text("Showing keystrokes needs the Accessibility permission.")
                 .font(.caption).foregroundStyle(.secondary)
+              Picker("Countdown before recording", selection: bind(\.countdownSeconds)) {
+                  Text("Off").tag(0)
+                  Text("3 seconds").tag(3)
+                  Text("5 seconds").tag(5)
+                  Text("10 seconds").tag(10)
+              }
         }
     }
 
