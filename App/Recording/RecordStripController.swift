@@ -10,6 +10,7 @@ final class RecordStripController {
 
     var onFullScreen: (() -> Void)?
     var onArea: (() -> Void)?
+    var onWindow: (() -> Void)?
     var onCancel: (() -> Void)?
 
     init(store: SettingsStore) { self.store = store }
@@ -28,6 +29,9 @@ final class RecordStripController {
         full.bezelStyle = .rounded
         let area = NSButton(title: "Record Area…", target: self, action: #selector(areaSelect))
         area.bezelStyle = .rounded
+        let windowBtn = NSButton(title: "Record Window…", target: self,
+                                 action: #selector(windowSelect))
+        windowBtn.bezelStyle = .rounded
 
         let format = NSSegmentedControl(labels: ["MP4", "GIF"], trackingMode: .selectOne,
                                         target: self, action: #selector(formatChanged(_:)))
@@ -59,7 +63,7 @@ final class RecordStripController {
         cancel.isBordered = false
         cancel.setAccessibilityLabel("Cancel")
 
-        for v in [full, area, format, mic, sys, cam, cancel] { strip.addArrangedSubview(v) }
+        for v in [full, windowBtn, area, format, mic, sys, cam, cancel] { strip.addArrangedSubview(v) }
 
         let size = strip.fittingSize
         let frame = CGRect(x: screen.visibleFrame.midX - size.width / 2,
@@ -86,6 +90,7 @@ final class RecordStripController {
 
     @objc private func fullScreen() { onFullScreen?() }
     @objc private func areaSelect() { onArea?() }
+    @objc private func windowSelect() { onWindow?() }
     @objc private func cancelTapped() { onCancel?() }
     @objc private func formatChanged(_ sender: NSSegmentedControl) {
         store.recording.format = sender.selectedSegment == 0 ? .mp4 : .gif

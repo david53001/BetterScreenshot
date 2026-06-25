@@ -16,6 +16,7 @@ final class RecordingCoordinator {
     private let clicks = ClickHighlighter()
     private let keystrokes = KeystrokeOverlayController()
     private let countdown = CountdownOverlayController()
+    private let windowPicker = WindowPickerController()
     private let hud = HUDController()
     // Shared with CaptureCoordinator: finished recordings join the same
     // bottom-corner thumbnail stack that screenshots use.
@@ -40,6 +41,7 @@ final class RecordingCoordinator {
         self.strip = RecordStripController(store: settings)
         strip.onFullScreen = { [weak self] in self?.beginFullScreen() }
         strip.onArea = { [weak self] in self?.beginAreaSelection() }
+        strip.onWindow = { [weak self] in self?.beginWindowSelection() }
         strip.onCancel = { [weak self] in self?.cancelStrip() }
         recorder.onStreamError = { [weak self] _ in
             Task { @MainActor in self?.streamFailed() }
@@ -95,6 +97,7 @@ final class RecordingCoordinator {
         // ⌘⇧5 while the area-selection overlay / countdown is up: tear it down too.
         selection.cancel()
         countdown.cancel()
+        windowPicker.cancel()
         strip.hide()
         state.transition(.reset)
     }
@@ -121,6 +124,44 @@ final class RecordingCoordinator {
                 await self.begin(target: .display(globalRect: result.globalRect), screen: screen)
             }
         }
+    }
+
+    private func beginWindowSelection() {
+        strip.hide()
+        // CGWindowList bounds are top-left global; convert with the primary
+        // display height (the screen whose origin is (0,0)).
+        let primaryHeight = (NSScreen.screens.first { $0.frame.origin == .zero }
+                             ?? NSScreen.main)?.frame.height ?? 0
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let info = (CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
+        let windows: [PickableWindow] = info.compactMap { dict in
+            guard let id = dict[kCGWindowNumber as String] as? UInt32,
+                  let layer = dict[kCGWindowLayer as String] as? Int,
+                  let pidInt = dict[kCGWindowOwnerPID as String] as? Int,
+                  let boundsValue = dict[kCGWindowBounds as String],
+                  let bounds = CGRect(dictionaryRepresentation: boundsValue as! CFDictionary)
+            else { return nil }
+            let title = dict[kCGWindowName as String] as? String
+            return PickableWindow(id: id,
+                                  frame: WindowPicking.cocoaFrame(fromTopLeft: bounds,
+                                                                  primaryHeight: primaryHeight),
+                                  title: title, layer: layer, ownerPID: pid_t(pidInt))
+        }
+        windowPicker.present(hitTest: { point in
+            guard let w = WindowPicking.topmost(at: point, windows: windows,
+                                                excludingPID: ownPID) else { return nil }
+            return (id: w.id, frame: w.frame, title: w.title)
+        }, onPicked: { [weak self] id in
+            guard let self else { return }
+            guard let id, let picked = windows.first(where: { $0.id == id }) else {
+                self.state.transition(.reset); self.notify(); return
+            }
+            let center = CGPoint(x: picked.frame.midX, y: picked.frame.midY)
+            let screen = NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main
+            guard let screen else { self.state.transition(.reset); self.notify(); return }
+            Task { await self.begin(target: .window(id), screen: screen) }
+        })
     }
 
     private func stripScreen() -> NSScreen? {
