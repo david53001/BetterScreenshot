@@ -2,11 +2,18 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
-## Unreleased
-
-> Merged to `main`, not yet tagged/released. The locally deployed build still reports version 2.3.2 (no version bump). Design + implementation: `docs/superpowers/specs/2026-06-25-betterscreenshot-editor-defaults-and-stack-button-design.md`.
+## v2.4.0 — 2026-06-25 · Recording Controls + Editor Defaults
 
 ### Added
+- **Countdown before recording.** Optional 3 / 5 / 10-second on-screen
+  countdown before a recording starts (Settings → Recording). Click the
+  countdown to start immediately; ⌘⇧5 cancels.
+- **Record Window.** A new "Record Window…" button on the record strip: hover
+  to highlight any window, then click to record just that window.
+- **Pause / Resume.** Pause a running recording and resume with no gap in the
+  saved file. Available from the menu bar and as a bindable shortcut
+  (Settings → Shortcuts → "Pause/Resume Recording"); the menu-bar timer
+  freezes and shows "Paused" while paused.
 - **Sticky annotation defaults.** The annotation editor now remembers the
   stroke/text **color** and **size** (S/M/L) you last used and reopens with
   them, instead of always starting on red / medium. Your choice persists across
