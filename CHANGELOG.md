@@ -2,6 +2,23 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## Unreleased
+
+> Merged to `main`, not yet tagged/released. The locally deployed build still reports version 2.3.2 (no version bump). Design + implementation: `docs/superpowers/specs/2026-06-25-betterscreenshot-editor-defaults-and-stack-button-design.md`.
+
+### Added
+- **Sticky annotation defaults.** The annotation editor now remembers the
+  stroke/text **color** and **size** (S/M/L) you last used and reopens with
+  them, instead of always starting on red / medium. Your choice persists across
+  captures and app restarts (stored locally in `UserDefaults`). The active tool
+  still defaults to Arrow.
+- **"Stack" button in the editor (replaces "Pin").** The editor's bottom action
+  bar now has a **Stack** button that drops the finished, annotated screenshot
+  into the bottom-right Quick Access stack alongside your other captures — with
+  the usual Copy / Edit / Pin / Save / drag actions — records it to History, then
+  closes the editor. Pin-to-Screen is unchanged and still available from the
+  Quick Access thumbnail's own Pin button.
+
 ## v2.3.2 — 2026-06-11 · History Clear All
 
 ### Added

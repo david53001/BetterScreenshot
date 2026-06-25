@@ -31,6 +31,7 @@ Local Swift packages + a menu-bar app target:
   - `…-plan-2-quick-access-overlay.md` — post-capture floating thumbnail.
   - `…-plan-3-annotation-editor.md` — the editor (model, canvas, tools, export).
 - P3 (shipped v1.3): `docs/superpowers/specs/2026-06-04-betterscreenshot-p3-ocr-pin-design.md` + `docs/superpowers/plans/2026-06-04-betterscreenshot-p3-ocr-pin.md` — Capture Text (OCR/QR, ⌘⇧7), Pin to Screen, Quick Access stack.
+- Editor sticky defaults + Stack button (shipped 2026-06-25, on `main`, not tagged): `docs/superpowers/specs/2026-06-25-betterscreenshot-editor-defaults-and-stack-button-design.md` + `docs/superpowers/plans/2026-06-25-betterscreenshot-editor-defaults-and-stack-button.md` — the annotation editor remembers the last-used stroke/text color + size across sessions (persisted in `UserDefaults` key `editorDefaultStyle` via `SettingsStore.editorStyle`, injected into `EditorWindowController` as `defaultStyle`, saved on the `onStyleChanged` callback); and the editor's bottom-bar **Pin** button was replaced by a **Stack** button (`EditorWindowController.onAddToStack` → `CaptureCoordinator.keepInStack`) that adds the flattened edit to the bottom-right Quick Access stack + History. Pin-to-Screen is retained via the Quick Access overlay's own Pin action (`QuickAccessActions.onPin`). This change is a good worked example of the brainstorm → spec → plan → subagent-driven-development → merge flow for a small two-feature change.
 - Next features (designed 2026-06-05, awaiting plans — see Roadmap below for order):
   - `docs/superpowers/specs/2026-06-05-betterscreenshot-capture-history-design.md`
   - `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
@@ -38,7 +39,7 @@ Local Swift packages + a menu-bar app target:
 - `CHANGELOG.md` — per-release history.
 
 ## Roadmap (post-v1, each its own spec → plan)
-~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added) · ~~v2.3 capture history~~ (shipped 2026-06-05).
+~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added) · ~~v2.3 capture history~~ (shipped 2026-06-05) · ~~editor sticky defaults + Stack-to-Quick-Access button~~ (shipped 2026-06-25, on `main`, not tagged — see Source of truth above).
 
 **Next up — specs ready, implement in this order** (for each: `superpowers:writing-plans` from the spec, then execute with `superpowers:subagent-driven-development`; each spec lists its own probes/risks — run probe tasks first, and verify named symbols against live code before planning):
 1. **v2.4 Recording Controls** (countdown · window target · pause/resume) — `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
