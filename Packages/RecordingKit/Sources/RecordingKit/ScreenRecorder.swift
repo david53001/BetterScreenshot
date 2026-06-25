@@ -166,6 +166,19 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         timeline = PauseTimeline()
     }
 
+    /// On the first sample after resume, fold the silent gap into the timeline
+    /// (anchored on the last appended video PTS) and let samples flow again.
+    /// Audio and video share the host-time clock, so whichever sample arrives
+    /// first may clear the resume — this avoids dropping audio when the captured
+    /// content is static (no new video frames) after resume.
+    private func clearPendingResume(firstPTS pts: CMTime) {
+        if let last = lastVideoPTS {
+            timeline.resume(lastPTSBeforePause: last, firstPTSAfterResume: pts,
+                            frameDuration: frameDuration)
+        }
+        pendingResume = false
+    }
+
     /// Append `sampleBuffer` retimed by the current pause offset. Subtracts the
     /// offset from every timing entry (handles multi-sample audio buffers). Fast
     /// path: with a zero offset (no pause yet) the original buffer is appended.
@@ -214,20 +227,15 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
                 lastVideoPTS = pts
             }
             if paused { return }
-            if pendingResume {
-                if let last = lastVideoPTS {
-                    timeline.resume(lastPTSBeforePause: last, firstPTSAfterResume: pts,
-                                    frameDuration: frameDuration)
-                }
-                pendingResume = false
-            }
+            if pendingResume { clearPendingResume(firstPTS: pts) }
             if let videoInput, videoInput.isReadyForMoreMediaData {
                 appendRetimed(sampleBuffer, to: videoInput)
             }
             lastVideoPTS = pts
         case .audio:
-            guard sessionStarted, !paused, !pendingResume,
+            guard sessionStarted, !paused,
                   let systemAudioInput, systemAudioInput.isReadyForMoreMediaData else { return }
+            if pendingResume { clearPendingResume(firstPTS: sampleBuffer.presentationTimeStamp) }
             appendRetimed(sampleBuffer, to: systemAudioInput)
         default:
             break
@@ -235,9 +243,10 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     private func appendMic(_ buffer: CMSampleBuffer) {
-        guard sessionStarted, !paused, !pendingResume, let sessionStartPTS,
+        guard sessionStarted, !paused, let sessionStartPTS,
               buffer.presentationTimeStamp >= sessionStartPTS,
               let micInput, micInput.isReadyForMoreMediaData else { return }
+        if pendingResume { clearPendingResume(firstPTS: buffer.presentationTimeStamp) }
         appendRetimed(buffer, to: micInput)
     }
 
