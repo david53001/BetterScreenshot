@@ -9,6 +9,9 @@ public final class EditorWindowController: NSWindowController {
     public var onCopy: ((CGImage) -> Void)?
     public var onSave: ((CGImage) -> Void)?
     public var onPin: ((CGImage) -> Void)?
+    /// Fired whenever the active color/stroke-weight/font-size changes, so the
+    /// host can persist the style as the next session's default.
+    public var onStyleChanged: ((AnnotationStyle) -> Void)?
 
     // Chrome references kept for live updates.
     private var toolButtons: [EditorTool: IconToolButton] = [:]
@@ -62,7 +65,7 @@ public final class EditorWindowController: NSWindowController {
             ? NSColor(white: 0.12, alpha: 1) : NSColor(white: 0.90, alpha: 1)
     }
 
-    public init(image: CGImage) {
+    public init(image: CGImage, defaultStyle: AnnotationStyle = .default) {
         let doc = EditorDocument(baseImage: image)
         self.canvas = EditorCanvasView(document: doc)
 
@@ -81,6 +84,8 @@ public final class EditorWindowController: NSWindowController {
         window.minSize = NSSize(width: 600, height: 440)
         super.init(window: window)
 
+        self.style = defaultStyle
+        canvas.style = defaultStyle
         window.backgroundColor = backdrop
         buildUI()
         // Delete / [ / ] are handled in the canvas's keyDown — make it the
@@ -488,18 +493,21 @@ public final class EditorWindowController: NSWindowController {
         style.strokeColor = RGBAColor(c)
         style.fillColor = RGBAColor(c.withAlphaComponent(0.25))
         canvas.style = style
+        onStyleChanged?(style)
     }
 
     @objc private func weightChanged(_ sender: NSSegmentedControl) {
         let widths: [CGFloat] = [2, 4, 7]
         style.lineWidth = widths[max(0, sender.selectedSegment)]
         canvas.style = style
+        onStyleChanged?(style)
     }
 
     @objc private func sizeChanged(_ sender: NSSegmentedControl) {
         let sizes: [CGFloat] = [18, 24, 36]
         style.fontSize = sizes[max(0, sender.selectedSegment)]
         canvas.style = style
+        onStyleChanged?(style)
     }
 
     @objc private func redactChanged(_ sender: NSSegmentedControl) {
