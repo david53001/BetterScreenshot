@@ -100,7 +100,7 @@ final class RecordingCoordinator {
     private func beginFullScreen() {
         guard let screen = stripScreen() else { return }
         strip.hide()
-        Task { await begin(globalRect: nil, screen: screen) }
+        Task { await begin(target: .display(globalRect: nil), screen: screen) }
     }
 
     private func beginAreaSelection() {
@@ -116,7 +116,7 @@ final class RecordingCoordinator {
                     self.state.transition(.reset)
                     return
                 }
-                await self.begin(globalRect: result.globalRect, screen: screen)
+                await self.begin(target: .display(globalRect: result.globalRect), screen: screen)
             }
         }
     }
@@ -125,34 +125,50 @@ final class RecordingCoordinator {
         NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
     }
 
-    /// Start the engine for `globalRect` (nil = full screen) on `screen`.
-    private func begin(globalRect: CGRect?, screen: NSScreen) async {
+    private enum RecordingTarget {
+        case display(globalRect: CGRect?)   // nil = full screen
+        case window(CGWindowID)
+    }
+
+    /// Start the engine for `target` on `screen`. Single path for full-screen,
+    /// area, and window recording.
+    private func begin(target: RecordingTarget, screen: NSScreen) async {
         // A ⌘⇧5 cancel can land while the selection overlay or permission prompts
         // were up — only proceed if we're still armed.
         guard case .armed = state else { return }
         var config = settings.recording
-        guard let displayID = screen.deviceDescription[
-                NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else {
-            state.transition(.reset)
-            return
-        }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(
                 false, onScreenWindowsOnly: true)
-            guard let display = content.displays.first(where: { $0.displayID == displayID })
-            else { throw RecorderError.writerFailed }
-
             let scale = screen.backingScaleFactor
-            // sourceRect: display-relative, top-left origin, points.
+            let filter: SCContentFilter
             var sourceRect: CGRect?
-            var pixelSize = CGSize(width: CGFloat(display.width) * scale,
+            var pixelSize: CGSize
+            let cameraAnchor: CGRect
+            switch target {
+            case .display(let globalRect):
+                guard let displayID = screen.deviceDescription[
+                        NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                      let display = content.displays.first(where: { $0.displayID == displayID })
+                else { throw RecorderError.writerFailed }
+                pixelSize = CGSize(width: CGFloat(display.width) * scale,
                                    height: CGFloat(display.height) * scale)
-            if let globalRect {
-                let local = CaptureGeometry.pixelRect(forGlobalRect: globalRect,
-                                                      inDisplayFrame: screen.frame,
-                                                      scale: 1)   // points, top-left
-                sourceRect = local
-                pixelSize = CGSize(width: local.width * scale, height: local.height * scale)
+                if let globalRect {
+                    // sourceRect: display-relative, top-left origin, points.
+                    let local = CaptureGeometry.pixelRect(forGlobalRect: globalRect,
+                                                          inDisplayFrame: screen.frame, scale: 1)
+                    sourceRect = local
+                    pixelSize = CGSize(width: local.width * scale, height: local.height * scale)
+                }
+                filter = SCContentFilter(display: display, excludingWindows: [])
+                cameraAnchor = globalRect ?? screen.frame
+            case .window(let windowID):
+                guard let window = content.windows.first(where: { $0.windowID == windowID })
+                else { throw RecorderError.writerFailed }
+                pixelSize = CGSize(width: window.frame.width * scale,
+                                   height: window.frame.height * scale)
+                filter = SCContentFilter(desktopIndependentWindow: window)
+                cameraAnchor = screen.frame   // camera bubble is screen-level (v1)
             }
 
             // Even pixel dimensions keep H.264 encoders happy.
@@ -160,18 +176,17 @@ final class RecordingCoordinator {
             pixelSize.height = (pixelSize.height / 2).rounded(.down) * 2
 
             if config.microphone, await MicCapturer.ensurePermission() == false {
-                // Denied: record without a mic track instead of writing an empty one.
                 config.microphone = false
                 hud.show("Mic access denied — recording without microphone", on: screen)
             }
             if config.camera, await CameraBubbleController.ensurePermission() {
-                bubble.show(near: globalRect ?? screen.frame, on: screen,
-                            diameter: config.cameraSize.diameter)
+                bubble.show(near: cameraAnchor, on: screen, diameter: config.cameraSize.diameter)
             }
             if config.clickHighlights { clicks.start(on: screen) }
             if config.keystrokeOverlay { keystrokes.start(on: screen) }
 
-            let filter = SCContentFilter(display: display, excludingWindows: [])
+            // (Task 9 inserts the countdown step here.)
+
             let ext = "mp4"   // GIF converts after the fact
             let name = FileNamer.fileName(for: Date(), ext: ext, prefix: "Recording")
             let url = config.format == .gif
