@@ -27,10 +27,14 @@ final class CaptureCoordinator {
     private var editorController: EditorWindowController?
 
     func presentEditor(_ image: CGImage) {
-        let controller = EditorWindowController(image: image)
+        let controller = EditorWindowController(image: image, defaultStyle: settings.editorStyle)
         controller.onCopy = { [weak self] img in self?.copy(img) }
         controller.onSave = { [weak self] img in self?.save(img) }
         controller.onPin = { [weak self] img in self?.pin(img) }
+        controller.onStyleChanged = { [weak self] style in
+            self?.settings.editorStyle = style
+            self?.settings.persistEditorStyle()
+        }
         editorController = controller
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
