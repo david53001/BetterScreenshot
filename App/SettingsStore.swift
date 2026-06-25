@@ -1,6 +1,7 @@
 import Foundation
 import CaptureKit
 import RecordingKit
+import EditorKit
 
 final class SettingsStore: ObservableObject {
     @Published var settings: CaptureSettings
@@ -9,6 +10,8 @@ final class SettingsStore: ObservableObject {
     /// Actions whose combo macOS refused to register (not persisted).
     @Published var failedActions: Set<HotkeyAction> = []
     @Published var recording: RecordingConfig
+    /// The annotation editor's sticky default style (color + sizes).
+    @Published var editorStyle: AnnotationStyle
 
     private let defaults = UserDefaults.standard
 
@@ -29,6 +32,12 @@ final class SettingsStore: ObservableObject {
         }
         let recDict = defaults.dictionary(forKey: "recordingConfig") as? [String: String] ?? [:]
         self.recording = recDict.isEmpty ? .default : RecordingConfig(dictionary: recDict)
+        if let data = defaults.data(forKey: "editorDefaultStyle"),
+           let decoded = try? JSONDecoder().decode(AnnotationStyle.self, from: data) {
+            self.editorStyle = decoded
+        } else {
+            self.editorStyle = .default
+        }
     }
 
     func persist() {
@@ -36,6 +45,12 @@ final class SettingsStore: ObservableObject {
         defaults.set(saveDirectory, forKey: "saveDirectory")
         defaults.set(bindings.dictionary, forKey: "hotkeyBindings")
         defaults.set(recording.dictionary, forKey: "recordingConfig")
+    }
+
+    func persistEditorStyle() {
+        if let data = try? JSONEncoder().encode(editorStyle) {
+            defaults.set(data, forKey: "editorDefaultStyle")
+        }
     }
 
     /// The user's macOS screenshot folder, or ~/Desktop if it isn't customized.
