@@ -51,6 +51,7 @@ final class RecordingCoordinator {
         case .idle: arm()
         case .armed: cancelStrip()
         case .recording: Task { await stop() }
+        case .paused: Task { await stop() }
         case .finishing: break   // busy — ignore
         }
     }

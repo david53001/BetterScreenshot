@@ -21,6 +21,15 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var sessionStarted = false
     private var sessionStartPTS: CMTime?
     private var outputURL: URL?
+    // Pause/resume: flags are flipped on `sampleQueue` so they serialize with
+    // appends. While `paused`, all samples are dropped. `pendingResume` means a
+    // resume was requested but the first post-resume video frame hasn't set the
+    // new offset yet (audio is held back until it does — a ≤1-buffer seam nick).
+    private var paused = false
+    private var pendingResume = false
+    private var lastVideoPTS: CMTime?
+    private var frameDuration = CMTime(value: 1, timescale: 60)
+    private var timeline = PauseTimeline()
 
     /// Stream died underneath us (display unplugged, etc.). Fired on sampleQueue.
     public var onStreamError: ((Error) -> Void)?
@@ -92,6 +101,11 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         self.micInput = micInput
         self.outputURL = outputURL
         self.sessionStarted = false
+        self.frameDuration = CMTime(value: 1, timescale: CMTimeScale(config.fps))
+        self.paused = false
+        self.pendingResume = false
+        self.lastVideoPTS = nil
+        self.timeline = PauseTimeline()
         self.stream = stream
 
         if config.microphone, micInput != nil {
@@ -133,10 +147,51 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         return outputURL
     }
 
+    /// Pause: drop all samples until `resume()`. Serialized on the sample queue.
+    public func pause() {
+        sampleQueue.sync { paused = true }
+    }
+
+    /// Resume: the next video frame re-establishes the gap-free offset; samples
+    /// flow again retimed by the accumulated pause offset.
+    public func resume() {
+        sampleQueue.sync { paused = false; pendingResume = true }
+    }
+
     private func reset() {
         stream = nil; writer = nil; videoInput = nil
         systemAudioInput = nil; micInput = nil; micCapturer = nil
         outputURL = nil; sessionStarted = false; sessionStartPTS = nil
+        paused = false; pendingResume = false; lastVideoPTS = nil
+        timeline = PauseTimeline()
+    }
+
+    /// Append `sampleBuffer` retimed by the current pause offset. Subtracts the
+    /// offset from every timing entry (handles multi-sample audio buffers). Fast
+    /// path: with a zero offset (no pause yet) the original buffer is appended.
+    private func appendRetimed(_ sampleBuffer: CMSampleBuffer, to input: AVAssetWriterInput) {
+        let offset = timeline.currentOffset
+        if offset == .zero { input.append(sampleBuffer); return }
+        var count: CMItemCount = 0
+        CMSampleBufferGetSampleTimingInfoArray(sampleBuffer, entryCount: 0,
+                                               arrayToFill: nil, entriesNeededOut: &count)
+        guard count > 0 else { input.append(sampleBuffer); return }
+        var timings = [CMSampleTimingInfo](repeating: CMSampleTimingInfo(), count: count)
+        CMSampleBufferGetSampleTimingInfoArray(sampleBuffer, entryCount: count,
+                                               arrayToFill: &timings, entriesNeededOut: &count)
+        for i in 0..<count {
+            if timings[i].presentationTimeStamp.isValid {
+                timings[i].presentationTimeStamp = timings[i].presentationTimeStamp - offset
+            }
+            if timings[i].decodeTimeStamp.isValid {
+                timings[i].decodeTimeStamp = timings[i].decodeTimeStamp - offset
+            }
+        }
+        var out: CMSampleBuffer?
+        let status = CMSampleBufferCreateCopyWithNewTiming(
+            allocator: kCFAllocatorDefault, sampleBuffer: sampleBuffer,
+            sampleTimingEntryCount: count, sampleTimingArray: &timings, sampleBufferOut: &out)
+        if status == noErr, let out { input.append(out) } else { input.append(sampleBuffer) }
     }
 
     // MARK: - SCStreamOutput (called on sampleQueue)
@@ -151,29 +206,39 @@ public final class ScreenRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
                       sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
                   let statusRaw = attachments.first?[.status] as? Int,
                   SCFrameStatus(rawValue: statusRaw) == .complete else { return }
+            let pts = sampleBuffer.presentationTimeStamp
             if !sessionStarted {
-                let pts = sampleBuffer.presentationTimeStamp
                 writer?.startSession(atSourceTime: pts)
                 sessionStartPTS = pts
                 sessionStarted = true
+                lastVideoPTS = pts
+            }
+            if paused { return }
+            if pendingResume {
+                if let last = lastVideoPTS {
+                    timeline.resume(lastPTSBeforePause: last, firstPTSAfterResume: pts,
+                                    frameDuration: frameDuration)
+                }
+                pendingResume = false
             }
             if let videoInput, videoInput.isReadyForMoreMediaData {
-                videoInput.append(sampleBuffer)
+                appendRetimed(sampleBuffer, to: videoInput)
             }
+            lastVideoPTS = pts
         case .audio:
-            guard sessionStarted, let systemAudioInput,
-                  systemAudioInput.isReadyForMoreMediaData else { return }
-            systemAudioInput.append(sampleBuffer)
+            guard sessionStarted, !paused, !pendingResume,
+                  let systemAudioInput, systemAudioInput.isReadyForMoreMediaData else { return }
+            appendRetimed(sampleBuffer, to: systemAudioInput)
         default:
             break
         }
     }
 
     private func appendMic(_ buffer: CMSampleBuffer) {
-        guard sessionStarted, let sessionStartPTS,
+        guard sessionStarted, !paused, !pendingResume, let sessionStartPTS,
               buffer.presentationTimeStamp >= sessionStartPTS,
               let micInput, micInput.isReadyForMoreMediaData else { return }
-        micInput.append(buffer)
+        appendRetimed(buffer, to: micInput)
     }
 
     // MARK: - SCStreamDelegate
