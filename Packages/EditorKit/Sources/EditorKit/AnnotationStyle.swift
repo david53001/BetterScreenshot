@@ -1,6 +1,6 @@
 import CoreGraphics
 
-public struct AnnotationStyle: Equatable {
+public struct AnnotationStyle: Equatable, Codable {
     public var strokeColor: RGBAColor
     public var fillColor: RGBAColor
     public var lineWidth: CGFloat

@@ -1,7 +1,7 @@
 import CoreGraphics
 import AppKit
 
-public struct RGBAColor: Equatable {
+public struct RGBAColor: Equatable, Codable {
     public var r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
     public init(r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat) {
         self.r = r; self.g = g; self.b = b; self.a = a
