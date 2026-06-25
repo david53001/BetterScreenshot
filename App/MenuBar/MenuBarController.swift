@@ -18,6 +18,7 @@ final class MenuBarController: NSObject {
 
     private var actionItems: [HotkeyAction: NSMenuItem] = [:]
     private var recordItem: NSMenuItem?
+    private var pauseItem: NSMenuItem?
 
     private func buildMenu() {
         let menu = NSMenu()
@@ -34,6 +35,12 @@ final class MenuBarController: NSObject {
                                   action: #selector(toggleRecording), keyEquivalent: "")
         recordItem?.target = self
         if let recordItem { actionItems[.record] = recordItem }
+        let pause = menu.addItem(withTitle: "Pause Recording",
+                                 action: #selector(togglePauseResume), keyEquivalent: "")
+        pause.target = self
+        pause.isHidden = true
+        pauseItem = pause
+        if let pauseItem { actionItems[.pauseResumeRecording] = pauseItem }
         menu.addItem(.separator())
         add("Pin from Clipboard", #selector(pinClipboard), .pinFromClipboard)
         menu.addItem(.separator())
@@ -67,12 +74,20 @@ final class MenuBarController: NSObject {
     var onToggleRecording: (() -> Void)?
     var onOpenHistory: (() -> Void)?
     var onRestoreRecentlyClosed: (() -> Void)?
+    var onPauseResume: (() -> Void)?
     /// Menu validation: false disables "Restore Recently Closed".
     var canRestore: (() -> Bool)?
 
     @objc private func toggleRecording() { onToggleRecording?() }
     @objc private func openHistory() { onOpenHistory?() }
     @objc private func restoreClosed() { onRestoreRecentlyClosed?() }
+    @objc private func togglePauseResume() { onPauseResume?() }
+
+    /// Pause/Resume item: shown only while recording/paused; title flips on state.
+    func setPauseItem(active: Bool, paused: Bool) {
+        pauseItem?.isHidden = !active
+        pauseItem?.title = paused ? "Resume Recording" : "Pause Recording"
+    }
 
     /// Red stop icon + elapsed timer while recording; normal icon otherwise.
     func setRecording(_ recording: Bool, elapsed: String?) {

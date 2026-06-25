@@ -28,6 +28,8 @@ final class RecordingCoordinator {
     var presentSetup: (() -> Void)?
     /// Menu-bar state: (recording?, elapsed string). Called on every change/tick.
     var onStateChange: ((Bool, String?) -> Void)?
+    /// Drives the Pause/Resume menu item: (session active?, currently paused?).
+    var onPauseStateChange: ((_ active: Bool, _ paused: Bool) -> Void)?
     /// Set by the app delegate; nil until then (history silently skipped).
     var history: HistoryService?
 
@@ -43,16 +45,36 @@ final class RecordingCoordinator {
         }
     }
 
-    var isRecording: Bool { if case .recording = state { return true }; return false }
+    /// True while a capture session exists (recording OR paused) — keeps the
+    /// menu-bar stop icon + timer visible through a pause.
+    var isRecording: Bool {
+        switch state { case .recording, .paused: return true; default: return false }
+    }
+    var isPaused: Bool { if case .paused = state { return true }; return false }
 
-    /// The smart ⌘⇧5 entry point: idle → strip · armed → cancel · recording → stop.
+    /// The smart ⌘⇧5 entry point: idle → strip · armed → cancel · recording/paused → stop.
     func toggle() {
         switch state {
         case .idle: arm()
         case .armed: cancelStrip()
-        case .recording: Task { await stop() }
-        case .paused: Task { await stop() }
+        case .recording, .paused: Task { await stop() }
         case .finishing: break   // busy — ignore
+        }
+    }
+
+    /// Pause/resume the running recording. No-op outside `.recording`/`.paused`.
+    func pauseResume() {
+        switch state {
+        case .recording:
+            guard state.transition(.pause(Date())) else { return }
+            recorder.pause()
+            notify()
+        case .paused:
+            guard state.transition(.resume(Date())) else { return }
+            recorder.resume()
+            notify()
+        default:
+            break
         }
     }
 
@@ -267,6 +289,7 @@ final class RecordingCoordinator {
 
     private func notify() {
         onStateChange?(isRecording, state.elapsedString(now: Date()))
+        onPauseStateChange?(isRecording, isPaused)
     }
 
     /// Post-save tail for every finished recording: add it to capture history,
