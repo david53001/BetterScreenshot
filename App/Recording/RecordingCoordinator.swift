@@ -15,6 +15,7 @@ final class RecordingCoordinator {
     private let bubble = CameraBubbleController()
     private let clicks = ClickHighlighter()
     private let keystrokes = KeystrokeOverlayController()
+    private let countdown = CountdownOverlayController()
     private let hud = HUDController()
     // Shared with CaptureCoordinator: finished recordings join the same
     // bottom-corner thumbnail stack that screenshots use.
@@ -91,8 +92,9 @@ final class RecordingCoordinator {
     }
 
     private func cancelStrip() {
-        // ⌘⇧5 while the area-selection overlay is up: tear it down too.
+        // ⌘⇧5 while the area-selection overlay / countdown is up: tear it down too.
         selection.cancel()
+        countdown.cancel()
         strip.hide()
         state.transition(.reset)
     }
@@ -185,7 +187,12 @@ final class RecordingCoordinator {
             if config.clickHighlights { clicks.start(on: screen) }
             if config.keystrokeOverlay { keystrokes.start(on: screen) }
 
-            // (Task 9 inserts the countdown step here.)
+            if config.countdownSeconds > 0 {
+                await countdown.run(seconds: config.countdownSeconds, on: screen)
+                // ⌘⇧5 during the countdown cancels (cancelStrip → reset). If we're
+                // no longer armed, tear the panels back down and bail.
+                guard case .armed = state else { tearDownPanels(); notify(); return }
+            }
 
             let ext = "mp4"   // GIF converts after the fact
             let name = FileNamer.fileName(for: Date(), ext: ext, prefix: "Recording")
