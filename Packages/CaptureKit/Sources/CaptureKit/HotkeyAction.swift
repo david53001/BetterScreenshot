@@ -3,7 +3,7 @@ import Foundation
 /// Every user-bindable action. Raw values are the persistence keys — don't rename.
 public enum HotkeyAction: String, CaseIterable, Hashable {
     case captureArea, captureWindow, captureFullscreen, captureText, pinFromClipboard, record,
-         openHistory, restoreRecentlyClosed
+         openHistory, restoreRecentlyClosed, pauseResumeRecording
 
     public var title: String {
         switch self {
@@ -15,6 +15,7 @@ public enum HotkeyAction: String, CaseIterable, Hashable {
         case .record:                return "Start/Stop Recording"
         case .openHistory:           return "Open History"
         case .restoreRecentlyClosed: return "Restore Recently Closed"
+        case .pauseResumeRecording:  return "Pause/Resume Recording"
         }
     }
 
@@ -31,6 +32,7 @@ public enum HotkeyAction: String, CaseIterable, Hashable {
         case .record:            return HotkeyCombo(keyCode: 23, modifiers: cmdShift) // ⌘⇧5
         case .openHistory:           return nil
         case .restoreRecentlyClosed: return nil
+        case .pauseResumeRecording:  return nil
         }
     }
 }
