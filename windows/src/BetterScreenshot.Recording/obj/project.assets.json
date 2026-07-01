@@ -1,0 +1,95 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0": {
+      "BetterScreenshot.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/BetterScreenshot.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BetterScreenshot.Core/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.Core/BetterScreenshot.Core.csproj",
+      "msbuildProject": "../BetterScreenshot.Core/BetterScreenshot.Core.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0": [
+      "BetterScreenshot.Core >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\david_v0a3rlc\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Recording\\BetterScreenshot.Recording.csproj",
+      "projectName": "BetterScreenshot.Recording",
+      "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Recording\\BetterScreenshot.Recording.csproj",
+      "packagesPath": "C:\\Users\\david_v0a3rlc\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Recording\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\david_v0a3rlc\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "projectReferences": {
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Core\\BetterScreenshot.Core.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Core\\BetterScreenshot.Core.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net9.0": {
+        "targetAlias": "net9.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

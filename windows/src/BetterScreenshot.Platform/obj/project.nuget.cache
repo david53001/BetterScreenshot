@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "ltWzk906qis=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Platform\\BetterScreenshot.Platform.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\david_v0a3rlc\\.nuget\\packages\\zxing.net\\0.16.11\\zxing.net.0.16.11.nupkg.sha512",
+    "C:\\Users\\david_v0a3rlc\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
+  ],
+  "logs": []
+}

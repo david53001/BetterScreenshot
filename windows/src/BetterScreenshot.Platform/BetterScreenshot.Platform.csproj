@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BetterScreenshot.Core\BetterScreenshot.Core.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Capture\BetterScreenshot.Capture.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Editor\BetterScreenshot.Editor.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.History\BetterScreenshot.History.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Recording\BetterScreenshot.Recording.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>

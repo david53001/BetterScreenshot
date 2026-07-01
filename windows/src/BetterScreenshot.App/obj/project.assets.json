@@ -1,0 +1,326 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0-windows10.0.19041": {
+      "ZXing.Net/0.16.11": {
+        "type": "package",
+        "compile": {
+          "lib/net9.0/zxing.dll": {
+            "related": ".XML"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/zxing.dll": {
+            "related": ".XML"
+          }
+        }
+      },
+      "BetterScreenshot.Capture/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "BetterScreenshot.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/BetterScreenshot.Capture.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.Capture.dll": {}
+        }
+      },
+      "BetterScreenshot.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/BetterScreenshot.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.Core.dll": {}
+        }
+      },
+      "BetterScreenshot.Editor/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "BetterScreenshot.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/BetterScreenshot.Editor.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.Editor.dll": {}
+        }
+      },
+      "BetterScreenshot.History/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "BetterScreenshot.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/BetterScreenshot.History.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.History.dll": {}
+        }
+      },
+      "BetterScreenshot.Platform/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "BetterScreenshot.Capture": "1.0.0",
+          "BetterScreenshot.Core": "1.0.0",
+          "BetterScreenshot.Editor": "1.0.0",
+          "BetterScreenshot.History": "1.0.0",
+          "BetterScreenshot.Recording": "1.0.0",
+          "ZXing.Net": "0.16.11"
+        },
+        "compile": {
+          "bin/placeholder/BetterScreenshot.Platform.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.Platform.dll": {}
+        },
+        "frameworkReferences": [
+          "Microsoft.WindowsDesktop.App.WPF"
+        ]
+      },
+      "BetterScreenshot.Recording/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "BetterScreenshot.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/BetterScreenshot.Recording.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/BetterScreenshot.Recording.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ZXing.Net/0.16.11": {
+      "sha512": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg==",
+      "type": "package",
+      "path": "zxing.net/0.16.11",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "docs/README.md",
+        "lib/native/zxing.XML",
+        "lib/native/zxing.pri",
+        "lib/native/zxing.winmd",
+        "lib/net20-cf/zxing.ce2.0.dll",
+        "lib/net20-cf/zxing.ce2.0.xml",
+        "lib/net20/zxing.XML",
+        "lib/net20/zxing.dll",
+        "lib/net35-cf/zxing.ce3.5.dll",
+        "lib/net35-cf/zxing.ce3.5.xml",
+        "lib/net35/zxing.XML",
+        "lib/net35/zxing.dll",
+        "lib/net40/zxing.XML",
+        "lib/net40/zxing.dll",
+        "lib/net40/zxing.presentation.XML",
+        "lib/net40/zxing.presentation.dll",
+        "lib/net45/zxing.XML",
+        "lib/net45/zxing.dll",
+        "lib/net45/zxing.presentation.XML",
+        "lib/net45/zxing.presentation.dll",
+        "lib/net461/zxing.XML",
+        "lib/net461/zxing.dll",
+        "lib/net461/zxing.presentation.XML",
+        "lib/net461/zxing.presentation.dll",
+        "lib/net47/zxing.XML",
+        "lib/net47/zxing.dll",
+        "lib/net47/zxing.presentation.XML",
+        "lib/net47/zxing.presentation.dll",
+        "lib/net48/zxing.XML",
+        "lib/net48/zxing.dll",
+        "lib/net48/zxing.presentation.XML",
+        "lib/net48/zxing.presentation.dll",
+        "lib/net5.0/zxing.XML",
+        "lib/net5.0/zxing.dll",
+        "lib/net6.0/zxing.XML",
+        "lib/net6.0/zxing.dll",
+        "lib/net7.0/zxing.XML",
+        "lib/net7.0/zxing.dll",
+        "lib/net8.0/zxing.XML",
+        "lib/net8.0/zxing.dll",
+        "lib/net9.0/zxing.XML",
+        "lib/net9.0/zxing.dll",
+        "lib/netcoreapp3.0/zxing.dll",
+        "lib/netcoreapp3.0/zxing.xml",
+        "lib/netcoreapp3.1/zxing.dll",
+        "lib/netcoreapp3.1/zxing.xml",
+        "lib/netstandard1.0/zxing.dll",
+        "lib/netstandard1.0/zxing.xml",
+        "lib/netstandard1.1/zxing.dll",
+        "lib/netstandard1.1/zxing.xml",
+        "lib/netstandard1.3/zxing.dll",
+        "lib/netstandard1.3/zxing.xml",
+        "lib/netstandard2.0/zxing.dll",
+        "lib/netstandard2.0/zxing.xml",
+        "lib/netstandard2.1/zxing.dll",
+        "lib/netstandard2.1/zxing.xml",
+        "lib/portable-win+net40+sl4+sl5+wp7+wp71+wp8/zxing.portable.XML",
+        "lib/portable-win+net40+sl4+sl5+wp7+wp71+wp8/zxing.portable.dll",
+        "lib/sl3-wp/zxing.wp7.0.XML",
+        "lib/sl3-wp/zxing.wp7.0.dll",
+        "lib/sl4-wp71/zxing.wp7.1.XML",
+        "lib/sl4-wp71/zxing.wp7.1.dll",
+        "lib/sl4/zxing.sl4.XML",
+        "lib/sl4/zxing.sl4.dll",
+        "lib/sl5/zxing.sl5.XML",
+        "lib/sl5/zxing.sl5.dll",
+        "lib/uap10/zxing.dll",
+        "lib/uap10/zxing.pri",
+        "lib/uap10/zxing.xml",
+        "lib/windows8-managed/zxing.winrt.XML",
+        "lib/windows8-managed/zxing.winrt.dll",
+        "lib/windows8/zxing.XML",
+        "lib/windows8/zxing.pri",
+        "lib/windows8/zxing.winmd",
+        "lib/wp8/zxing.wp8.0.XML",
+        "lib/wp8/zxing.wp8.0.dll",
+        "logo.jpg",
+        "zxing.net.0.16.11.nupkg.sha512",
+        "zxing.net.nuspec"
+      ]
+    },
+    "BetterScreenshot.Capture/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.Capture/BetterScreenshot.Capture.csproj",
+      "msbuildProject": "../BetterScreenshot.Capture/BetterScreenshot.Capture.csproj"
+    },
+    "BetterScreenshot.Core/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.Core/BetterScreenshot.Core.csproj",
+      "msbuildProject": "../BetterScreenshot.Core/BetterScreenshot.Core.csproj"
+    },
+    "BetterScreenshot.Editor/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.Editor/BetterScreenshot.Editor.csproj",
+      "msbuildProject": "../BetterScreenshot.Editor/BetterScreenshot.Editor.csproj"
+    },
+    "BetterScreenshot.History/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.History/BetterScreenshot.History.csproj",
+      "msbuildProject": "../BetterScreenshot.History/BetterScreenshot.History.csproj"
+    },
+    "BetterScreenshot.Platform/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.Platform/BetterScreenshot.Platform.csproj",
+      "msbuildProject": "../BetterScreenshot.Platform/BetterScreenshot.Platform.csproj"
+    },
+    "BetterScreenshot.Recording/1.0.0": {
+      "type": "project",
+      "path": "../BetterScreenshot.Recording/BetterScreenshot.Recording.csproj",
+      "msbuildProject": "../BetterScreenshot.Recording/BetterScreenshot.Recording.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0-windows10.0.19041": [
+      "BetterScreenshot.Capture >= 1.0.0",
+      "BetterScreenshot.Core >= 1.0.0",
+      "BetterScreenshot.Editor >= 1.0.0",
+      "BetterScreenshot.History >= 1.0.0",
+      "BetterScreenshot.Platform >= 1.0.0",
+      "BetterScreenshot.Recording >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\david_v0a3rlc\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.App\\BetterScreenshot.App.csproj",
+      "projectName": "BetterScreenshot.App",
+      "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.App\\BetterScreenshot.App.csproj",
+      "packagesPath": "C:\\Users\\david_v0a3rlc\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.App\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\david_v0a3rlc\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0-windows10.0.19041.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0-windows10.0.19041": {
+          "targetAlias": "net9.0-windows10.0.19041.0",
+          "projectReferences": {
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Capture\\BetterScreenshot.Capture.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Capture\\BetterScreenshot.Capture.csproj"
+            },
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Core\\BetterScreenshot.Core.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Core\\BetterScreenshot.Core.csproj"
+            },
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Editor\\BetterScreenshot.Editor.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Editor\\BetterScreenshot.Editor.csproj"
+            },
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.History\\BetterScreenshot.History.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.History\\BetterScreenshot.History.csproj"
+            },
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Platform\\BetterScreenshot.Platform.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Platform\\BetterScreenshot.Platform.csproj"
+            },
+            "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Recording\\BetterScreenshot.Recording.csproj": {
+              "projectPath": "C:\\Users\\david_v0a3rlc\\Sorted\\Coding\\Apps\\BetterScreenshot\\windows\\src\\BetterScreenshot.Recording\\BetterScreenshot.Recording.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net9.0-windows10.0.19041": {
+        "targetAlias": "net9.0-windows10.0.19041.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.Windows.SDK.NET.Ref",
+            "version": "[10.0.19041.57, 10.0.19041.57]"
+          }
+        ],
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          },
+          "Microsoft.Windows.SDK.NET.Ref.Windows": {
+            "privateAssets": "all"
+          },
+          "Microsoft.WindowsDesktop.App": {
+            "privateAssets": "none"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
