@@ -7,23 +7,27 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1–5 COMPLETE ✅. Now entering **Phase 6 (Capture history UI + service)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **171 passed** (incl. 10 hardware-gated tests).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **181 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
-  the primary display → clipboard.
-- **Next task:** Phase 6 Task **6.2 (HistoryService facade + wire into coordinators)** in `BetterScreenshot.App` —
-  `HistoryService` over `HistoryStore` (path `%APPDATA%\BetterScreenshot\History\`, cap from settings.Capture.HistoryCap):
-  recordScreenshot(BitmapSource)→id, recordRecording(path, thumbSource)→id, restore-recently-closed LIFO (RestoreStack),
-  delete/clearAll, copyToClipboard(entry), revealInExplorer(entry) (`explorer /select,`), image/thumb/savedFile getters.
-  Wire into CaptureCoordinator: record screenshots on save/overlay + Quick Access "closed"→RestoreStack; KeepInStack →
-  record + overlay; RestoreRecentlyClosed command → pop + re-show card. See `port-reference/04-historykit.md`.
+  the primary display → clipboard. Captures are now recorded in **persistent history** (save/overlay), and
+  Restore-Recently-Closed brings back the newest ✕-closed Quick Access card.
+- **Next task:** Phase 6 Task **6.3 (History window)** in `BetterScreenshot.App` — `App/History/HistoryWindow.xaml(.cs)`:
+  thumbnail grid over `HistoryService.Entries` (thumb via `ThumbPath`), kind badge (camera/film glyph), relative date
+  ("2h ago"), action bar (Copy `CopyToClipboard`, Annotate screenshot→`Annotate(LoadImage(e))`, Pin screenshot→`PinImage`,
+  Show in Explorer `RevealInExplorer`, Delete `Delete`, Clear All `ClearAll`), double-click = annotate (screenshot) /
+  open player (recording). Wire `OpenHistory()` (currently a stub) to show it; refresh the grid after delete/clear.
+  Add a pure relative-date formatter (e.g. `HistoryDateFormat.Relative(now, date)`) with TDD (see 04-historykit.md
+  "2h ago"). See `port-reference/04-historykit.md` §"History window UI".
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8).
   INTERIM caveats still open: captureText→region select.
 
 ## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
 - [x] 6.1 HistoryStore (file IO, load-prune, add/remove/clearAll) + ThumbnailRenderer — done, 14 tests (10 store + 4 thumb)
-- [ ] 6.2 HistoryService facade (record/restore/copy/reveal/delete) + wire into coordinators
-- [ ] 6.3 History window (thumbnail grid, actions)
+- [x] 6.2 HistoryService facade (record/restore/copy/reveal/delete) + wire into coordinators — done, +10 tests
+      (RestoreStack.PopRestorable ×2, HistoryService ×8). Wired: record on save/overlay, ✕-close/evict→RestoreStack,
+      KeepInStack records, RestoreRecentlyClosed re-shows newest closed card. ClipboardService.SetFile added.
+- [ ] 6.3 History window (thumbnail grid, actions) — wire OpenHistory() + add pure relative-date formatter (TDD)
 
 ## Phase 5 task status (Annotation editor — BetterScreenshot.App)
 - [x] 5.1 Editor window + canvas render (DocumentRenderer, WPF) — done, 4 renderer tests (pixel read-back)
@@ -103,6 +107,10 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
 - Tray = built-in WinForms `NotifyIcon` (not H.NotifyIcon.Wpf, which resolved via a .NET Framework fallback).
 - RecorderState elapsed formula = wall − accumulatedPause (the "7s" figure in 05-recordingkit.md is a doc typo;
   the real value for start0/pause10/resume13/now20 is 0:17). Verified by test.
+- History records a capture only when it is **saved or shown as an overlay** (not for copy-only captures, which are
+  transient) — matches the PROGRESS pointer's "record on save/overlay". Copy-only stays ephemeral. (Task 6.2)
+- HistoryService reads cap + enabled **live** from settings each call (via `ForSettings`), so toggling history in
+  Settings takes effect immediately without reconstructing the service. (Task 6.2)
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
