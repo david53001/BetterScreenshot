@@ -7,11 +7,12 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1 & 2 COMPLETE ✅. Now entering **Phase 3 (App shell + capture flow)** — makes the app runnable.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **120 passed** (incl. 8 hardware-gated tests).
-- **Next task:** Phase 3 Task **3.1 (Settings store)** in `BetterScreenshot.App` — `SettingsStore`: JSON at
-  `%APPDATA%\BetterScreenshot\settings.json`, keys 1:1 with the macOS app (see `port-reference/06-app-shell.md`),
-  typed accessors for CaptureSettings, saveDirectory (default `Pictures\Screenshots`), hotkeyBindings,
-  recordingConfig, editorDefaultStyle, flags. Round-trip test (headless).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **123 passed** (incl. 8 hardware-gated tests).
+- **Next task:** Phase 3 Task **3.2 (Tray + menu)** in `BetterScreenshot.App` — `App.xaml`/`TrayIcon`: H.NotifyIcon
+  is dropped; use the built-in WinForms `NotifyIcon` (already enabled). Build the exact tray menu (see
+  `port-reference/06-app-shell.md`): Capture Area/Window/Fullscreen/Text, sep, Record/Pause-Resume, sep, Pin from
+  Clipboard, sep, History/Restore, sep, Settings, Quit. Wire commands to coordinator stubs; show hotkey text;
+  recording state → icon+tooltip. App runs to a tray icon. Verify by launching the app (it should appear in tray).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -44,7 +45,17 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 2.6 Global hotkey host (RegisterHotKey on hidden HwndSource) — done, STA registration test (hardware)
 - [x] 2.7 ffmpeg runner + availability — done, availability+run test (hardware)
 - [x] 2.8 Global input hooks (WH_MOUSE_LL / WH_KEYBOARD_LL) — done, glyph tests + hook-install tests
-**Phase 2 COMPLETE — 120 tests green.** Next: Phase 3 (App shell). Phases 3–8 pending — see PLAN.md.
+**Phase 2 COMPLETE — 120 tests green.** Phases 3–8 pending — see PLAN.md.
+
+## Phase 3 task status (App shell + capture flow — BetterScreenshot.App)
+- [x] 3.1 Settings store (JSON, keys 1:1 with mac) — done, round-trip/missing/corrupt tests
+      NOTE: placed in `BetterScreenshot.Platform` (not App) so the Tests project can cover it without referencing
+      the WinExe. Namespace `BetterScreenshot.Platform.SettingsStore`.
+- [ ] 3.2 Tray + menu (WinForms NotifyIcon, full menu) — **NEXT** (verify by launching app)
+- [ ] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions)
+- [ ] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy)
+- [ ] 3.5 Onboarding (welcome window)
+- [ ] 3.6 Settings window (General/Shortcuts/Recording tabs + shortcut recorder)
 
 ## Completed (append as you go)
 - 2026-07-01 (seed): Reconnaissance of macOS app → SPEC.md, PLAN.md, LOOP-PROMPT.md, seven port-reference docs.
