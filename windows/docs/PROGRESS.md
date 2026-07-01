@@ -5,12 +5,13 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** **Phase 1 COMPLETE** ✅ (all 18 pure-logic tasks). Now entering **Phase 2 (Windows platform integration)**.
+- **Phase:** Phases 1 & 2 COMPLETE ✅. Now entering **Phase 3 (App shell + capture flow)** — makes the app runnable.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **116 passed** (incl. 6 hardware-gated tests).
-- **Next task:** Phase 2 Task **2.8 (Global input hooks)** in `BetterScreenshot.Platform` — `GlobalHooks`:
-  low-level `WH_MOUSE_LL` (mouse-down points) + `WH_KEYBOARD_LL` (key events → glyph string) hooks with events,
-  safe install/remove. LAST Phase-2 task; after it, Phase 2 is complete → Phase 3 (App shell).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **120 passed** (incl. 8 hardware-gated tests).
+- **Next task:** Phase 3 Task **3.1 (Settings store)** in `BetterScreenshot.App` — `SettingsStore`: JSON at
+  `%APPDATA%\BetterScreenshot\settings.json`, keys 1:1 with the macOS app (see `port-reference/06-app-shell.md`),
+  typed accessors for CaptureSettings, saveDirectory (default `Pictures\Screenshots`), hotkeyBindings,
+  recordingConfig, editorDefaultStyle, flags. Round-trip test (headless).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -42,7 +43,8 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 2.5 OCR + QR (Windows.Media.Ocr + ZXing) — done, QR round-trip test (hardware)
 - [x] 2.6 Global hotkey host (RegisterHotKey on hidden HwndSource) — done, STA registration test (hardware)
 - [x] 2.7 ffmpeg runner + availability — done, availability+run test (hardware)
-- [ ] 2.8 Global input hooks (WH_MOUSE_LL / WH_KEYBOARD_LL)
+- [x] 2.8 Global input hooks (WH_MOUSE_LL / WH_KEYBOARD_LL) — done, glyph tests + hook-install tests
+**Phase 2 COMPLETE — 120 tests green.** Next: Phase 3 (App shell). Phases 3–8 pending — see PLAN.md.
 
 ## Completed (append as you go)
 - 2026-07-01 (seed): Reconnaissance of macOS app → SPEC.md, PLAN.md, LOOP-PROMPT.md, seven port-reference docs.
