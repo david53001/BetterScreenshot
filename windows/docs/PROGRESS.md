@@ -7,11 +7,10 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** **Phase 1 COMPLETE** ✅ (all 18 pure-logic tasks). Now entering **Phase 2 (Windows platform integration)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **105 passed** (incl. 1 hardware-gated Screens test).
-- **Next task:** Phase 2 Task **2.2 (Still capture)** in `BetterScreenshot.Platform` — `ScreenCapture` via GDI
-  BitBlt for a region/display → BitmapSource, and `CaptureWindow(hwnd)` via PrintWindow. Verify by capturing +
-  saving a PNG. NOTE: Tests project is now `net9.0-windows` and references Platform; hardware-dependent tests get
-  `[Trait("category","hardware")]` (they pass on this dev machine's display session).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **106 passed** (incl. 2 hardware-gated tests).
+- **Next task:** Phase 2 Task **2.3 (Window picking — Win32)** in `BetterScreenshot.Platform` — enumerate top-level
+  windows in Z-order (GetTopWindow/GetWindow), rects (GetWindowRect / DWM extended frame), titles, skip own PID +
+  cloaked/invisible → `List<PickableWindow>` to feed the pure `WindowPicking.Topmost`.
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -37,7 +36,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 
 ## Phase 2 task status (Windows platform integration — BetterScreenshot.Platform)
 - [x] 2.1 Screen enumeration + DPI (Screens: EnumDisplayMonitors + GetDpiForMonitor) — done, hardware test
-- [ ] 2.2 Still capture (GDI BitBlt region/display + PrintWindow) — **NEXT**
+- [x] 2.2 Still capture (GDI BitBlt region/display + PrintWindow) — done, hardware test
 - [ ] 2.3 Window picking (Win32 enum in Z-order → feed pure WindowPicking)
 - [ ] 2.4 Clipboard + temp writer + encode (PNG/JPG)
 - [ ] 2.5 OCR + QR (Windows.Media.Ocr + ZXing)
