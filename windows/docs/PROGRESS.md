@@ -7,22 +7,21 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1–5 COMPLETE ✅. Now entering **Phase 6 (Capture history UI + service)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **157 passed** (incl. 10 hardware-gated tests).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **171 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 6 Task **6.1 (HistoryStore + ThumbnailRenderer)** — file-backed history (namespace
-  `BetterScreenshot.History` for the pure store, `BetterScreenshot.Platform` for the WPF ThumbnailRenderer).
-  HistoryStore: `%APPDATA%\BetterScreenshot\History\`, `history.json`, add screenshot (copy PNG + thumb) / recording
-  (thumb + reference), load-prune (cap + 30-day + missing), remove (never deletes recording file), clearAll —
-  mirror the 10 macOS HistoryStore tests. ThumbnailRenderer: ≤400px longest side JPEG q0.8, no upscale, valid JPEG —
-  mirror the 4 macOS tests. Both fully testable. See `port-reference/04-historykit.md`.
+- **Next task:** Phase 6 Task **6.2 (HistoryService facade + wire into coordinators)** in `BetterScreenshot.App` —
+  `HistoryService` over `HistoryStore` (path `%APPDATA%\BetterScreenshot\History\`, cap from settings.Capture.HistoryCap):
+  recordScreenshot(BitmapSource)→id, recordRecording(path, thumbSource)→id, restore-recently-closed LIFO (RestoreStack),
+  delete/clearAll, copyToClipboard(entry), revealInExplorer(entry) (`explorer /select,`), image/thumb/savedFile getters.
+  Wire into CaptureCoordinator: record screenshots on save/overlay + Quick Access "closed"→RestoreStack; KeepInStack →
+  record + overlay; RestoreRecentlyClosed command → pop + re-show card. See `port-reference/04-historykit.md`.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8).
-  INTERIM caveats still open: captureText→region select; KeepInStack currently only re-shows the Quick Access card
-  (history recording wires in 6.2).
+  INTERIM caveats still open: captureText→region select.
 
 ## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
-- [ ] 6.1 HistoryStore (file IO, load-prune, add/remove/clearAll) + ThumbnailRenderer — **NEXT**
+- [x] 6.1 HistoryStore (file IO, load-prune, add/remove/clearAll) + ThumbnailRenderer — done, 14 tests (10 store + 4 thumb)
 - [ ] 6.2 HistoryService facade (record/restore/copy/reveal/delete) + wire into coordinators
 - [ ] 6.3 History window (thumbnail grid, actions)
 
