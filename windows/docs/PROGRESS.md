@@ -5,11 +5,13 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phase 1 (pure-logic core) — partially complete; then Phase 2+ per `PLAN.md`.
-- **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)** as of seed.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **99 passed**.
-- **Next task:** Phase 1 Task **1.18 (Redactor — buffer-based detail destruction)** — the LAST Phase-1 pure-logic
-  task. After it, Phase 1 is complete → start Phase 2 (Windows platform integration).
+- **Phase:** **Phase 1 COMPLETE** ✅ (all 18 pure-logic tasks). Now entering **Phase 2 (Windows platform integration)**.
+- **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **104 passed**.
+- **Next task:** Phase 2 Task **2.1 (Screen enumeration + DPI)** in `BetterScreenshot.Platform` — enumerate monitors
+  (EnumDisplayMonitors/GetDpiForMonitor) → list of {deviceName, physical bounds PxRect, dpiScale}, primary flag.
+  NOTE: Phase 2+ is system code (Win32/WinRT) — verify by building (and running where observable); pure-logic
+  helpers should still be unit-tested. Hardware-dependent bits get `[Trait("category","hardware")]` and are skippable.
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -29,9 +31,9 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - [x] 1.15 RecorderState                            — done, tested
 - [x] 1.16 PauseTimeline + GIFTiming                — done, tested
 - [x] 1.17 PinGeometry                              — done, tested
-- [ ] 1.18 Redactor (buffer-based detail destruction) — pending
-Phases 0 (scaffold) complete. Phases 2–8 (Platform, App shell, Overlays, Editor UI, History UI, Recording, Icons)
-all pending — see PLAN.md.
+- [x] 1.18 Redactor (buffer-based detail destruction) — done, tested
+**Phase 1 COMPLETE — 104 tests green.** Phase 0 (scaffold) complete. Phases 2–8 (Platform, App shell, Overlays,
+Editor UI, History UI, Recording, Icons) pending — see PLAN.md. Next: Phase 2 Task 2.1.
 
 ## Completed (append as you go)
 - 2026-07-01 (seed): Reconnaissance of macOS app → SPEC.md, PLAN.md, LOOP-PROMPT.md, seven port-reference docs.
