@@ -7,15 +7,15 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phase 1 (pure-logic core) — partially complete; then Phase 2+ per `PLAN.md`.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)** as of seed.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **57 passed** as of seed.
-- **Next task:** Phase 1 Task **1.4 (Hotkey model — Windows VK/modifiers)**. Then 1.8, 1.9, 1.10, 1.11, 1.17, 1.18
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **65 passed**.
+- **Next task:** Phase 1 Task **1.8 (WindowPicking — pure hit-test)**. Then 1.9, 1.10, 1.11, 1.17, 1.18
   (the remaining Phase-1 pure-logic), then Phase 2 onward.
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
 - [x] 1.2 CropMath                                 — done, tested
 - [x] 1.3 FileNamer                                — done, tested
-- [ ] 1.4 Hotkey model (HotkeyAction/Combo/Bindings, Windows VK) — **NEXT**
+- [x] 1.4 Hotkey model (HotkeyAction/Combo/Bindings, Windows VK) — done, tested
 - [x] 1.5 OverlayPositioner (top-left)             — done, tested
 - [x] 1.6 RecognitionResult/Resolver              — done, tested
 - [x] 1.7 CaptureSettings                          — done, tested
