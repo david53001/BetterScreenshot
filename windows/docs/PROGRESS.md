@@ -5,29 +5,32 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–5 COMPLETE ✅. Now entering **Phase 6 (Capture history UI + service)**.
+- **Phase:** Phases 1–6 COMPLETE ✅. Now entering **Phase 7 (Screen recording)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **181 passed** (incl. 10 hardware-gated tests).
-- **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
-  capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
-  the primary display → clipboard. Captures are now recorded in **persistent history** (save/overlay), and
-  Restore-Recently-Closed brings back the newest ✕-closed Quick Access card.
-- **Next task:** Phase 6 Task **6.3 (History window)** in `BetterScreenshot.App` — `App/History/HistoryWindow.xaml(.cs)`:
-  thumbnail grid over `HistoryService.Entries` (thumb via `ThumbPath`), kind badge (camera/film glyph), relative date
-  ("2h ago"), action bar (Copy `CopyToClipboard`, Annotate screenshot→`Annotate(LoadImage(e))`, Pin screenshot→`PinImage`,
-  Show in Explorer `RevealInExplorer`, Delete `Delete`, Clear All `ClearAll`), double-click = annotate (screenshot) /
-  open player (recording). Wire `OpenHistory()` (currently a stub) to show it; refresh the grid after delete/clear.
-  Add a pure relative-date formatter (e.g. `HistoryDateFormat.Relative(now, date)`) with TDD (see 04-historykit.md
-  "2h ago"). See `port-reference/04-historykit.md` §"History window UI".
-  DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8).
-  INTERIM caveats still open: captureText→region select.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **197 passed** (incl. 10 hardware-gated tests).
+- **App TAKES SCREENSHOTS + HISTORY:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy;
+  captureArea → selection overlay; captureText OCRs primary display → clipboard+HUD. Captures are recorded in
+  **persistent history**; the **History window** (tray → History…) browses thumbnails with copy/annotate/pin/reveal/
+  delete/clear-all, and Restore-Recently-Closed brings back the newest ✕-closed Quick Access card. **Recording is
+  still stubbed** (`ToggleRecording`/`PauseResumeRecording` are no-ops) — that's Phase 7.
+- **Next task:** Phase 7 Task **7.1 (ffmpeg arg builder + engine)** — `Recording/FfmpegArgs.cs` (PURE: build the
+  ffmpeg CLI args from `RecordingConfig` + target + region — video via gdigrab/ddagrab, WASAPI loopback for system
+  audio, dshow mic, H.264 + bitrate, output path; **TDD the arg strings**) and `App/Recording/RecordingEngine.cs`
+  (drives the existing `FfmpegRunner` in Platform). See `port-reference/05-recordingkit.md` and SPEC §"Recording".
+  Then 7.2 record strip + coordinator, 7.3 countdown + gapless pause/resume, 7.4 camera/click/keystroke overlays,
+  7.5 GIF export + finalize + recording history card.
+  DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
+  captureText→region select.
 
 ## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
 - [x] 6.1 HistoryStore (file IO, load-prune, add/remove/clearAll) + ThumbnailRenderer — done, 14 tests (10 store + 4 thumb)
 - [x] 6.2 HistoryService facade (record/restore/copy/reveal/delete) + wire into coordinators — done, +10 tests
       (RestoreStack.PopRestorable ×2, HistoryService ×8). Wired: record on save/overlay, ✕-close/evict→RestoreStack,
       KeepInStack records, RestoreRecentlyClosed re-shows newest closed card. ClipboardService.SetFile added.
-- [ ] 6.3 History window (thumbnail grid, actions) — wire OpenHistory() + add pure relative-date formatter (TDD)
+- [x] 6.3 History window (thumbnail grid, actions) — done, +16 tests (HistoryDateFormat.Relative). Dark grid over
+      HistoryService.Entries, hand-authored camera/film badges, relative date, action bar (copy/annotate/pin/reveal/
+      delete/clear-all), double-click open, OpenHistory() shows single reused window. App-launch verified.
+**Phase 6 COMPLETE — 197 tests green.** Capture history persists + is browsable end-to-end. Next: Phase 7 (recording).
 
 ## Phase 5 task status (Annotation editor — BetterScreenshot.App)
 - [x] 5.1 Editor window + canvas render (DocumentRenderer, WPF) — done, 4 renderer tests (pixel read-back)
