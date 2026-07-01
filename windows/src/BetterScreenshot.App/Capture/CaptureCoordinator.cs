@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Media.Imaging;
+using BetterScreenshot.App.Overlays;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Capture;
 using BetterScreenshot.Core;
@@ -17,6 +18,7 @@ public sealed class CaptureCoordinator : IAppCommands
 {
     private readonly SettingsStore _settings;
     private readonly Action _quit;
+    private readonly SelectionOverlayController _selection = new();
 
     public CaptureCoordinator(SettingsStore settings, Action quit)
     {
@@ -40,7 +42,13 @@ public sealed class CaptureCoordinator : IAppCommands
         Handle(ScreenCapture.CaptureWindow(front.Hwnd));
     }
 
-    public void CaptureArea() => CaptureFullscreen(); // TODO Phase 4: interactive selection overlay
+    public void CaptureArea()
+    {
+        _selection.Present(rect =>
+        {
+            if (rect is { } r) Handle(ScreenCapture.CaptureRegion(r));
+        });
+    }
 
     public void CaptureText() => _ = CaptureTextAsync();
 

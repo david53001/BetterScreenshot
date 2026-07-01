@@ -8,20 +8,21 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Phase:** Phases 1, 2 & 3 COMPLETE ✅. Now entering **Phase 4 (Overlays)** — the interactive UI (selection,
   Quick Access, pin, HUD, window picker) that replaces the Phase-3 interim capture fallbacks.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **138 passed** (incl. 10 hardware-gated tests).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **141 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 4 Task **4.1 (SelectionOverlay)** in `BetterScreenshot.App` — per-monitor dimmed (0.35)
-  full-screen borderless topmost windows, crosshair, white 1px selection rect, live "W×H" label, Esc cancel,
-  min 1px, first-monitor-wins; emit a top-left **physical-pixel** rect (map via monitor DPI) + callback. Wire into
-  `CaptureCoordinator.CaptureArea` to replace the fullscreen fallback (crop the captured region via CropMath).
-  See `port-reference/02-overlaykit.md`. Verify by launching + a manual/scripted check where feasible.
-  INTERIM caveats to fix in Phase 4: window→interactive picker (4.4), captureText→region select, ShowOverlay
-  default currently saves+copies (should show Quick Access card, 4.2).
+- **Next task:** Phase 4 Task **4.2 (QuickAccess card + stack)** in `BetterScreenshot.App` — post-capture floating
+  card (220×168, corner radius 12, thumbnail 200×112, action buttons per `port-reference/02-overlaykit.md`),
+  stacked ≤3 at the settings corner (OverlayPositioner + margin 24), evict oldest, DismissReason; drag-to-export a
+  temp PNG. Wire into `Handle(...)` so the `ShowOverlay` after-capture behavior shows the card (replacing the
+  interim save+copy). Screenshot buttons: Copy (keeps open), Edit (Phase 5 editor), Pin (4.3), Save, Close.
+  NEEDS MANUAL VERIFY (4.1): the drag-select overlay's interactive behavior (drag, DPI on secondary monitors) —
+  pure math is tested + app launches; confirm a real drag captures the right region.
+  INTERIM caveats still open: window→interactive picker (4.4), captureText→region select.
 
 ## Phase 4 task status (Overlays — BetterScreenshot.App)
-- [ ] 4.1 SelectionOverlay (area selection) — **NEXT**
+- [x] 4.1 SelectionOverlay (area selection) — done (physical-pixel positioning, SelectionMath tested); needs manual drag verify
 - [ ] 4.2 QuickAccess card + stack (220×168, ≤3, actions, drag-export)
 - [ ] 4.3 Pin panels (PinGeometry-based, drag/zoom/multi-pin)
 - [ ] 4.4 HUD + WindowPicker overlay
