@@ -7,9 +7,8 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phase 1 (pure-logic core) — partially complete; then Phase 2+ per `PLAN.md`.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)** as of seed.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **87 passed**.
-- **Next task:** Phase 1 Task **1.11 (ArrowGeometry)**. Then 1.17 (PinGeometry), 1.18 (Redactor)
-  complete Phase 1; then Phase 2 onward.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **90 passed**.
+- **Next task:** Phase 1 Task **1.17 (PinGeometry)**. Then 1.18 (Redactor) completes Phase 1; then Phase 2 onward.
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -22,7 +21,7 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - [x] 1.8 WindowPicking (pure hit-test)            — done, tested
 - [x] 1.9 RGBAColor + AnnotationStyle              — done, tested
 - [x] 1.10 Annotation model + EditorDocument       — done, tested
-- [ ] 1.11 ArrowGeometry                            — pending
+- [x] 1.11 ArrowGeometry                            — done, tested
 - [x] 1.12 HistoryEntry + HistoryIndex             — done, tested
 - [x] 1.13 RestoreStack                             — done, tested
 - [x] 1.14 RecordingConfig                          — done, tested
