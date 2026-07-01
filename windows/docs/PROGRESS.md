@@ -7,8 +7,9 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phase 1 (pure-logic core) — partially complete; then Phase 2+ per `PLAN.md`.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)** as of seed.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **90 passed**.
-- **Next task:** Phase 1 Task **1.17 (PinGeometry)**. Then 1.18 (Redactor) completes Phase 1; then Phase 2 onward.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **99 passed**.
+- **Next task:** Phase 1 Task **1.18 (Redactor — buffer-based detail destruction)** — the LAST Phase-1 pure-logic
+  task. After it, Phase 1 is complete → start Phase 2 (Windows platform integration).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -27,7 +28,7 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - [x] 1.14 RecordingConfig                          — done, tested
 - [x] 1.15 RecorderState                            — done, tested
 - [x] 1.16 PauseTimeline + GIFTiming                — done, tested
-- [ ] 1.17 PinGeometry                              — pending
+- [x] 1.17 PinGeometry                              — done, tested
 - [ ] 1.18 Redactor (buffer-based detail destruction) — pending
 Phases 0 (scaffold) complete. Phases 2–8 (Platform, App shell, Overlays, Editor UI, History UI, Recording, Icons)
 all pending — see PLAN.md.
