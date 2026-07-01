@@ -1,6 +1,7 @@
 using System.Windows;
 using BetterScreenshot.App.Capture;
 using BetterScreenshot.App.Onboarding;
+using BetterScreenshot.App.Settings;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Platform;
 
@@ -25,6 +26,7 @@ public partial class App : System.Windows.Application
         _tray = new TrayIcon(commands, _settings.Hotkeys);
         _hotkeys = new HotkeyController(commands);
         _hotkeys.Apply(_settings.Hotkeys);
+        commands.OnOpenSettings = ShowSettings;
 
         if (!_settings.FirstRunComplete)
         {
@@ -32,6 +34,16 @@ public partial class App : System.Windows.Application
             _settings.FirstRunComplete = true;
             _settings.Save();
         }
+    }
+
+    private SettingsWindow? _settingsWindow;
+
+    private void ShowSettings()
+    {
+        if (_settingsWindow != null) { _settingsWindow.Activate(); return; }
+        _settingsWindow = new SettingsWindow(_settings, _hotkeys);
+        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        _settingsWindow.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)

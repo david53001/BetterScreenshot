@@ -24,6 +24,9 @@ public sealed class CaptureCoordinator : IAppCommands
         _quit = quit;
     }
 
+    /// <summary>Set by the app to show the settings window (which needs the hotkey controller too).</summary>
+    public Action? OnOpenSettings { get; set; }
+
     public void CaptureFullscreen()
     {
         var monitor = Screens.Primary();
@@ -84,6 +87,6 @@ public sealed class CaptureCoordinator : IAppCommands
     public void PinFromClipboard() { }
     public void OpenHistory() { }
     public void RestoreRecentlyClosed() { }
-    public void OpenSettings() { }
+    public void OpenSettings() => OnOpenSettings?.Invoke();
     public void Quit() => _quit();
 }

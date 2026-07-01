@@ -5,20 +5,26 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1 & 2 COMPLETE ✅. Now entering **Phase 3 (App shell + capture flow)** — makes the app runnable.
+- **Phase:** Phases 1, 2 & 3 COMPLETE ✅. Now entering **Phase 4 (Overlays)** — the interactive UI (selection,
+  Quick Access, pin, HUD, window picker) that replaces the Phase-3 interim capture fallbacks.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **134 passed** (incl. 10 hardware-gated tests).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **138 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 3 Task **3.6 (Settings window)** in `BetterScreenshot.App` — `SettingsWindow`: tabbed WPF
-  (General / Shortcuts / Recording per `port-reference/06-app-shell.md`). General: after-capture behavior, format
-  PNG/JPG, overlay corner, auto-dismiss secs, save-folder picker, pin radius/shadow, history enable/cap,
-  launch-at-login, capture sound. Shortcuts: a recorder row per action (KeyDown capture, Esc cancel, Backspace clear,
-  validity + conflict). Recording: format/fps/audio/camera/clicks/keystrokes/countdown. Wire OpenSettings command +
-  persist to SettingsStore. LAST Phase-3 task; after it Phase 3 complete → Phase 4 (Overlays).
-  INTERIM caveats to fix in Phase 4: area→overlay, window→interactive picker, captureText→region select, ShowOverlay
-  default currently saves+copies (should show Quick Access card).
+- **Next task:** Phase 4 Task **4.1 (SelectionOverlay)** in `BetterScreenshot.App` — per-monitor dimmed (0.35)
+  full-screen borderless topmost windows, crosshair, white 1px selection rect, live "W×H" label, Esc cancel,
+  min 1px, first-monitor-wins; emit a top-left **physical-pixel** rect (map via monitor DPI) + callback. Wire into
+  `CaptureCoordinator.CaptureArea` to replace the fullscreen fallback (crop the captured region via CropMath).
+  See `port-reference/02-overlaykit.md`. Verify by launching + a manual/scripted check where feasible.
+  INTERIM caveats to fix in Phase 4: window→interactive picker (4.4), captureText→region select, ShowOverlay
+  default currently saves+copies (should show Quick Access card, 4.2).
+
+## Phase 4 task status (Overlays — BetterScreenshot.App)
+- [ ] 4.1 SelectionOverlay (area selection) — **NEXT**
+- [ ] 4.2 QuickAccess card + stack (220×168, ≤3, actions, drag-export)
+- [ ] 4.3 Pin panels (PinGeometry-based, drag/zoom/multi-pin)
+- [ ] 4.4 HUD + WindowPicker overlay
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -61,7 +67,9 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions) — done, dispatch tests; app runs w/ hotkeys
 - [x] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy) — done, e2e capture→save test
 - [x] 3.5 Onboarding (welcome window) — done, renders on first run (verified via Start-Process)
-- [ ] 3.6 Settings window (General/Shortcuts/Recording tabs + shortcut recorder)
+- [x] 3.6 Settings window (General/Shortcuts/Recording tabs + shortcut recorder) — done, recorder tested; app runs
+**Phase 3 COMPLETE — 138 tests green.** App = functional tray screenshot tool (capture/save/copy, OCR, settings,
+live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
 
 ## Completed (append as you go)
 - 2026-07-01 (seed): Reconnaissance of macOS app → SPEC.md, PLAN.md, LOOP-PROMPT.md, seven port-reference docs.
