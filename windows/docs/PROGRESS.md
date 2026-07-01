@@ -7,21 +7,22 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1–4 COMPLETE ✅. Now entering **Phase 5 (Annotation editor)** — the biggest UI subsystem.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **145 passed** (incl. 10 hardware-gated tests).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **152 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 5 Task **5.2 (Tools + interaction)** in `BetterScreenshot.App` — build the editing canvas on
-  `EditorWindow`: shape tools (arrow/line/rect/filled/ellipse) drag-to-create with live preview; text inline TextBox;
-  counter click; blur/pixelate/crop marquee (min sizes; redaction via `Redactor` + `ImageConvert`); select tool
-  (click/move/marquee/8 resize handles/z-order/delete). Draw the interaction layer over the rendered image (an
-  overlay Canvas). Mutate `_document` + `Redraw()`. See `port-reference/03-editorkit.md`.
-  NEEDS MANUAL VERIFY (Phase 4): drag-select, Quick Access card, pin drag/zoom, window picker, HUD.
-  INTERIM caveats still open: captureText→region select; Quick Access Edit button (wires in 5.4).
+- **Next task:** Phase 5 Task **5.3 (Toolbar/inspector + undo/redo + sticky style + Stack button)** in
+  `BetterScreenshot.App` — polish the editor: styled tool toolbar (hand-drawn glyphs, selected state) + inspector
+  (8 preset color swatches + custom color, weight S/M/L=2/4/7, size S/M/L=18/24/36 by tool); undo/redo via document
+  snapshots (max 50) with Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y; sticky style (load defaultStyle, on change persist via
+  `StyleChanged`); Stack button already present (wire `OnAddToStack`). See `port-reference/03-editorkit.md`.
+  DEFERRED from 5.2 (do in 5.3 or hardening): 8-handle resize for a single selection (currently move/delete/z-order
+  only); marquee multi-select. NEEDS MANUAL VERIFY: editor tools once reachable (Edit wires in 5.4).
+  INTERIM caveats still open: captureText→region select; Quick Access Edit button (5.4).
 
 ## Phase 5 task status (Annotation editor — BetterScreenshot.App)
 - [x] 5.1 Editor window + canvas render (DocumentRenderer, WPF) — done, 4 renderer tests (pixel read-back)
-- [ ] 5.2 Tools + interaction (draw/select/move/resize/marquee/redact/crop)
+- [x] 5.2 Tools + interaction (draw/select/move/redact/crop; AnnotationFactory tested) — done; 8-handle resize + marquee-select deferred to 5.3
 - [ ] 5.3 Toolbar + inspector + action bar + undo/redo + sticky style + Stack button
 - [ ] 5.4 Wire editor into CaptureCoordinator (Quick Access Edit, annotate from history)
 
