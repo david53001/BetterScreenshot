@@ -1,7 +1,10 @@
 namespace BetterScreenshot.Core;
 
 /// <summary>A 2D point in pixel/logical space (top-left origin, like all Windows coordinates).</summary>
-public readonly record struct PxPoint(double X, double Y);
+public readonly record struct PxPoint(double X, double Y)
+{
+    public PxPoint Offset(double dx, double dy) => new(X + dx, Y + dy);
+}
 
 /// <summary>A width/height pair.</summary>
 public readonly record struct PxSize(double Width, double Height)
@@ -41,4 +44,7 @@ public readonly record struct PxRect(double X, double Y, double Width, double He
 
     public PxRect Union(PxRect o) =>
         FromLtrb(Math.Min(X, o.X), Math.Min(Y, o.Y), Math.Max(Right, o.Right), Math.Max(Bottom, o.Bottom));
+
+    /// <summary>Same size, translated by (dx, dy).</summary>
+    public PxRect Offset(double dx, double dy) => new(X + dx, Y + dy, Width, Height);
 }
