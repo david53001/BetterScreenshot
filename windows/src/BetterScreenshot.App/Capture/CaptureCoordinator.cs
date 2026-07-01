@@ -25,6 +25,7 @@ public sealed class CaptureCoordinator : IAppCommands
     private readonly QuickAccessStackController _stack = new();
     private readonly PinPanelController _pins = new();
     private readonly WindowPickerController _picker = new();
+    private HistoryWindow? _historyWindow;
 
     public CaptureCoordinator(SettingsStore settings, Action quit)
     {
@@ -169,10 +170,24 @@ public sealed class CaptureCoordinator : IAppCommands
         if (image != null) ShowOverlayCard(image, entry.Id);
     }
 
+    /// <summary>Shows the capture-history browser (a single reused window), reloading its grid each time.</summary>
+    public void OpenHistory()
+    {
+        if (_historyWindow is null)
+        {
+            _historyWindow = new HistoryWindow(_history, new HistoryWindowActions(Annotate, PinImage));
+            _historyWindow.Closed += (_, _) => _historyWindow = null;
+            _historyWindow.Show();
+        }
+        else
+        {
+            _historyWindow.Activate();
+        }
+    }
+
     // Wired up in later phases.
     public void ToggleRecording() { }
     public void PauseResumeRecording() { }
-    public void OpenHistory() { }
     public void OpenSettings() => OnOpenSettings?.Invoke();
     public void Quit() => _quit();
 }
