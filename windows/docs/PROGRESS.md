@@ -7,11 +7,11 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** **Phase 1 COMPLETE** ✅ (all 18 pure-logic tasks). Now entering **Phase 2 (Windows platform integration)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **104 passed**.
-- **Next task:** Phase 2 Task **2.1 (Screen enumeration + DPI)** in `BetterScreenshot.Platform` — enumerate monitors
-  (EnumDisplayMonitors/GetDpiForMonitor) → list of {deviceName, physical bounds PxRect, dpiScale}, primary flag.
-  NOTE: Phase 2+ is system code (Win32/WinRT) — verify by building (and running where observable); pure-logic
-  helpers should still be unit-tested. Hardware-dependent bits get `[Trait("category","hardware")]` and are skippable.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **105 passed** (incl. 1 hardware-gated Screens test).
+- **Next task:** Phase 2 Task **2.2 (Still capture)** in `BetterScreenshot.Platform` — `ScreenCapture` via GDI
+  BitBlt for a region/display → BitmapSource, and `CaptureWindow(hwnd)` via PrintWindow. Verify by capturing +
+  saving a PNG. NOTE: Tests project is now `net9.0-windows` and references Platform; hardware-dependent tests get
+  `[Trait("category","hardware")]` (they pass on this dev machine's display session).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -32,8 +32,18 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - [x] 1.16 PauseTimeline + GIFTiming                — done, tested
 - [x] 1.17 PinGeometry                              — done, tested
 - [x] 1.18 Redactor (buffer-based detail destruction) — done, tested
-**Phase 1 COMPLETE — 104 tests green.** Phase 0 (scaffold) complete. Phases 2–8 (Platform, App shell, Overlays,
-Editor UI, History UI, Recording, Icons) pending — see PLAN.md. Next: Phase 2 Task 2.1.
+**Phase 1 COMPLETE — 104 tests green.** Phase 0 (scaffold) complete. Phases 3–8 (App shell, Overlays,
+Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
+
+## Phase 2 task status (Windows platform integration — BetterScreenshot.Platform)
+- [x] 2.1 Screen enumeration + DPI (Screens: EnumDisplayMonitors + GetDpiForMonitor) — done, hardware test
+- [ ] 2.2 Still capture (GDI BitBlt region/display + PrintWindow) — **NEXT**
+- [ ] 2.3 Window picking (Win32 enum in Z-order → feed pure WindowPicking)
+- [ ] 2.4 Clipboard + temp writer + encode (PNG/JPG)
+- [ ] 2.5 OCR + QR (Windows.Media.Ocr + ZXing)
+- [ ] 2.6 Global hotkey host (RegisterHotKey on hidden HwndSource)
+- [ ] 2.7 ffmpeg runner + availability
+- [ ] 2.8 Global input hooks (WH_MOUSE_LL / WH_KEYBOARD_LL)
 
 ## Completed (append as you go)
 - 2026-07-01 (seed): Reconnaissance of macOS app → SPEC.md, PLAN.md, LOOP-PROMPT.md, seven port-reference docs.

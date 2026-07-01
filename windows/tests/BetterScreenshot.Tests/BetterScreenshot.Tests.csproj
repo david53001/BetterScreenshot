@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <!-- Windows TFM so the suite can also exercise the Platform (Win32/WinRT) library. -->
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -24,6 +25,7 @@
     <ProjectReference Include="..\..\src\BetterScreenshot.Editor\BetterScreenshot.Editor.csproj" />
     <ProjectReference Include="..\..\src\BetterScreenshot.History\BetterScreenshot.History.csproj" />
     <ProjectReference Include="..\..\src\BetterScreenshot.Recording\BetterScreenshot.Recording.csproj" />
+    <ProjectReference Include="..\..\src\BetterScreenshot.Platform\BetterScreenshot.Platform.csproj" />
   </ItemGroup>
 
 </Project>
