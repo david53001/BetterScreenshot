@@ -7,12 +7,14 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1 & 2 COMPLETE ✅. Now entering **Phase 3 (App shell + capture flow)** — makes the app runnable.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **123 passed** (incl. 8 hardware-gated tests).
-- **App is RUNNABLE:** launches to a tray icon (hand-drawn camera glyph) with the full menu; verified via
-  `Start-Process` (runs without crashing). Entry: `App.OnStartup` → `SettingsStore.Load()` + `TrayIcon(StubCommands…)`.
-- **Next task:** Phase 3 Task **3.3 (Hotkey wiring)** in `BetterScreenshot.App` — `HotkeyController`: load bindings
-  from settings, register via `HotkeyHost`, dispatch `HotkeyPressed(action)` to the `IAppCommands` methods;
-  re-register on change; surface registration failures. Replace `StubCommands.Quit`-only wiring as commands land.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **132 passed** (incl. 9 hardware-gated tests).
+- **App is RUNNABLE:** launches to a tray icon + full menu + registered global hotkeys (Ctrl+Shift+4/5/6/7/8);
+  verified via `Start-Process`. Tests project now references App too (App-layer logic is unit-testable).
+- **Next task:** Phase 3 Task **3.4 (CaptureCoordinator)** in `BetterScreenshot.App` — the real command target:
+  captureArea (SelectionOverlay is Phase 4; for now capture a display/region via Platform), captureFullscreen
+  (primary display), captureWindow (WindowEnum picker → CaptureWindow), captureText (region → OCR → clipboard+HUD).
+  `Handle(image, sourceRect)` routes by `afterCapture` (copy/save/both/overlay); save+copy via Platform ImageIo/
+  ClipboardService. Replace `StubCommands` with this coordinator. (Overlay/editor wiring comes in Phases 4–5.)
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -52,7 +54,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
       NOTE: placed in `BetterScreenshot.Platform` (not App) so the Tests project can cover it without referencing
       the WinExe. Namespace `BetterScreenshot.Platform.SettingsStore`.
 - [x] 3.2 Tray + menu (WinForms NotifyIcon, full menu) — done, app launches to tray (verified via Start-Process)
-- [ ] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions)
+- [x] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions) — done, dispatch tests; app runs w/ hotkeys
 - [ ] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy)
 - [ ] 3.5 Onboarding (welcome window)
 - [ ] 3.6 Settings window (General/Shortcuts/Recording tabs + shortcut recorder)

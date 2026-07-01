@@ -13,16 +13,21 @@ public partial class App : System.Windows.Application
 {
     private SettingsStore _settings = null!;
     private TrayIcon _tray = null!;
+    private HotkeyController _hotkeys = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         _settings = SettingsStore.Load();
-        _tray = new TrayIcon(new StubCommands(this), _settings.Hotkeys);
+        var commands = new StubCommands(this);
+        _tray = new TrayIcon(commands, _settings.Hotkeys);
+        _hotkeys = new HotkeyController(commands);
+        _hotkeys.Apply(_settings.Hotkeys);
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _hotkeys?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);
     }
