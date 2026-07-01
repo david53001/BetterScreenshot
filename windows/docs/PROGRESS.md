@@ -11,9 +11,12 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 3 Task **3.5 (Onboarding)** in `BetterScreenshot.App` — `WelcomeWindow`: one-time welcome
-  (app icon, feature blurb, Ctrl+Shift cheat sheet: 4=area, 5=record, 6=fullscreen, 8=window, Start button); set
-  `FirstRunComplete` flag in settings so it only shows once. Shown from `App.OnStartup` when `!FirstRunComplete`.
+- **Next task:** Phase 3 Task **3.6 (Settings window)** in `BetterScreenshot.App` — `SettingsWindow`: tabbed WPF
+  (General / Shortcuts / Recording per `port-reference/06-app-shell.md`). General: after-capture behavior, format
+  PNG/JPG, overlay corner, auto-dismiss secs, save-folder picker, pin radius/shadow, history enable/cap,
+  launch-at-login, capture sound. Shortcuts: a recorder row per action (KeyDown capture, Esc cancel, Backspace clear,
+  validity + conflict). Recording: format/fps/audio/camera/clicks/keystrokes/countdown. Wire OpenSettings command +
+  persist to SettingsStore. LAST Phase-3 task; after it Phase 3 complete → Phase 4 (Overlays).
   INTERIM caveats to fix in Phase 4: area→overlay, window→interactive picker, captureText→region select, ShowOverlay
   default currently saves+copies (should show Quick Access card).
 
@@ -57,7 +60,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 3.2 Tray + menu (WinForms NotifyIcon, full menu) — done, app launches to tray (verified via Start-Process)
 - [x] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions) — done, dispatch tests; app runs w/ hotkeys
 - [x] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy) — done, e2e capture→save test
-- [ ] 3.5 Onboarding (welcome window)
+- [x] 3.5 Onboarding (welcome window) — done, renders on first run (verified via Start-Process)
 - [ ] 3.6 Settings window (General/Shortcuts/Recording tabs + shortcut recorder)
 
 ## Completed (append as you go)

@@ -1,5 +1,6 @@
 using System.Windows;
 using BetterScreenshot.App.Capture;
+using BetterScreenshot.App.Onboarding;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Platform;
 
@@ -24,6 +25,13 @@ public partial class App : System.Windows.Application
         _tray = new TrayIcon(commands, _settings.Hotkeys);
         _hotkeys = new HotkeyController(commands);
         _hotkeys.Apply(_settings.Hotkeys);
+
+        if (!_settings.FirstRunComplete)
+        {
+            new WelcomeWindow().ShowDialog();
+            _settings.FirstRunComplete = true;
+            _settings.Save();
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
