@@ -7,8 +7,8 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phase 1 (pure-logic core) — partially complete; then Phase 2+ per `PLAN.md`.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)** as of seed.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **69 passed**.
-- **Next task:** Phase 1 Task **1.9 (RGBAColor + AnnotationStyle)**. Then 1.10, 1.11, 1.17, 1.18
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **72 passed**.
+- **Next task:** Phase 1 Task **1.10 (Annotation model + EditorDocument)**. Then 1.11, 1.17, 1.18
   (the remaining Phase-1 pure-logic), then Phase 2 onward.
 
 ## Phase 1 task status (pure-logic core)
@@ -20,7 +20,7 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - [x] 1.6 RecognitionResult/Resolver              — done, tested
 - [x] 1.7 CaptureSettings                          — done, tested
 - [x] 1.8 WindowPicking (pure hit-test)            — done, tested
-- [ ] 1.9 RGBAColor + AnnotationStyle              — pending
+- [x] 1.9 RGBAColor + AnnotationStyle              — done, tested
 - [ ] 1.10 Annotation model + EditorDocument       — pending
 - [ ] 1.11 ArrowGeometry                            — pending
 - [x] 1.12 HistoryEntry + HistoryIndex             — done, tested
