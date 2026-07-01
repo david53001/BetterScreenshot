@@ -1,0 +1,6 @@
+# .NET build output — never commit these.
+bin/
+obj/
+*.user
+*.suo
+.vs/
