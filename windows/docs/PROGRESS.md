@@ -7,10 +7,10 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** **Phase 1 COMPLETE** ✅ (all 18 pure-logic tasks). Now entering **Phase 2 (Windows platform integration)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **112 passed** (incl. 4 hardware-gated tests).
-- **Next task:** Phase 2 Task **2.6 (Global hotkey host)** in `BetterScreenshot.Platform` — `HotkeyHost`: hidden
-  `HwndSource` message window, RegisterHotKey/UnregisterHotKey, map `HotkeyCombo`→(MOD flags, vk), raise
-  `HotkeyPressed(HotkeyAction)`, report registration failures, suspend/resume.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **114 passed** (incl. 5 hardware-gated tests).
+- **Next task:** Phase 2 Task **2.7 (ffmpeg runner + availability)** in `BetterScreenshot.Platform` —
+  `FfmpegRunner`: locate ffmpeg (PATH or `windows/tools/ffmpeg.exe`), `IsAvailable`, start/stop a recording
+  process (args built by the Recording layer), run MP4→GIF, capture stderr for diagnostics.
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -40,7 +40,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 2.3 Window picking (Win32 enum in Z-order → feed pure WindowPicking) — done, hardware test
 - [x] 2.4 Clipboard + temp writer + encode (PNG/JPG) — done (ImageIo tested headless; ClipboardService build-only)
 - [x] 2.5 OCR + QR (Windows.Media.Ocr + ZXing) — done, QR round-trip test (hardware)
-- [ ] 2.6 Global hotkey host (RegisterHotKey on hidden HwndSource)
+- [x] 2.6 Global hotkey host (RegisterHotKey on hidden HwndSource) — done, STA registration test (hardware)
 - [ ] 2.7 ffmpeg runner + availability
 - [ ] 2.8 Global input hooks (WH_MOUSE_LL / WH_KEYBOARD_LL)
 
