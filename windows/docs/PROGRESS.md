@@ -7,23 +7,22 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1–4 COMPLETE ✅. Now entering **Phase 5 (Annotation editor)** — the biggest UI subsystem.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **152 passed** (incl. 10 hardware-gated tests).
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **157 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 5 Task **5.3 (Toolbar/inspector + undo/redo + sticky style + Stack button)** in
-  `BetterScreenshot.App` — polish the editor: styled tool toolbar (hand-drawn glyphs, selected state) + inspector
-  (8 preset color swatches + custom color, weight S/M/L=2/4/7, size S/M/L=18/24/36 by tool); undo/redo via document
-  snapshots (max 50) with Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y; sticky style (load defaultStyle, on change persist via
-  `StyleChanged`); Stack button already present (wire `OnAddToStack`). See `port-reference/03-editorkit.md`.
-  DEFERRED from 5.2 (do in 5.3 or hardening): 8-handle resize for a single selection (currently move/delete/z-order
-  only); marquee multi-select. NEEDS MANUAL VERIFY: editor tools once reachable (Edit wires in 5.4).
-  INTERIM caveats still open: captureText→region select; Quick Access Edit button (5.4).
+- **Next task:** Phase 5 Task **5.4 (Wire editor into CaptureCoordinator)** — LAST Phase-5 task. In
+  `CaptureCoordinator`: add `Annotate(BitmapSource)` that opens an `EditorWindow(image, settings.EditorStyle)` and
+  wires callbacks — `OnCopy`→Copy, `OnSave`→Save, `OnAddToStack`→keepInStack (history + Quick Access), and
+  `StyleChanged`→ persist `settings.EditorStyle` (via SettingsStore.Save). Set the Quick Access card's `OnEdit` =>
+  Annotate(image). After it, Phase 5 complete → Phase 6 (history UI/service).
+  DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8).
+  INTERIM caveats still open: captureText→region select.
 
 ## Phase 5 task status (Annotation editor — BetterScreenshot.App)
 - [x] 5.1 Editor window + canvas render (DocumentRenderer, WPF) — done, 4 renderer tests (pixel read-back)
 - [x] 5.2 Tools + interaction (draw/select/move/redact/crop; AnnotationFactory tested) — done; 8-handle resize + marquee-select deferred to 5.3
-- [ ] 5.3 Toolbar + inspector + action bar + undo/redo + sticky style + Stack button
+- [x] 5.3 Toolbar + inspector + action bar + undo/redo + sticky style + Stack button — done (UndoHistory tested; inspector colors/weights/sizes)
 - [ ] 5.4 Wire editor into CaptureCoordinator (Quick Access Edit, annotate from history)
 
 ## Phase 4 task status (Overlays — BetterScreenshot.App)

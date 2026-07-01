@@ -5,7 +5,10 @@
         WindowStartupLocation="CenterScreen" Background="#FF2B2B2E">
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="#FF232326" Padding="8,6">
-            <StackPanel x:Name="Toolbar" Orientation="Horizontal" HorizontalAlignment="Center"/>
+            <StackPanel>
+                <StackPanel x:Name="Toolbar" Orientation="Horizontal" HorizontalAlignment="Center"/>
+                <StackPanel x:Name="Inspector" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            </StackPanel>
         </Border>
         <Border DockPanel.Dock="Bottom" Background="#FF232326" Padding="12,8">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
