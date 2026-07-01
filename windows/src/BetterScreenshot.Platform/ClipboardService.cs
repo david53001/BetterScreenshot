@@ -26,6 +26,14 @@ public static class ClipboardService
 
     public static void SetText(string text) => Clipboard.SetText(text);
 
+    /// <summary>Puts a single existing file on the clipboard as a file-drop (e.g. a saved recording).</summary>
+    public static void SetFile(string path)
+    {
+        var data = new DataObject();
+        data.SetFileDropList(new StringCollection { path });
+        Clipboard.SetDataObject(data, copy: true);
+    }
+
     private static void ScheduleDelete(string? dir)
     {
         if (string.IsNullOrEmpty(dir)) return;

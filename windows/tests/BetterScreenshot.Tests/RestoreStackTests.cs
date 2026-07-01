@@ -58,4 +58,32 @@ public class RestoreStackTests
         Assert.Equal(a, s.Pop());
         Assert.Equal(b, s.Pop());
     }
+
+    [Fact]
+    public void PopRestorableSkipsEntriesThatNoLongerExist()
+    {
+        var s = new RestoreStack();
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        var c = Guid.NewGuid();
+        s.Push(a);
+        s.Push(b);
+        s.Push(c);
+        // b was deleted from history in the meantime; c/a still exist.
+        var alive = new HashSet<Guid> { a, c };
+        Assert.Equal(c, s.PopRestorable(alive.Contains)); // newest survivor first
+        Assert.Equal(a, s.PopRestorable(alive.Contains)); // b skipped
+        Assert.Null(s.PopRestorable(alive.Contains));     // empty
+        Assert.True(s.IsEmpty);
+    }
+
+    [Fact]
+    public void PopRestorableReturnsNullWhenNoneExist()
+    {
+        var s = new RestoreStack();
+        s.Push(Guid.NewGuid());
+        s.Push(Guid.NewGuid());
+        Assert.Null(s.PopRestorable(_ => false)); // all gone
+        Assert.True(s.IsEmpty);                    // stack drained
+    }
 }

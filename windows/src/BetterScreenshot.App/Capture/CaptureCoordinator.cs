@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows.Media.Imaging;
 using BetterScreenshot.App.Editor;
+using BetterScreenshot.App.History;
 using BetterScreenshot.App.Overlays;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Capture;
@@ -19,6 +20,7 @@ public sealed class CaptureCoordinator : IAppCommands
 {
     private readonly SettingsStore _settings;
     private readonly Action _quit;
+    private readonly HistoryService _history;
     private readonly SelectionOverlayController _selection = new();
     private readonly QuickAccessStackController _stack = new();
     private readonly PinPanelController _pins = new();
@@ -28,6 +30,7 @@ public sealed class CaptureCoordinator : IAppCommands
     {
         _settings = settings;
         _quit = quit;
+        _history = HistoryService.ForSettings(settings);
     }
 
     /// <summary>Set by the app to show the settings window (which needs the hotkey controller too).</summary>
@@ -77,10 +80,12 @@ public sealed class CaptureCoordinator : IAppCommands
         var (copy, save, overlay) = CaptureRouter.Decide(_settings.Capture.AfterCapture);
         if (copy) Copy(image);
         if (save) Save(image);
-        if (overlay) ShowOverlayCard(image);
+        // Remember every non-ephemeral capture (saved or shown) in history; copy-only captures stay transient.
+        Guid? historyId = (save || overlay) ? _history.RecordScreenshot(image) : null;
+        if (overlay) ShowOverlayCard(image, historyId);
     }
 
-    private void ShowOverlayCard(BitmapSource image)
+    private void ShowOverlayCard(BitmapSource image, Guid? historyId = null)
     {
         string dragFile = ImageIo.WriteTempPng(image, "quickaccess.png");
         var actions = new QuickAccessActions
@@ -90,7 +95,15 @@ public sealed class CaptureCoordinator : IAppCommands
             OnPin = () => PinImage(image),
             OnEdit = () => Annotate(image),
         };
-        _stack.Present(image, QuickAccessKind.Screenshot, actions, MapCorner(_settings.Capture.OverlayCorner), dragFile);
+        _stack.Present(image, QuickAccessKind.Screenshot, actions, MapCorner(_settings.Capture.OverlayCorner),
+            dragFile, reason => OnCardDismissed(historyId, reason));
+    }
+
+    /// <summary>Only ✕-closed / evicted cards are restorable; deliberate actions (save/edit/pin) are not.</summary>
+    private void OnCardDismissed(Guid? historyId, DismissReason reason)
+    {
+        if (historyId is { } id && reason is DismissReason.Closed or DismissReason.Evicted)
+            _history.NoteClosed(id);
     }
 
     private static Corner MapCorner(SettingsOverlayCorner corner) => corner switch
@@ -140,14 +153,26 @@ public sealed class CaptureCoordinator : IAppCommands
         editor.Show();
     }
 
-    /// <summary>Editor "Stack" button: re-enter the Quick Access flow (history recording added in Phase 6).</summary>
-    private void KeepInStack(BitmapSource image) => ShowOverlayCard(image);
+    /// <summary>Editor "Stack" button: record the flattened edit in history and re-enter the Quick Access flow.</summary>
+    private void KeepInStack(BitmapSource image)
+    {
+        var id = _history.RecordScreenshot(image);
+        ShowOverlayCard(image, id);
+    }
+
+    /// <summary>Restore Recently Closed: bring back the newest ✕-closed card that still exists in history.</summary>
+    public void RestoreRecentlyClosed()
+    {
+        var entry = _history.PopRestorable();
+        if (entry is null) return;
+        var image = _history.LoadImage(entry);
+        if (image != null) ShowOverlayCard(image, entry.Id);
+    }
 
     // Wired up in later phases.
     public void ToggleRecording() { }
     public void PauseResumeRecording() { }
     public void OpenHistory() { }
-    public void RestoreRecentlyClosed() { }
     public void OpenSettings() => OnOpenSettings?.Invoke();
     public void Quit() => _quit();
 }

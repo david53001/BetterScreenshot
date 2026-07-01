@@ -18,7 +18,8 @@ public sealed class QuickAccessStackController
 
     private readonly List<QuickAccessWindow> _cards = new(); // index 0 = newest
 
-    public void Present(BitmapSource image, QuickAccessKind kind, QuickAccessActions actions, Corner corner, string? dragFile)
+    public void Present(BitmapSource image, QuickAccessKind kind, QuickAccessActions actions, Corner corner,
+        string? dragFile, Action<DismissReason>? onDismiss = null)
     {
         if (_cards.Count >= MaxCount)
         {
@@ -28,10 +29,11 @@ public sealed class QuickAccessStackController
         }
 
         var card = new QuickAccessWindow(image, kind, actions, dragFile);
-        card.Dismissed += _ =>
+        card.Dismissed += reason =>
         {
             _cards.Remove(card);
             Restack(corner);
+            onDismiss?.Invoke(reason);
         };
         _cards.Insert(0, card);
         Restack(corner);
