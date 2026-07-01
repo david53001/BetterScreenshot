@@ -69,8 +69,17 @@ packaging/installer, extra polish. Mark these clearly as stretch in the ledger.
 - **Toolchain:** .NET 9 SDK (`dotnet` on PATH). App/Platform target `net9.0-windows10.0.19041.0`; pure libs `net9.0`.
   Build the whole solution and run `dotnet test` before committing.
 
-## 6. When done (each firing)
+## 6. When done (each firing) — AND SCHEDULE THE NEXT ONE
 - Update `windows/docs/PROGRESS.md`: check off what you finished, set the current phase/task pointer, append any
   assumption or known issue, and (if applicable) the `DONE — nothing left` line.
 - Ensure PLAN.md checkboxes reflect reality.
 - Report back a short delta: **what this firing changed**, **what remains**, and **anything needing David's eyes**.
+- **MANDATORY LAST ACTION — never skip this:** unless you just wrote `DONE — nothing left`, the *final tool call of
+  every firing* must be `ScheduleWakeup` to queue the next iteration, so the loop self-perpetuates and never stalls.
+  Use `delaySeconds: 270` (≈5 min, keeps the prompt cache warm), a one-line `reason`, and `prompt` set to the exact
+  loop instruction below (verbatim) so the next firing re-enters this loop:
+
+      Read and execute the instructions in windows/LOOP-PROMPT.md (repo: C:\Users\david_v0a3rlc\Sorted\Coding\Apps\BetterScreenshot). Do exactly one durable increment per firing: re-assess state via windows/docs/PROGRESS.md, run the build + tests, then continue PLAN.md's next unchecked task (TDD for pure logic) or harden if the plan is complete. Keep the build clean and all tests green, commit on branch windows-port (never push), and update windows/docs/PROGRESS.md. If the GOAL is fully met and a full re-scan finds nothing, write "DONE — nothing left" in PROGRESS.md and make no further changes.
+
+  Only when the GOAL is fully met and you wrote `DONE — nothing left` do you skip ScheduleWakeup — that is how the
+  loop terminates. Otherwise: schedule it, every single firing, without fail.
