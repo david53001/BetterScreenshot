@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Media.Imaging;
+using BetterScreenshot.App.Editor;
 using BetterScreenshot.App.Overlays;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Capture;
@@ -87,7 +88,7 @@ public sealed class CaptureCoordinator : IAppCommands
             OnCopy = () => Copy(image),
             OnSave = () => Save(image),
             OnPin = () => PinImage(image),
-            // OnEdit (Phase 5 editor) wires up in a later task.
+            OnEdit = () => Annotate(image),
         };
         _stack.Present(image, QuickAccessKind.Screenshot, actions, MapCorner(_settings.Capture.OverlayCorner), dragFile);
     }
@@ -125,6 +126,22 @@ public sealed class CaptureCoordinator : IAppCommands
         var actions = new PinActions(() => Copy(image), () => Save(image));
         _pins.Pin(image, style, actions);
     }
+
+    /// <summary>Opens the annotation editor on the image, wiring copy/save/stack and sticky-style persistence.</summary>
+    private void Annotate(BitmapSource image)
+    {
+        var editor = new EditorWindow(image, _settings.EditorStyle)
+        {
+            OnCopy = Copy,
+            OnSave = Save,
+            OnAddToStack = KeepInStack,
+            StyleChanged = style => { _settings.EditorStyle = style; _settings.Save(); },
+        };
+        editor.Show();
+    }
+
+    /// <summary>Editor "Stack" button: re-enter the Quick Access flow (history recording added in Phase 6).</summary>
+    private void KeepInStack(BitmapSource image) => ShowOverlayCard(image);
 
     // Wired up in later phases.
     public void ToggleRecording() { }

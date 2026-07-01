@@ -5,24 +5,33 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–4 COMPLETE ✅. Now entering **Phase 5 (Annotation editor)** — the biggest UI subsystem.
+- **Phase:** Phases 1–5 COMPLETE ✅. Now entering **Phase 6 (Capture history UI + service)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **157 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 5 Task **5.4 (Wire editor into CaptureCoordinator)** — LAST Phase-5 task. In
-  `CaptureCoordinator`: add `Annotate(BitmapSource)` that opens an `EditorWindow(image, settings.EditorStyle)` and
-  wires callbacks — `OnCopy`→Copy, `OnSave`→Save, `OnAddToStack`→keepInStack (history + Quick Access), and
-  `StyleChanged`→ persist `settings.EditorStyle` (via SettingsStore.Save). Set the Quick Access card's `OnEdit` =>
-  Annotate(image). After it, Phase 5 complete → Phase 6 (history UI/service).
+- **Next task:** Phase 6 Task **6.1 (HistoryStore + ThumbnailRenderer)** — file-backed history (namespace
+  `BetterScreenshot.History` for the pure store, `BetterScreenshot.Platform` for the WPF ThumbnailRenderer).
+  HistoryStore: `%APPDATA%\BetterScreenshot\History\`, `history.json`, add screenshot (copy PNG + thumb) / recording
+  (thumb + reference), load-prune (cap + 30-day + missing), remove (never deletes recording file), clearAll —
+  mirror the 10 macOS HistoryStore tests. ThumbnailRenderer: ≤400px longest side JPEG q0.8, no upscale, valid JPEG —
+  mirror the 4 macOS tests. Both fully testable. See `port-reference/04-historykit.md`.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8).
-  INTERIM caveats still open: captureText→region select.
+  INTERIM caveats still open: captureText→region select; KeepInStack currently only re-shows the Quick Access card
+  (history recording wires in 6.2).
+
+## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
+- [ ] 6.1 HistoryStore (file IO, load-prune, add/remove/clearAll) + ThumbnailRenderer — **NEXT**
+- [ ] 6.2 HistoryService facade (record/restore/copy/reveal/delete) + wire into coordinators
+- [ ] 6.3 History window (thumbnail grid, actions)
 
 ## Phase 5 task status (Annotation editor — BetterScreenshot.App)
 - [x] 5.1 Editor window + canvas render (DocumentRenderer, WPF) — done, 4 renderer tests (pixel read-back)
 - [x] 5.2 Tools + interaction (draw/select/move/redact/crop; AnnotationFactory tested) — done; 8-handle resize + marquee-select deferred to 5.3
 - [x] 5.3 Toolbar + inspector + action bar + undo/redo + sticky style + Stack button — done (UndoHistory tested; inspector colors/weights/sizes)
+- [x] 5.4 Wire editor into CaptureCoordinator (Quick Access Edit, sticky-style persist) — done; app runs
+**Phase 5 COMPLETE — 157 tests green.** Editor reachable end-to-end. Next: Phase 6 (history).
 - [ ] 5.4 Wire editor into CaptureCoordinator (Quick Access Edit, annotate from history)
 
 ## Phase 4 task status (Overlays — BetterScreenshot.App)
