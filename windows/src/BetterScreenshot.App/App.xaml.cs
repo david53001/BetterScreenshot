@@ -1,4 +1,5 @@
 using System.Windows;
+using BetterScreenshot.App.Capture;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Platform;
 
@@ -19,7 +20,7 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         _settings = SettingsStore.Load();
-        var commands = new StubCommands(this);
+        var commands = new CaptureCoordinator(_settings, Shutdown);
         _tray = new TrayIcon(commands, _settings.Hotkeys);
         _hotkeys = new HotkeyController(commands);
         _hotkeys.Apply(_settings.Hotkeys);
@@ -30,21 +31,5 @@ public partial class App : System.Windows.Application
         _hotkeys?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);
-    }
-
-    /// <summary>Temporary command target so the app is runnable now; replaced by the coordinator wiring in Task 3.4/7.2.</summary>
-    private sealed class StubCommands(App app) : IAppCommands
-    {
-        public void CaptureArea() { }
-        public void CaptureWindow() { }
-        public void CaptureFullscreen() { }
-        public void CaptureText() { }
-        public void ToggleRecording() { }
-        public void PauseResumeRecording() { }
-        public void PinFromClipboard() { }
-        public void OpenHistory() { }
-        public void RestoreRecentlyClosed() { }
-        public void OpenSettings() { }
-        public void Quit() => app.Shutdown();
     }
 }

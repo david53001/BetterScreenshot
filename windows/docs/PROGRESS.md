@@ -7,14 +7,15 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** Phases 1 & 2 COMPLETE ✅. Now entering **Phase 3 (App shell + capture flow)** — makes the app runnable.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **132 passed** (incl. 9 hardware-gated tests).
-- **App is RUNNABLE:** launches to a tray icon + full menu + registered global hotkeys (Ctrl+Shift+4/5/6/7/8);
-  verified via `Start-Process`. Tests project now references App too (App-layer logic is unit-testable).
-- **Next task:** Phase 3 Task **3.4 (CaptureCoordinator)** in `BetterScreenshot.App` — the real command target:
-  captureArea (SelectionOverlay is Phase 4; for now capture a display/region via Platform), captureFullscreen
-  (primary display), captureWindow (WindowEnum picker → CaptureWindow), captureText (region → OCR → clipboard+HUD).
-  `Handle(image, sourceRect)` routes by `afterCapture` (copy/save/both/overlay); save+copy via Platform ImageIo/
-  ClipboardService. Replace `StubCommands` with this coordinator. (Overlay/editor wiring comes in Phases 4–5.)
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **134 passed** (incl. 10 hardware-gated tests).
+- **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
+  capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
+  the primary display → clipboard.
+- **Next task:** Phase 3 Task **3.5 (Onboarding)** in `BetterScreenshot.App` — `WelcomeWindow`: one-time welcome
+  (app icon, feature blurb, Ctrl+Shift cheat sheet: 4=area, 5=record, 6=fullscreen, 8=window, Start button); set
+  `FirstRunComplete` flag in settings so it only shows once. Shown from `App.OnStartup` when `!FirstRunComplete`.
+  INTERIM caveats to fix in Phase 4: area→overlay, window→interactive picker, captureText→region select, ShowOverlay
+  default currently saves+copies (should show Quick Access card).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -55,7 +56,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
       the WinExe. Namespace `BetterScreenshot.Platform.SettingsStore`.
 - [x] 3.2 Tray + menu (WinForms NotifyIcon, full menu) — done, app launches to tray (verified via Start-Process)
 - [x] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions) — done, dispatch tests; app runs w/ hotkeys
-- [ ] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy)
+- [x] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy) — done, e2e capture→save test
 - [ ] 3.5 Onboarding (welcome window)
 - [ ] 3.6 Settings window (General/Shortcuts/Recording tabs + shortcut recorder)
 
