@@ -8,11 +8,11 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Phase:** Phases 1 & 2 COMPLETE ✅. Now entering **Phase 3 (App shell + capture flow)** — makes the app runnable.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **123 passed** (incl. 8 hardware-gated tests).
-- **Next task:** Phase 3 Task **3.2 (Tray + menu)** in `BetterScreenshot.App` — `App.xaml`/`TrayIcon`: H.NotifyIcon
-  is dropped; use the built-in WinForms `NotifyIcon` (already enabled). Build the exact tray menu (see
-  `port-reference/06-app-shell.md`): Capture Area/Window/Fullscreen/Text, sep, Record/Pause-Resume, sep, Pin from
-  Clipboard, sep, History/Restore, sep, Settings, Quit. Wire commands to coordinator stubs; show hotkey text;
-  recording state → icon+tooltip. App runs to a tray icon. Verify by launching the app (it should appear in tray).
+- **App is RUNNABLE:** launches to a tray icon (hand-drawn camera glyph) with the full menu; verified via
+  `Start-Process` (runs without crashing). Entry: `App.OnStartup` → `SettingsStore.Load()` + `TrayIcon(StubCommands…)`.
+- **Next task:** Phase 3 Task **3.3 (Hotkey wiring)** in `BetterScreenshot.App` — `HotkeyController`: load bindings
+  from settings, register via `HotkeyHost`, dispatch `HotkeyPressed(action)` to the `IAppCommands` methods;
+  re-register on change; surface registration failures. Replace `StubCommands.Quit`-only wiring as commands land.
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -51,7 +51,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 3.1 Settings store (JSON, keys 1:1 with mac) — done, round-trip/missing/corrupt tests
       NOTE: placed in `BetterScreenshot.Platform` (not App) so the Tests project can cover it without referencing
       the WinExe. Namespace `BetterScreenshot.Platform.SettingsStore`.
-- [ ] 3.2 Tray + menu (WinForms NotifyIcon, full menu) — **NEXT** (verify by launching app)
+- [x] 3.2 Tray + menu (WinForms NotifyIcon, full menu) — done, app launches to tray (verified via Start-Process)
 - [ ] 3.3 Hotkey wiring (load bindings → HotkeyHost → dispatch to actions)
 - [ ] 3.4 CaptureCoordinator (area/fullscreen/window/text → route by afterCapture; save/copy)
 - [ ] 3.5 Onboarding (welcome window)
