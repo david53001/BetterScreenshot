@@ -7,10 +7,10 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **Branch:** `windows-port`
 - **Phase:** **Phase 1 COMPLETE** ✅ (all 18 pure-logic tasks). Now entering **Phase 2 (Windows platform integration)**.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **107 passed** (incl. 3 hardware-gated tests).
-- **Next task:** Phase 2 Task **2.4 (Clipboard + temp writer + encode)** in `BetterScreenshot.Platform` —
-  `ClipboardService` (set image + file-drop of a self-deleting temp PNG), `ImageIo` (EncodePng/EncodeJpg(quality),
-  SavePng/Jpg, WriteTempPng). Pure-ish encode logic can be tested by round-tripping bytes/magic numbers.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **111 passed** (incl. 3 hardware-gated tests).
+- **Next task:** Phase 2 Task **2.5 (OCR + QR)** in `BetterScreenshot.Platform` — `TextRecognizerService`:
+  `Windows.Media.Ocr.OcrEngine.TryCreateFromUserProfileLanguages` → text lines; `ZXing` QR decode; feed the pure
+  `RecognitionResolver`. Hardware-gated integration test (render text → recognize).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested
@@ -38,7 +38,7 @@ Editor UI, History UI, Recording, Icons) pending — see PLAN.md.
 - [x] 2.1 Screen enumeration + DPI (Screens: EnumDisplayMonitors + GetDpiForMonitor) — done, hardware test
 - [x] 2.2 Still capture (GDI BitBlt region/display + PrintWindow) — done, hardware test
 - [x] 2.3 Window picking (Win32 enum in Z-order → feed pure WindowPicking) — done, hardware test
-- [ ] 2.4 Clipboard + temp writer + encode (PNG/JPG)
+- [x] 2.4 Clipboard + temp writer + encode (PNG/JPG) — done (ImageIo tested headless; ClipboardService build-only)
 - [ ] 2.5 OCR + QR (Windows.Media.Ocr + ZXing)
 - [ ] 2.6 Global hotkey host (RegisterHotKey on hidden HwndSource)
 - [ ] 2.7 ffmpeg runner + availability
