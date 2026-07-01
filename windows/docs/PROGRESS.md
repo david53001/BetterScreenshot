@@ -12,18 +12,17 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 4 Task **4.2 (QuickAccess card + stack)** in `BetterScreenshot.App` — post-capture floating
-  card (220×168, corner radius 12, thumbnail 200×112, action buttons per `port-reference/02-overlaykit.md`),
-  stacked ≤3 at the settings corner (OverlayPositioner + margin 24), evict oldest, DismissReason; drag-to-export a
-  temp PNG. Wire into `Handle(...)` so the `ShowOverlay` after-capture behavior shows the card (replacing the
-  interim save+copy). Screenshot buttons: Copy (keeps open), Edit (Phase 5 editor), Pin (4.3), Save, Close.
-  NEEDS MANUAL VERIFY (4.1): the drag-select overlay's interactive behavior (drag, DPI on secondary monitors) —
-  pure math is tested + app launches; confirm a real drag captures the right region.
+- **Next task:** Phase 4 Task **4.3 (Pin panels)** in `BetterScreenshot.App` — `PinWindow` + `PinPanelController`:
+  topmost image window sized via the (tested) `PinGeometry.InitialFrame`/`ZoomedFrame`; drag to move, corner/scroll
+  to resize (0.25×–3×), double-click copy, right-click menu (copy/save/close), multi-pin, style (radius/shadow from
+  settings). Wire `pinFromClipboard` (read clipboard image → pin) and the Quick Access card's Pin button (OnPin).
+  See `port-reference/02-overlaykit.md`.
+  NEEDS MANUAL VERIFY: 4.1 drag-select interaction; 4.2 Quick Access card actions/drag-export/stack.
   INTERIM caveats still open: window→interactive picker (4.4), captureText→region select.
 
 ## Phase 4 task status (Overlays — BetterScreenshot.App)
 - [x] 4.1 SelectionOverlay (area selection) — done (physical-pixel positioning, SelectionMath tested); needs manual drag verify
-- [ ] 4.2 QuickAccess card + stack (220×168, ≤3, actions, drag-export)
+- [x] 4.2 QuickAccess card + stack (220×168, ≤3, actions, drag-export) — done; Copy/Save work, Edit/Pin stubs (4.3/5)
 - [ ] 4.3 Pin panels (PinGeometry-based, drag/zoom/multi-pin)
 - [ ] 4.4 HUD + WindowPicker overlay
 

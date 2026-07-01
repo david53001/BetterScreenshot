@@ -19,6 +19,7 @@ public sealed class CaptureCoordinator : IAppCommands
     private readonly SettingsStore _settings;
     private readonly Action _quit;
     private readonly SelectionOverlayController _selection = new();
+    private readonly QuickAccessStackController _stack = new();
 
     public CaptureCoordinator(SettingsStore settings, Action quit)
     {
@@ -71,13 +72,28 @@ public sealed class CaptureCoordinator : IAppCommands
         var (copy, save, overlay) = CaptureRouter.Decide(_settings.Capture.AfterCapture);
         if (copy) Copy(image);
         if (save) Save(image);
-        if (overlay)
-        {
-            // TODO Phase 4: Quick Access overlay. Interim behavior: save + copy so nothing is lost.
-            Save(image);
-            Copy(image);
-        }
+        if (overlay) ShowOverlayCard(image);
     }
+
+    private void ShowOverlayCard(BitmapSource image)
+    {
+        string dragFile = ImageIo.WriteTempPng(image, "quickaccess.png");
+        var actions = new QuickAccessActions
+        {
+            OnCopy = () => Copy(image),
+            OnSave = () => Save(image),
+            // OnEdit (Phase 5 editor) and OnPin (Phase 4.3) wire up in later tasks.
+        };
+        _stack.Present(image, QuickAccessKind.Screenshot, actions, MapCorner(_settings.Capture.OverlayCorner), dragFile);
+    }
+
+    private static Corner MapCorner(SettingsOverlayCorner corner) => corner switch
+    {
+        SettingsOverlayCorner.TopLeft => Corner.TopLeft,
+        SettingsOverlayCorner.TopRight => Corner.TopRight,
+        SettingsOverlayCorner.BottomLeft => Corner.BottomLeft,
+        _ => Corner.BottomRight,
+    };
 
     private void Save(BitmapSource image)
     {
