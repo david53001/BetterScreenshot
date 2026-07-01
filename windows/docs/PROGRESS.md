@@ -1,5 +1,9 @@
 # BetterScreenshot-Windows — Progress Ledger
 
+> ⏸️ **LOOP PAUSED (2026-07-02).** The autonomous "chrono" task was cancelled at the owner's request; no
+> ScheduleWakeup/cron is pending. Phases 1–6 are complete (197 tests green). **To resume tomorrow, read
+> `windows/docs/HANDOFF-2026-07-02.md` and paste its §6 loop prompt into a fresh Claude Code chat.**
+
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
