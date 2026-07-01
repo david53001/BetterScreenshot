@@ -12,18 +12,19 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 4 Task **4.3 (Pin panels)** in `BetterScreenshot.App` — `PinWindow` + `PinPanelController`:
-  topmost image window sized via the (tested) `PinGeometry.InitialFrame`/`ZoomedFrame`; drag to move, corner/scroll
-  to resize (0.25×–3×), double-click copy, right-click menu (copy/save/close), multi-pin, style (radius/shadow from
-  settings). Wire `pinFromClipboard` (read clipboard image → pin) and the Quick Access card's Pin button (OnPin).
-  See `port-reference/02-overlaykit.md`.
-  NEEDS MANUAL VERIFY: 4.1 drag-select interaction; 4.2 Quick Access card actions/drag-export/stack.
-  INTERIM caveats still open: window→interactive picker (4.4), captureText→region select.
+- **Next task:** Phase 4 Task **4.4 (HUD + WindowPicker overlay)** in `BetterScreenshot.App` — LAST Phase-4 task.
+  `HudWindow`: bottom-center pill toast (1.5s auto-dismiss, 13pt) for messages like the Capture-Text HUD.
+  `WindowPickerWindow`: per-monitor overlay highlighting the hovered window (accent fill/stroke + title caption),
+  click picks, Esc cancels — feed `WindowEnum.ForPicking()` + pure `WindowPicking.Topmost`; wire into
+  `CaptureCoordinator.CaptureWindow` to replace the front-window fallback, and show the OCR HUD in captureText.
+  See `port-reference/02-overlaykit.md`. After it, Phase 4 complete → Phase 5 (annotation editor).
+  NEEDS MANUAL VERIFY: 4.1 drag-select; 4.2 Quick Access; 4.3 pin drag/zoom.
+  INTERIM caveats still open: captureText→region select (currently OCRs full primary display).
 
 ## Phase 4 task status (Overlays — BetterScreenshot.App)
 - [x] 4.1 SelectionOverlay (area selection) — done (physical-pixel positioning, SelectionMath tested); needs manual drag verify
 - [x] 4.2 QuickAccess card + stack (220×168, ≤3, actions, drag-export) — done; Copy/Save work, Edit/Pin stubs (4.3/5)
-- [ ] 4.3 Pin panels (PinGeometry-based, drag/zoom/multi-pin)
+- [x] 4.3 Pin panels (PinGeometry-based, drag/zoom/multi-pin) — done (Pin from Clipboard + Quick Access Pin button)
 - [ ] 4.4 HUD + WindowPicker overlay
 
 ## Phase 1 task status (pure-logic core)

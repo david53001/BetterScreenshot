@@ -20,6 +20,7 @@ public sealed class CaptureCoordinator : IAppCommands
     private readonly Action _quit;
     private readonly SelectionOverlayController _selection = new();
     private readonly QuickAccessStackController _stack = new();
+    private readonly PinPanelController _pins = new();
 
     public CaptureCoordinator(SettingsStore settings, Action quit)
     {
@@ -82,7 +83,8 @@ public sealed class CaptureCoordinator : IAppCommands
         {
             OnCopy = () => Copy(image),
             OnSave = () => Save(image),
-            // OnEdit (Phase 5 editor) and OnPin (Phase 4.3) wire up in later tasks.
+            OnPin = () => PinImage(image),
+            // OnEdit (Phase 5 editor) wires up in a later task.
         };
         _stack.Present(image, QuickAccessKind.Screenshot, actions, MapCorner(_settings.Capture.OverlayCorner), dragFile);
     }
@@ -105,10 +107,25 @@ public sealed class CaptureCoordinator : IAppCommands
 
     private static void Copy(BitmapSource image) => ClipboardService.SetImage(image);
 
+    public void PinFromClipboard()
+    {
+        if (System.Windows.Clipboard.ContainsImage())
+        {
+            var image = System.Windows.Clipboard.GetImage();
+            if (image != null) PinImage(image);
+        }
+    }
+
+    private void PinImage(BitmapSource image)
+    {
+        var style = new PinStyle(_settings.Capture.PinCornerRadius, _settings.Capture.PinShadow);
+        var actions = new PinActions(() => Copy(image), () => Save(image));
+        _pins.Pin(image, style, actions);
+    }
+
     // Wired up in later phases.
     public void ToggleRecording() { }
     public void PauseResumeRecording() { }
-    public void PinFromClipboard() { }
     public void OpenHistory() { }
     public void RestoreRecentlyClosed() { }
     public void OpenSettings() => OnOpenSettings?.Invoke();
