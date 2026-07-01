@@ -5,27 +5,34 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1, 2 & 3 COMPLETE ✅. Now entering **Phase 4 (Overlays)** — the interactive UI (selection,
-  Quick Access, pin, HUD, window picker) that replaces the Phase-3 interim capture fallbacks.
+- **Phase:** Phases 1–4 COMPLETE ✅. Now entering **Phase 5 (Annotation editor)** — the biggest UI subsystem.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **141 passed** (incl. 10 hardware-gated tests).
 - **App TAKES SCREENSHOTS:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy; end-to-end
   capture→save PNG verified by test. captureArea falls back to fullscreen (overlay = Phase 4); captureText OCRs
   the primary display → clipboard.
-- **Next task:** Phase 4 Task **4.4 (HUD + WindowPicker overlay)** in `BetterScreenshot.App` — LAST Phase-4 task.
-  `HudWindow`: bottom-center pill toast (1.5s auto-dismiss, 13pt) for messages like the Capture-Text HUD.
-  `WindowPickerWindow`: per-monitor overlay highlighting the hovered window (accent fill/stroke + title caption),
-  click picks, Esc cancels — feed `WindowEnum.ForPicking()` + pure `WindowPicking.Topmost`; wire into
-  `CaptureCoordinator.CaptureWindow` to replace the front-window fallback, and show the OCR HUD in captureText.
-  See `port-reference/02-overlaykit.md`. After it, Phase 4 complete → Phase 5 (annotation editor).
-  NEEDS MANUAL VERIFY: 4.1 drag-select; 4.2 Quick Access; 4.3 pin drag/zoom.
-  INTERIM caveats still open: captureText→region select (currently OCRs full primary display).
+- **Next task:** Phase 5 Task **5.1 (Editor window + canvas render)** in `BetterScreenshot.App` — `EditorWindow` +
+  `DocumentRenderer` (WPF `RenderTargetBitmap`, top-left origin, `BitmapScalingMode.HighQuality`, `FormattedText`):
+  render an `EditorDocument` (base image + annotations + in-progress preview) to screen and to an export
+  `BitmapSource`. Test the renderer where feasible (e.g. filled-rect renders red at an interior pixel; arrow shaft
+  doesn't bleed past head — mirror the macOS DocumentRenderer tests). See `port-reference/03-editorkit.md`.
+  NEEDS MANUAL VERIFY (Phase 4): drag-select, Quick Access card, pin drag/zoom, window picker highlight+click, HUD.
+  INTERIM caveats still open: captureText→region select (currently OCRs full primary display); Quick Access Edit
+  button (wires to this editor in Phase 5).
+
+## Phase 5 task status (Annotation editor — BetterScreenshot.App)
+- [ ] 5.1 Editor window + canvas render (DocumentRenderer, WPF) — **NEXT**
+- [ ] 5.2 Tools + interaction (draw/select/move/resize/marquee/redact/crop)
+- [ ] 5.3 Toolbar + inspector + action bar + undo/redo + sticky style + Stack button
+- [ ] 5.4 Wire editor into CaptureCoordinator (Quick Access Edit, annotate from history)
 
 ## Phase 4 task status (Overlays — BetterScreenshot.App)
 - [x] 4.1 SelectionOverlay (area selection) — done (physical-pixel positioning, SelectionMath tested); needs manual drag verify
 - [x] 4.2 QuickAccess card + stack (220×168, ≤3, actions, drag-export) — done; Copy/Save work, Edit/Pin stubs (4.3/5)
 - [x] 4.3 Pin panels (PinGeometry-based, drag/zoom/multi-pin) — done (Pin from Clipboard + Quick Access Pin button)
-- [ ] 4.4 HUD + WindowPicker overlay
+- [x] 4.4 HUD + WindowPicker overlay — done (Capture-Text HUD; interactive window picker → CaptureWindow)
+**Phase 4 COMPLETE — 141 tests green.** Overlays all built (selection, Quick Access, pin, HUD, window picker).
+Next: Phase 5 (annotation editor).
 
 ## Phase 1 task status (pure-logic core)
 - [x] 1.1 CaptureGeometry (top-left)              — done, tested

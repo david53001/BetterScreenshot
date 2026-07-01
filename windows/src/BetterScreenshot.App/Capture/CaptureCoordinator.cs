@@ -21,6 +21,7 @@ public sealed class CaptureCoordinator : IAppCommands
     private readonly SelectionOverlayController _selection = new();
     private readonly QuickAccessStackController _stack = new();
     private readonly PinPanelController _pins = new();
+    private readonly WindowPickerController _picker = new();
 
     public CaptureCoordinator(SettingsStore settings, Action quit)
     {
@@ -39,9 +40,10 @@ public sealed class CaptureCoordinator : IAppCommands
 
     public void CaptureWindow()
     {
-        var front = WindowEnum.ForPicking().FirstOrDefault();
-        if (front.Hwnd == IntPtr.Zero) { CaptureFullscreen(); return; } // TODO Phase 4: interactive window picker
-        Handle(ScreenCapture.CaptureWindow(front.Hwnd));
+        _picker.Present(hwnd =>
+        {
+            if (hwnd is { } h && h != IntPtr.Zero) Handle(ScreenCapture.CaptureWindow(h));
+        });
     }
 
     public void CaptureArea()
@@ -61,6 +63,7 @@ public sealed class CaptureCoordinator : IAppCommands
             var image = ScreenCapture.CaptureDisplay(Screens.Primary());
             var result = await TextRecognizerService.RecognizeAsync(image);
             if (result.ClipboardString is { } text) ClipboardService.SetText(text);
+            HudController.Show(result.HudMessage);
         }
         catch
         {
