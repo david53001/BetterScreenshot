@@ -52,6 +52,20 @@ public static class WindowEnum
         return result;
     }
 
+    /// <summary>
+    /// The physical-pixel bounds of a single window (DWM extended frame, shadow excluded; falls back to
+    /// <c>GetWindowRect</c>). Used to record a specific window as a fixed desktop region. Null if the handle
+    /// is invalid or the window has no area.
+    /// </summary>
+    public static PxRect? FrameBounds(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return null;
+        if (DwmGetWindowAttribute(hwnd, DwmwaExtendedFrameBounds, out Rect rc, Marshal.SizeOf<Rect>()) != 0)
+            if (!GetWindowRect(hwnd, out rc)) return null;
+        int w = rc.Right - rc.Left, h = rc.Bottom - rc.Top;
+        return w > 0 && h > 0 ? new PxRect(rc.Left, rc.Top, w, h) : null;
+    }
+
     [DllImport("user32.dll")] private static extern IntPtr GetTopWindow(IntPtr hWnd);
     [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr hWnd, int uCmd);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);

@@ -4,20 +4,21 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BetterScreenshot.App.Overlays;
 using BetterScreenshot.Capture;
+using BetterScreenshot.Core;
 using BetterScreenshot.Platform;
 using BetterScreenshot.Recording;
 
 namespace BetterScreenshot.App.Recording;
 
 /// <summary>
-/// Orchestrates screen recording: owns the <see cref="RecorderState"/> machine and the ffmpeg
-/// <see cref="RecordingEngine"/>, picks the capture region, resolves audio devices, drives a 1s tray timer, and on
-/// stop hands the finished MP4 + a thumbnail back to the app for the history record and Quick Access card.
+/// Orchestrates screen recording (mac <c>RecordingCoordinator</c>): a smart <see cref="RecorderState"/> machine
+/// driven by the single Ctrl+Shift+5 <see cref="Toggle"/> — idle shows the record strip (armed), armed cancels,
+/// recording stops. The strip's target buttons pick full screen / area / window; all three reduce to one
+/// desktop-relative pixel region handed to the ffmpeg <see cref="RecordingEngine"/>. A 1s DispatcherTimer drives
+/// the tray icon + timer; on stop the finished MP4 + a thumbnail go to history + the Quick Access card.
 ///
-/// This is the start/stop core wired to <c>ToggleRecording</c>. It records the full primary display for now; area/
-/// window targets and the record-strip picker UI, plus gapless pause/resume (Task 7.3), build on top of this.
-/// The whole start/stop flow stays on the UI thread (no ConfigureAwait(false) here) so the DispatcherTimer and the
-/// state-change callback run on the dispatcher.
+/// Gapless pause/resume is Task 7.3 (the record strip has no pause yet). The whole flow stays on the UI thread
+/// (no ConfigureAwait(false) here) so the DispatcherTimer and callbacks run on the dispatcher.
 /// </summary>
 public sealed class RecordingCoordinator
 {
@@ -26,9 +27,13 @@ public sealed class RecordingCoordinator
     private readonly DispatcherTimer _timer;
     private readonly Action<bool, string?> _onStateChange;
     private readonly Action<string, BitmapSource> _onFinished;
+    private readonly SelectionOverlayController _selection = new();
+    private readonly WindowPickerController _picker = new();
 
+    private RecordStripWindow? _strip;
     private RecorderState _state = RecorderState.Idle;
-    private bool _busy; // guards against overlapping start/stop while an async transition is in flight
+    private PxRect _region;
+    private bool _stopping;
 
     public RecordingCoordinator(SettingsStore settings, Action<bool, string?> onStateChange,
         Action<string, BitmapSource> onFinished)
@@ -42,77 +47,141 @@ public sealed class RecordingCoordinator
 
     public bool IsRecording => _state.Phase is RecorderPhase.Recording or RecorderPhase.Paused;
 
-    /// <summary>Start recording (full screen) if idle, else stop. Fire-and-forget from the hotkey / tray menu.</summary>
-    public void Toggle() => _ = ToggleAsync();
-
-    private async Task ToggleAsync()
+    /// <summary>The Ctrl+Shift+5 entry point: idle → strip · armed → cancel · recording/paused → stop.</summary>
+    public void Toggle()
     {
-        if (_busy) return;
-        _busy = true;
-        try
+        switch (_state.Phase)
         {
-            if (IsRecording) await StopAsync();
-            else await StartFullScreenAsync();
-        }
-        finally
-        {
-            _busy = false;
+            case RecorderPhase.Idle: Arm(); break;
+            case RecorderPhase.Armed: CancelStrip(); break;
+            case RecorderPhase.Recording:
+            case RecorderPhase.Paused: _ = StopAsync(); break;
+            case RecorderPhase.Finishing: break; // busy — ignore
         }
     }
 
-    private async Task StartFullScreenAsync()
+    private void Arm()
     {
         if (!FfmpegRunner.IsAvailable())
         {
             HudController.Show("ffmpeg not found — recording unavailable");
             return;
         }
+        if (!_state.Transition(RecorderEvent.Arm)) return;
+        _strip = new RecordStripWindow(_settings)
+        {
+            OnFullScreen = BeginFullScreen,
+            OnArea = BeginArea,
+            OnWindow = BeginWindow,
+            OnCancel = CancelStrip,
+        };
+        _strip.Show();
+    }
 
-        var monitor = Screens.Primary();
-        var region = monitor.Bounds;
+    private void HideStrip()
+    {
+        _strip?.Close();
+        _strip = null;
+    }
+
+    private void CancelStrip()
+    {
+        // Any in-flight area-selection / window-picker overlay self-cancels on Esc; resetting the state here means
+        // its completion callback (which checks for the Armed phase) will no-op if it still arrives.
+        HideStrip();
+        _state.Transition(RecorderEvent.Reset);
+        _onStateChange(false, null);
+    }
+
+    private void BeginFullScreen()
+    {
+        HideStrip();
+        _ = BeginAsync(OverlayHelpers.MonitorUnderCursor().Bounds);
+    }
+
+    private void BeginArea()
+    {
+        HideStrip();
+        _selection.Present(rect =>
+        {
+            if (rect is { } r && !r.IsEmpty) _ = BeginAsync(r);
+            else AbortArm();
+        });
+    }
+
+    private void BeginWindow()
+    {
+        HideStrip();
+        _picker.Present(hwnd =>
+        {
+            if (hwnd is { } h && WindowEnum.FrameBounds(h) is { } r) _ = BeginAsync(r);
+            else AbortArm();
+        });
+    }
+
+    private void AbortArm()
+    {
+        if (_state.Phase == RecorderPhase.Armed)
+        {
+            _state.Transition(RecorderEvent.Reset);
+            _onStateChange(false, null);
+        }
+    }
+
+    private async Task BeginAsync(PxRect region)
+    {
+        if (_state.Phase != RecorderPhase.Armed) return; // cancelled before we got here
+
         var config = _settings.Recording;
-
         Directory.CreateDirectory(_settings.RecordingsDirectory);
         string path = Path.Combine(_settings.RecordingsDirectory, FileNamer.Name(DateTime.Now, "mp4", "Recording"));
-
-        // Resolve audio devices off the UI thread; the await resumes back on the dispatcher (no ConfigureAwait here).
         var audio = await DshowAudioDevices.ResolveAsync(config);
 
-        if (!_state.Transition(RecorderEvent.Arm)) return;
+        if (_state.Phase != RecorderPhase.Armed) return; // cancelled during device enumeration
         if (!_state.Transition(RecorderEvent.Begin, DateTime.Now)) { _state = RecorderState.Idle; return; }
 
         if (!_engine.Start(config, region, path, audio))
         {
             _state = RecorderState.Idle;
             HudController.Show("Could not start recording");
+            _onStateChange(false, null);
             return;
         }
 
+        _region = region;
         _timer.Start();
         _onStateChange(true, _state.ElapsedString(DateTime.Now));
     }
 
     private async Task StopAsync()
     {
-        _timer.Stop();
-        _state.Transition(RecorderEvent.Finish);
+        if (_stopping) return;
+        _stopping = true;
+        try
+        {
+            _timer.Stop();
+            _state.Transition(RecorderEvent.Finish);
 
-        // A representative still (the display as it is at stop ≈ the final frame) for the card + history thumbnail.
-        var thumb = CaptureThumb();
-        string? path = await _engine.StopAsync();
+            var thumb = CaptureThumb(_region);
+            string? path = await _engine.StopAsync();
 
-        _state = RecorderState.Idle;
-        _onStateChange(false, null);
+            _state = RecorderState.Idle;
+            _onStateChange(false, null);
 
-        if (path is not null)
-            _onFinished(path, thumb);
+            if (path is not null)
+                _onFinished(path, thumb);
+        }
+        finally
+        {
+            _stopping = false;
+        }
     }
 
-    private static BitmapSource CaptureThumb()
+    private static BitmapSource CaptureThumb(PxRect region)
     {
         try
         {
-            return ScreenCapture.CaptureDisplay(Screens.Primary());
+            return ScreenCapture.CaptureRegion(region);
         }
         catch
         {
