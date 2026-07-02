@@ -32,6 +32,7 @@ public sealed class RecordingCoordinator
     private readonly WindowPickerController _picker = new();
 
     private RecordStripWindow? _strip;
+    private CountdownOverlayWindow? _countdown;
     private RecorderState _state = RecorderState.Idle;
     private PxRect _region;
     private bool _stopping;
@@ -116,6 +117,7 @@ public sealed class RecordingCoordinator
         // Any in-flight area-selection / window-picker overlay self-cancels on Esc; resetting the state here means
         // its completion callback (which checks for the Armed phase) will no-op if it still arrives.
         HideStrip();
+        _countdown?.Cancel(); // abort a running pre-record countdown too
         _state.Transition(RecorderEvent.Reset);
         _onStateChange(false, null);
     }
@@ -163,8 +165,18 @@ public sealed class RecordingCoordinator
         Directory.CreateDirectory(_settings.RecordingsDirectory);
         string path = Path.Combine(_settings.RecordingsDirectory, FileNamer.Name(DateTime.Now, "mp4", "Recording"));
         var audio = await DshowAudioDevices.ResolveAsync(config);
-
         if (_state.Phase != RecorderPhase.Armed) return; // cancelled during device enumeration
+
+        // Pre-record countdown (still armed; runs before capture starts, so it is not recorded).
+        if (config.CountdownSeconds > 0)
+        {
+            _countdown = new CountdownOverlayWindow();
+            bool proceed = await _countdown.RunAsync(config.CountdownSeconds);
+            _countdown = null;
+            if (!proceed) { AbortArm(); return; } // cancelled during countdown
+            if (_state.Phase != RecorderPhase.Armed) return;
+        }
+
         if (!_state.Transition(RecorderEvent.Begin, DateTime.Now)) { _state = RecorderState.Idle; return; }
 
         if (!_engine.Start(config, region, path, audio))

@@ -2,18 +2,17 @@
 
 > ▶️ **LOOP RESUMED (2026-07-02).** Restarted from `windows/docs/HANDOFF-2026-07-02.md`; the self-perpetuating
 > firing loop is active again (ScheduleWakeup). Phases 1–6 complete; **Phase 7 (Screen recording) IN PROGRESS —
-> Tasks 7.1 & 7.2 DONE; 7.3 gapless pause/resume DONE (countdown overlay remaining), 212 tests green.**
-> Ctrl+Shift+5 shows the record strip → records to MP4 (full/area/window) in Videos + Quick Access card + history;
-> tray shows red icon + m:ss timer; the tray Pause/Resume menu item pauses/resumes **gaplessly** (segment+concat).
-> Verified end-to-end: an app-driven record→pause→resume→stop yields a valid MP4 whose duration EXCLUDES the pause.
-> Next: finish Task 7.3 — the **countdown overlay** (200×200, 120pt, click-skip, before begin when countdown>0).
+> Tasks 7.1, 7.2 & 7.3 DONE, 212 tests green.** Ctrl+Shift+5 → record strip → records MP4 (full/area/window) to
+> Videos + Quick Access card + history; tray red icon + m:ss; tray Pause/Resume is **gapless** (segment+concat);
+> optional pre-roll **countdown** overlay (200×200, 120pt digit, click-skip). All verified on-screen / by ffprobe.
+> Next: Task 7.4 (recording overlays — camera bubble, click highlighter, keystroke).
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — 7.1 & 7.2 done; 7.3 pause/resume done.
+- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — Tasks 7.1, 7.2 & 7.3 done.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **212 passed** (197 + 7 FfmpegArgs + 8
   DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). (7.2's strip is UI — no new unit tests;
@@ -27,14 +26,16 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   and shows a Quick Access recording card (Copy file / Open / Show in folder); the tray icon turns red with a live
   m:ss timer. A second Ctrl+Shift+5 while the strip is up cancels; while recording it stops. The tray **Pause /
   Resume Recording** menu item pauses & resumes **gaplessly** (segment+concat) — the timer freezes at "Paused ·
-  m:ss" and the menu label flips. **Not yet:** the **countdown overlay** (pre-roll when `countdownSeconds>0`); GIF
-  output is still recorded as MP4 (GIF conversion is Task 7.5); camera bubble / click / keystroke overlays (7.4).
-- **Next task:** finish Phase 7 Task **7.3 — the countdown overlay** `App/Recording/CountdownOverlayWindow.xaml(.cs)`
-  (200×200 dark rounded pill radius 24, 120pt mono-semibold digit, per-second tick, click-to-skip, cancellable via
-  Ctrl+Shift+5). Run it in `RecordingCoordinator.BeginAsync` (before `_engine.Start`) when `config.CountdownSeconds>0`;
-  if cancelled → abort (AbortArm); `CancelStrip` must also cancel a running countdown. See
-  `port-reference/05-recordingkit.md` §"Overlay controllers". Then 7.4 camera/click/keystroke overlays, 7.5 GIF
-  export + finalize + quit-time best-effort finalize.
+  m:ss" and the menu label flips. When `countdownSeconds>0`, a **pre-roll countdown** (200×200 dark pill, 120pt
+  digit, click-to-skip, Ctrl+Shift+5-cancel) runs before capture starts. **Not yet:** GIF output is still recorded
+  as MP4 (GIF conversion is Task 7.5); camera bubble / click / keystroke overlays (7.4).
+- **Next task:** Phase 7 Task **7.4 — recording overlays** (`port-reference/05-recordingkit.md` §"Overlay
+  controllers"): `App/Recording/ClickHighlighter.cs` (full-screen click-through window; `WH_MOUSE_LL` via the
+  existing `GlobalHooks`; draws Ø36 accent@0.45 circle at each click, 0.4s fade), `App/Recording/KeystrokeOverlayWindow`
+  (280×44 black@0.75 pill radius 10, top-center 100px from top, 20pt mono white; `WH_KEYBOARD_LL` glyphs, 1.0s fade),
+  `App/Recording/CameraBubbleWindow` (circular webcam preview Ø160/240 via `MediaCapture`, draggable). Start these in
+  `RecordingCoordinator.BeginAsync` per config (clickHighlights/keystrokeOverlay/camera), stop on finish; they are
+  captured because they're on-screen windows. Then 7.5 GIF export + finalize + quit-time best-effort finalize.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -61,7 +62,11 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       Quick Access recording card). Wired `CaptureCoordinator.ToggleRecording`→coordinator; `App`→tray state.
       **Verified: build clean; 212 tests green; the record strip renders correctly on screen** (screenshot: all
       glyphs draw; MP4 + system-audio selected by default) via a real Ctrl+Shift+5 synthetic-hotkey trigger.
-- [~] 7.3 Countdown + gapless pause/resume — **pause/resume DONE; countdown overlay remaining.**
+- [x] 7.3 Countdown + gapless pause/resume — **done.** Countdown: `App/Recording/CountdownOverlayWindow.xaml(.cs)`
+      (200×200 dark pill radius 24, 120pt Consolas semibold digit, 1s tick, click-to-skip, `Cancel()`), run in
+      `RecordingCoordinator.BeginAsync` before `_engine.Start` when `CountdownSeconds>0`; `CancelStrip` cancels it;
+      cancel→AbortArm. **Verified on-screen** (drove app with countdown=5 → the dark "4" pill rendered centered).
+      Pause/resume (below) was the prior sub-increment:
       `App/Recording/RecordingEngine.cs` reworked to **segment-per-active-span + concat**: Start records segment 0;
       `PauseAsync` finalizes the current segment; `Resume` starts a new one; `StopAsync` concatenates all segments
       (`-c copy` via ffmpeg concat demuxer; single segment → File.Move) into the final MP4. Paused time is never
@@ -216,6 +221,9 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
   is null, mirroring the mac which also ships it unbound). The user can bind one in Settings → Shortcuts.
 - **(7.3) Recording segments + concat list live in `%TEMP%`** (`bs_rec_*.mp4`, `bs_concat_*.txt`), deleted after a
   successful concat; a single-segment recording is `File.Move`d straight to the final path (no re-mux).
+- **(7.3) Countdown is centered on the PRIMARY screen** (`SystemParameters.PrimaryScreen*`), not the recorded
+  monitor. It runs before capture starts so it is never in the recording — a pure pre-roll for the user — so the
+  monitor choice is cosmetic; primary-centered is consistent with the strip. Digit font is Consolas (monospaced).
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
