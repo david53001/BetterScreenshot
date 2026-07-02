@@ -97,6 +97,7 @@ public partial class QuickAccessWindow : Window
             BorderThickness = new Thickness(0),
             Cursor = Cursors.Hand,
         };
+        System.Windows.Automation.AutomationProperties.SetName(button, tip); // accessible name for an icon-only button
         button.Click += (_, _) => onClick();
         return button;
     }

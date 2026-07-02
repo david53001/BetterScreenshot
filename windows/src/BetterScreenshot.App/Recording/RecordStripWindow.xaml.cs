@@ -133,6 +133,7 @@ public partial class RecordStripWindow : Window
             Cursor = Cursors.Hand,
             BorderThickness = new Thickness(0),
         };
+        System.Windows.Automation.AutomationProperties.SetName(b, tip);
         void Apply()
         {
             b.Background = state ? AccentBrush : Brushes.Transparent;
@@ -156,6 +157,7 @@ public partial class RecordStripWindow : Window
             Background = Brushes.Transparent,
             BorderThickness = new Thickness(0),
         };
+        System.Windows.Automation.AutomationProperties.SetName(b, tip);
         b.Click += (_, _) => onClick();
         return b;
     }

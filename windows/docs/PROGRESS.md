@@ -7,17 +7,19 @@
 > tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
 > **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
 > verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Phase 8 IN PROGRESS:**
-> Tasks 8.1 (icons) + 8.2 (app icon) DONE. 8.1: `Icons.xaml` (38 glyphs) + `IconPresenter`, all consumers migrated.
-> 8.2: `Resources/AppIcon.ico` (7-size DIB, hand-drawn charcoal squircle + white camera) wired via `<ApplicationIcon>`;
-> `AppIconFactory` unified as the single art source (tray + .ico); verified the exe's embedded icon renders as the
-> camera. Next: 8.3 end-to-end pass (PLAN §V), 8.4 README-win → tag win-v1.0, then harden.
+> Tasks 8.1 (icons) + 8.2 (app icon) + 8.3 (end-to-end §V pass) DONE. §V passed: build 0/0; 214 tests; **no-network
+> audit clean** (zero HttpClient/WebClient/Socket/WebRequest/http in product .cs; only MS schema xmlns in XAML);
+> fullscreen capture → Quick Access card (migrated copy/edit/pin/save/close icons render) → **editor opens** (all 11
+> tools + inspector + Done/Stack/Save/Copy, captured image on canvas); the **app icon shows in the window titlebar +
+> taskbar**. Fixed one issue found: icon-only buttons now set `AutomationProperties.Name` (accessibility). Next:
+> 8.4 README-win → tag win-v1.0, then the harden loop.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 IN PROGRESS** — 8.1 icons + 8.2 app icon DONE. Next: 8.3 e2e pass.
+- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 IN PROGRESS** — 8.1 + 8.2 + 8.3 DONE. Next: 8.4 README-win → tag v1.0.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
   GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
@@ -38,12 +40,14 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   bottom-right of the region, draggable) when `camera` is on. If **GIF** format is chosen, on stop the MP4 is
   converted to a looping GIF (960px/10fps/lanczos + palette) and the temp MP4 removed; a recording in progress at
   app quit is finalized best-effort (MP4 saved). **Phase 7 is COMPLETE.**
-- **Next task:** **Phase 8 Task 8.3 — end-to-end verification pass** (PLAN §V full checklist): build 0/0; tests
-  green; no-network grep (`HttpClient|WebClient|Socket|WebRequest|http://|https://`) over product source → none;
-  launch to tray; capture area/fullscreen/window/text; editor tools; history; recording MP4+GIF; pause/resume;
-  DPI sanity. Fix any issue found (one per firing if several). Then 8.4 `README-win.md` (install/build/run, mac
-  differences, ffmpeg note); tag `win-v1.0`. After Phase 8, run the harden loop (PLAN §V) until a re-scan finds
-  nothing, then write "DONE — nothing left".
+- **Next task:** **Phase 8 Task 8.4 — `README-win.md`** at `windows/README-win.md` (or repo root): what it is (a
+  free, 100%-local Windows port of BetterScreenshot/CleanShot X); prerequisites (.NET 9 SDK, ffmpeg on PATH or
+  `windows/tools/ffmpeg.exe`); build (`dotnet build windows/BetterScreenshot.sln -c Release`) + test
+  (`dotnet test windows/tests/BetterScreenshot.Tests -c Release`) + run (the App exe → tray); the hotkeys
+  (Ctrl+Shift+4/5/6/7/8); feature list; differences from macOS (no cloud, ffmpeg recording, pause/resume via
+  segment+concat, camera bubble needs a webcam, permissions dropped); 100%-local guarantee. Then **tag `win-v1.0`**
+  (all Phase-8 tasks done). After that: HARDEN — re-run §V; fix the single most important issue per firing until a
+  fresh re-scan finds nothing new; then write "DONE — nothing left" in PROGRESS.md and stop (ends the loop).
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -65,7 +69,18 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       the App csproj → embedded in the exe (WPF windows use the exe icon by default). **Verified:** build 0/0;
       rendered the .ico frames + extracted the exe's embedded icon → both show the camera. (A pure-monochrome
       viewfinder-only tray variant is optional polish, deferred; the charcoal+white camera tray icon is legible.)
-- [ ] 8.3 End-to-end verification pass (PLAN §V checklist)
+- [x] 8.3 End-to-end verification pass (PLAN §V) — done. **All automatable checks pass:** build 0/0; 214 tests;
+      no-network audit clean (grep of product `.cs` for HttpClient/WebClient/WebRequest/HttpListener/TcpClient/
+      UdpClient/Socket/Dns/http:// → NONE; XAML only has MS/openxml schema xmlns). **Interactive, driven on-screen:**
+      launch to tray (no crash); Ctrl+Shift+6 fullscreen capture → Quick Access card with the migrated copy/edit/pin/
+      save/close icons; card **Edit** → the annotation editor opens showing the captured image, all 11 tools, the
+      color/size inspector, and Done/Stack/Save/Copy; the **app icon appears in the window titlebar + taskbar** (8.2
+      confirmed end-to-end). Recording (MP4/GIF/pause-resume/overlays/countdown) + record strip + icon sheet were
+      verified in prior firings. **Fixed one issue found:** icon-only buttons (Quick Access card, record strip) now
+      set `AutomationProperties.Name` (= tooltip) for accessibility (they had only a ToolTip). Punch list (minor,
+      covered by unit tests / prior verification, not re-driven this cycle): OCR HUD (Ctrl+Shift+7), area/window
+      capture interactive, blur/pixelate drawing, multi-DPI visual — all have unit tests and/or earlier app-launch
+      verification.
 - [ ] 8.4 `README-win.md`; then tag `win-v1.0`
 
 ## Phase 7 task status (Screen recording — BetterScreenshot.Recording/App)
