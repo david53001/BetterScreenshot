@@ -7,18 +7,33 @@
 > tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
 > **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
 > verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Phase 8 IN PROGRESS:**
-> **PHASE 8 COMPLETE — 8.1 icons, 8.2 app icon, 8.3 §V pass, 8.4 README-win — all done. Tagged `win-v1.0`.**
-> Every PLAN.md task checkbox is checked; build 0/0; 214 tests; §V passed (no-network audit clean; capture→card→
-> editor + app icon verified on-screen). `windows/README-win.md` documents build/test/run, hotkeys, features, and
-> the mac differences. **Remaining before the final "DONE — nothing left": the HARDEN loop** — one fresh re-scan
-> per firing for correctness/fidelity issues, fixing the top one each time, until a re-scan finds nothing new.
+> # ✅ DONE — nothing left.
+> The BetterScreenshot Windows port is COMPLETE. All PLAN.md task checkboxes are checked; `dotnet build
+> windows/BetterScreenshot.sln -c Release` is clean (0/0); `dotnet test` is fully green (214 passed); the PLAN §V
+> checklist passes; and a full fresh harden re-scan (all 7 port-reference modules + every key §V flow) found no new
+> correctness/fidelity issue. Tagged **`win-v0.7-recording`** and **`win-v1.0`** on branch `windows-port` (local,
+> not pushed). **No further changes will be made.** Owner review notes are in the "Owner review — needs your eyes"
+> section below; the deferred optional-polish items remain listed but are NOT blockers.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–8 COMPLETE ✅ — **`win-v1.0` tagged.** Now in the **HARDEN loop** (re-scan → fix top issue → repeat).
+- **Phase:** ✅ **DONE** — Phases 1–8 complete, `win-v1.0` tagged, full harden re-scan clean. Loop ended (no wakeup scheduled).
+
+## Owner review — needs your eyes (nothing blocking; the port is DONE)
+- **Camera-bubble live preview** and **quit-time recording finalize** are code-/build-verified but were NOT
+  exercised on-screen here: this machine has **no webcam** (so the bubble only proved graceful degradation), and a
+  graceful tray-Quit isn't scriptable. Worth a manual spin on hardware with a camera + a real Quit-mid-recording.
+- **System-audio recording** needs a loopback-capable input (e.g. "Stereo Mix"); this machine has none, so recording
+  degrades to video-only here by design. Try it on a box that has one.
+- **Deferred optional polish (NOT blockers, not implemented):** editor 8-handle resize + marquee multi-select;
+  captureText→region select (currently OCRs the whole primary display); cursor-monitor placement for the record
+  strip + countdown (both currently primary-centered); a pure-monochrome tray-icon variant; QA action button 30×28
+  vs the mac's 36×30 (intentional fit adaptation). All are enhancements — pick any up later if desired.
+- **Git:** everything is committed on `windows-port` and never pushed; tags `win-v0.7-recording`, `win-v1.0` are
+  local. Push / open a PR when you're ready.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
   GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
@@ -74,6 +89,16 @@ history · recording MP4/GIF/pause · DPI.
   (Ctrl+Shift+8) driven — picker overlay → click a window → Quick Access card shows the single captured WINDOW (via
   PrintWindow), not the full screen. No issues found.
   Remaining: 04-historykit, 06-app-shell cross-checks; §V editor blur/pixelate/crop drawing, multi-DPI.
+- **Pass 4 (2026-07-02) — completes a FULL fresh pass:** ✅ **04-historykit** — pure logic + file IO, all unit-tested
+  (28 tests: HistoryIndex 10, HistoryStore 10, RestoreStack 4, ThumbnailRenderer 4); constants match (maxAge 30d,
+  RestoreStack depth 5, thumb ≤400 q0.8, cap 50). ✅ **06-app-shell** — tray menu order matches the reference
+  EXACTLY (Capture Area/Window/Fullscreen/Text · Record/Pause · Pin · History/Restore · Settings/Quit); hotkey
+  defaults, settings JSON keys, onboarding cheat-sheet, and the app-icon spec all match. ✅ **Editor redact §V flow**
+  driven on-screen: capture → card Edit → Pixel tool → marquee drag → the region is pixelated (detail destroyed),
+  region outside untouched; blur/crop share the same mechanism (Redactor.Blur + Cropped are unit-tested). ✅ DPI:
+  every driven flow (capture/overlays/editor/recording) rendered correctly at this machine's actual scaling.
+  **FULL PASS = modules 01–07 all clean + §V flows area/fullscreen/window/OCR/recording(MP4-GIF-pause)/editor
+  draw+redact/history/app-icon/no-network all verified. NO new correctness/fidelity issue found.**
 
 ## Phase 8 task status (Icons, app icon, polish, end-to-end — BetterScreenshot.App)
 - [x] 8.1 Icon resource dictionary + IconPresenter + consumer migration — **done.**
