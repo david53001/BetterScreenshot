@@ -1,10 +1,11 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using BetterScreenshot.App.Controls;
 using BetterScreenshot.Capture;
 using BetterScreenshot.Core;
 using BetterScreenshot.Editor;
-using Button = System.Windows.Controls.Button;
+using Brushes = System.Windows.Media.Brushes;
 using Canvas = System.Windows.Controls.Canvas;
 using Color = System.Windows.Media.Color;
 using Cursors = System.Windows.Input.Cursors;
@@ -18,7 +19,9 @@ using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using Separator = System.Windows.Controls.Separator;
+using TextBlock = System.Windows.Controls.TextBlock;
 using TextBox = System.Windows.Controls.TextBox;
+using ToggleButton = System.Windows.Controls.Primitives.ToggleButton;
 
 namespace BetterScreenshot.App.Editor;
 
@@ -51,6 +54,7 @@ public partial class EditorWindow : Window
     public EditorWindow(BitmapSource image, AnnotationStyle? defaultStyle = null)
     {
         InitializeComponent();
+        WindowThemer.ApplyDark(this);
         _baseImage = image;
         _style = defaultStyle ?? AnnotationStyle.Default;
         _document = new EditorDocument(new PxSize(image.PixelWidth, image.PixelHeight));
@@ -77,20 +81,50 @@ public partial class EditorWindow : Window
         InteractionLayer.Height = _baseImage.PixelHeight;
     }
 
+    private static readonly SolidColorBrush ToolGlyphBrush = new(Color.FromRgb(0xD8, 0xD8, 0xDE));
+
+    private readonly Dictionary<EditorTool, ToggleButton> _toolButtons = new();
+    private readonly List<(RGBAColor Color, ToggleButton Button)> _colorButtons = new();
+    private readonly Dictionary<double, ToggleButton> _weightButtons = new();
+    private readonly Dictionary<double, ToggleButton> _sizeButtons = new();
+
     private void BuildToolbar()
     {
-        (string Label, EditorTool Tool)[] tools =
+        (string Icon, string Name, EditorTool Tool)[] tools =
         {
-            ("Select", EditorTool.Select), ("Arrow", EditorTool.Arrow), ("Line", EditorTool.Line),
-            ("Rect", EditorTool.Rectangle), ("Fill", EditorTool.FilledRectangle), ("Ellipse", EditorTool.Ellipse),
-            ("Text", EditorTool.Text), ("Counter", EditorTool.Counter), ("Blur", EditorTool.Blur),
-            ("Pixel", EditorTool.Pixelate), ("Crop", EditorTool.Crop),
+            ("cursor", "Select", EditorTool.Select), ("arrow", "Arrow", EditorTool.Arrow),
+            ("line", "Line", EditorTool.Line), ("rect", "Rectangle", EditorTool.Rectangle),
+            ("rect-fill", "Filled rectangle", EditorTool.FilledRectangle),
+            ("ellipse", "Ellipse", EditorTool.Ellipse), ("text", "Text", EditorTool.Text),
+            ("counter", "Counter", EditorTool.Counter), ("blur", "Blur", EditorTool.Blur),
+            ("pixelate", "Pixelate", EditorTool.Pixelate), ("crop", "Crop", EditorTool.Crop),
         };
-        foreach (var (label, tool) in tools)
+        foreach (var (icon, name, tool) in tools)
         {
-            var button = new Button { Content = label, Padding = new Thickness(9, 4, 9, 4), Margin = new Thickness(2, 0, 2, 0), Tag = tool };
-            button.Click += (_, _) => _tool = (EditorTool)button.Tag;
+            var button = new ToggleButton
+            {
+                Content = new IconPresenter { IconKey = icon, Brush = ToolGlyphBrush, Width = 18, Height = 18 },
+                Style = (Style)FindResource("Theme.ToolButton"),
+                Width = 34,
+                Height = 30,
+                Margin = new Thickness(2, 0, 2, 0),
+                ToolTip = name,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(button, name);
+            button.Click += (_, _) => SelectTool(tool);
+            _toolButtons[tool] = button;
             Toolbar.Children.Add(button);
+        }
+        SelectTool(EditorTool.Select);
+    }
+
+    private void SelectTool(EditorTool tool)
+    {
+        _tool = tool;
+        foreach (var (t, b) in _toolButtons)
+        {
+            b.IsChecked = t == tool;
+            ((IconPresenter)b.Content).Brush = t == tool ? Brushes.White : ToolGlyphBrush;
         }
     }
 
@@ -103,33 +137,65 @@ public partial class EditorWindow : Window
         };
         foreach (var color in presets)
         {
-            var swatch = new Button
-            {
-                Width = 22,
-                Height = 22,
-                Margin = new Thickness(2, 0, 2, 0),
-                Background = new SolidColorBrush(Color.FromRgb((byte)(color.R * 255), (byte)(color.G * 255), (byte)(color.B * 255))),
-            };
             var c = color;
+            var swatch = new ToggleButton
+            {
+                Style = (Style)FindResource("Theme.SwatchButton"),
+                Margin = new Thickness(2, 0, 2, 0),
+                Background = new SolidColorBrush(Color.FromRgb((byte)(c.R * 255), (byte)(c.G * 255), (byte)(c.B * 255))),
+                ToolTip = "Color",
+            };
             swatch.Click += (_, _) => SetColor(c);
+            _colorButtons.Add((c, swatch));
             Inspector.Children.Add(swatch);
         }
-        Inspector.Children.Add(new Separator { Width = 10, Visibility = Visibility.Hidden });
-        foreach (var w in new[] { 2.0, 4.0, 7.0 }) AddInspectorButton(w.ToString("0"), () => SetWeight(w));
-        Inspector.Children.Add(new Separator { Width = 10, Visibility = Visibility.Hidden });
-        foreach (var s in new[] { 18.0, 24.0, 36.0 }) AddInspectorButton(s.ToString("0"), () => SetSize(s));
+        Inspector.Children.Add(new Separator { Width = 12, Visibility = Visibility.Hidden });
+        foreach (var w in new[] { 2.0, 4.0, 7.0 })
+        {
+            double weight = w;
+            var dot = new System.Windows.Shapes.Ellipse { Width = 3 + weight, Height = 3 + weight, Fill = Brushes.White };
+            _weightButtons[weight] = InspectorToggle(dot, $"Line width {weight:0}", () => SetWeight(weight));
+        }
+        Inspector.Children.Add(new Separator { Width = 12, Visibility = Visibility.Hidden });
+        foreach (var s in new[] { 18.0, 24.0, 36.0 })
+        {
+            double size = s;
+            var a = new TextBlock
+            {
+                Text = "A", Foreground = Brushes.White, FontSize = 9 + size / 3, FontWeight = FontWeights.SemiBold,
+            };
+            _sizeButtons[size] = InspectorToggle(a, $"Text size {size:0}", () => SetSize(size));
+        }
+        RefreshInspector();
     }
 
-    private void AddInspectorButton(string label, Action onClick)
+    private ToggleButton InspectorToggle(UIElement content, string tip, Action onClick)
     {
-        var button = new Button { Content = label, Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(2, 0, 2, 0) };
+        var button = new ToggleButton
+        {
+            Content = content,
+            Style = (Style)FindResource("Theme.ToolButton"),
+            Width = 30,
+            Height = 28,
+            Margin = new Thickness(2, 0, 2, 0),
+            ToolTip = tip,
+        };
+        System.Windows.Automation.AutomationProperties.SetName(button, tip);
         button.Click += (_, _) => onClick();
         Inspector.Children.Add(button);
+        return button;
     }
 
-    private void SetColor(RGBAColor c) { _style = _style with { StrokeColor = c, FillColor = c.WithAlpha(0.25) }; StyleChanged?.Invoke(_style); }
-    private void SetWeight(double w) { _style = _style with { LineWidth = w }; StyleChanged?.Invoke(_style); }
-    private void SetSize(double s) { _style = _style with { FontSize = s }; StyleChanged?.Invoke(_style); }
+    private void RefreshInspector()
+    {
+        foreach (var (color, button) in _colorButtons) button.IsChecked = color == _style.StrokeColor;
+        foreach (var (weight, button) in _weightButtons) button.IsChecked = Math.Abs(weight - _style.LineWidth) < 0.01;
+        foreach (var (size, button) in _sizeButtons) button.IsChecked = Math.Abs(size - _style.FontSize) < 0.01;
+    }
+
+    private void SetColor(RGBAColor c) { _style = _style with { StrokeColor = c, FillColor = c.WithAlpha(0.25) }; StyleChanged?.Invoke(_style); RefreshInspector(); }
+    private void SetWeight(double w) { _style = _style with { LineWidth = w }; StyleChanged?.Invoke(_style); RefreshInspector(); }
+    private void SetSize(double s) { _style = _style with { FontSize = s }; StyleChanged?.Invoke(_style); RefreshInspector(); }
 
     private PxPoint Pos(MouseEventArgs e)
     {
@@ -339,7 +405,8 @@ public partial class EditorWindow : Window
         {
             MinWidth = 80,
             FontSize = _style.FontSize,
-            Background = System.Windows.Media.Brushes.White,
+            Background = Brushes.White,
+            Foreground = Brushes.Black, // the implicit dark-theme TextBox would put light text on this white box
             Tag = p,
         };
         Canvas.SetLeft(_textBox, p.X);

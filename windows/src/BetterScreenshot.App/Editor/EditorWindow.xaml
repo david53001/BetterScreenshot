@@ -2,21 +2,21 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="BetterScreenshot Editor" Width="960" Height="720"
-        WindowStartupLocation="CenterScreen" Background="#FF2B2B2E">
+        WindowStartupLocation="CenterScreen" Background="{StaticResource Theme.WindowBrush}">
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="#FF232326" Padding="8,6">
+        <Border DockPanel.Dock="Top" Background="{StaticResource Theme.ChromeBrush}" Padding="8,6">
             <StackPanel>
                 <StackPanel x:Name="Toolbar" Orientation="Horizontal" HorizontalAlignment="Center"/>
                 <StackPanel x:Name="Inspector" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,0"/>
             </StackPanel>
         </Border>
-        <Border DockPanel.Dock="Bottom" Background="#FF232326" Padding="12,8">
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource Theme.ChromeBrush}" Padding="12,8">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Done" Click="Done_Click" Padding="14,6" Margin="6,0,0,0"/>
                 <Button Content="Stack" Click="Stack_Click" Padding="14,6" Margin="6,0,0,0"/>
                 <Button Content="Save" Click="Save_Click" Padding="14,6" Margin="6,0,0,0"/>
                 <Button Content="Copy" Click="Copy_Click" Padding="14,6" Margin="6,0,0,0"
-                        Background="#0A84FF" Foreground="White" BorderThickness="0"/>
+                        Style="{StaticResource Theme.AccentButton}"/>
             </StackPanel>
         </Border>
         <Grid>
