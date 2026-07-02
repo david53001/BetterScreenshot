@@ -67,6 +67,13 @@ history · recording MP4/GIF/pause · DPI.
   Quick Access card shows the correctly-CROPPED region (not full screen) with the migrated icons. No issues found.
   Remaining: 01-capturekit, 04-historykit, 06-app-shell cross-checks; §V window capture (Ctrl+Shift+8), editor
   blur/pixelate/crop drawing, multi-DPI.
+- **Pass 3 (2026-07-02):** ✅ **01-capturekit** re-scanned — CLEAN: OCR hudMessage strings verbatim ("QR code copied"
+  / "Text copied — {N} characters" [em-dash] / "No text found"); CaptureSettings defaults all match (showOverlay,
+  png, bottomRight, 6, 8, true, true, 50); hotkey defaults Ctrl+Shift+4/5/6/7/8 + FileNamer format verified earlier;
+  pure-logic (geometry/crop/positioner/recognition/windowpicking/hotkeys) unit-tested. ✅ **Window-capture §V flow**
+  (Ctrl+Shift+8) driven — picker overlay → click a window → Quick Access card shows the single captured WINDOW (via
+  PrintWindow), not the full screen. No issues found.
+  Remaining: 04-historykit, 06-app-shell cross-checks; §V editor blur/pixelate/crop drawing, multi-DPI.
 
 ## Phase 8 task status (Icons, app icon, polish, end-to-end — BetterScreenshot.App)
 - [x] 8.1 Icon resource dictionary + IconPresenter + consumer migration — **done.**
