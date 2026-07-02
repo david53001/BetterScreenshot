@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
 using BetterScreenshot.App.Editor;
 using BetterScreenshot.App.History;
 using BetterScreenshot.App.Overlays;
+using BetterScreenshot.App.Recording;
 using BetterScreenshot.App.Tray;
 using BetterScreenshot.Capture;
 using BetterScreenshot.Core;
@@ -25,6 +27,7 @@ public sealed class CaptureCoordinator : IAppCommands
     private readonly QuickAccessStackController _stack = new();
     private readonly PinPanelController _pins = new();
     private readonly WindowPickerController _picker = new();
+    private readonly RecordingCoordinator _recording;
     private HistoryWindow? _historyWindow;
 
     public CaptureCoordinator(SettingsStore settings, Action quit)
@@ -32,10 +35,17 @@ public sealed class CaptureCoordinator : IAppCommands
         _settings = settings;
         _quit = quit;
         _history = HistoryService.ForSettings(settings);
+        _recording = new RecordingCoordinator(
+            settings,
+            (recording, elapsed) => OnRecordingStateChanged?.Invoke(recording, elapsed),
+            OnRecordingFinished);
     }
 
     /// <summary>Set by the app to show the settings window (which needs the hotkey controller too).</summary>
     public Action? OnOpenSettings { get; set; }
+
+    /// <summary>Set by the app to reflect recording state (icon + elapsed timer) in the tray.</summary>
+    public Action<bool, string?>? OnRecordingStateChanged { get; set; }
 
     public void CaptureFullscreen()
     {
@@ -185,9 +195,43 @@ public sealed class CaptureCoordinator : IAppCommands
         }
     }
 
-    // Wired up in later phases.
-    public void ToggleRecording() { }
+    /// <summary>Start/stop a screen recording (full display for now — target picking arrives with the record strip).</summary>
+    public void ToggleRecording() => _recording.Toggle();
+
+    // Gapless pause/resume is Task 7.3; the record strip + target picking is the remaining part of Task 7.2.
     public void PauseResumeRecording() { }
+
+    /// <summary>A finished recording: record it in history and show a Quick Access recording card.</summary>
+    private void OnRecordingFinished(string path, BitmapSource thumbnail)
+    {
+        Guid? id = _history.RecordRecording(path, thumbnail);
+        ShowRecordingCard(path, thumbnail, id);
+    }
+
+    private void ShowRecordingCard(string path, BitmapSource thumbnail, Guid? historyId)
+    {
+        var actions = new QuickAccessActions
+        {
+            OnCopy = () => ClipboardService.SetFile(path),
+            OnOpen = () => OpenFile(path),
+            OnReveal = () => RevealFile(path),
+        };
+        _stack.Present(thumbnail, QuickAccessKind.Recording, actions, MapCorner(_settings.Capture.OverlayCorner),
+            path, reason => OnCardDismissed(historyId, reason));
+    }
+
+    private static void OpenFile(string path)
+    {
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+        catch { /* best-effort: no default handler */ }
+    }
+
+    private static void RevealFile(string path)
+    {
+        try { Process.Start(new ProcessStartInfo("explorer.exe", HistoryService.ExplorerSelectArgs(path)) { UseShellExecute = true }); }
+        catch { /* best-effort */ }
+    }
+
     public void OpenSettings() => OnOpenSettings?.Invoke();
     public void Quit() => _quit();
 }

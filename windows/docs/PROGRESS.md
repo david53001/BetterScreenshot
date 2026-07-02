@@ -2,32 +2,33 @@
 
 > ▶️ **LOOP RESUMED (2026-07-02).** Restarted from `windows/docs/HANDOFF-2026-07-02.md`; the self-perpetuating
 > firing loop is active again (ScheduleWakeup). Phases 1–6 complete; **Phase 7 (Screen recording) IN PROGRESS —
-> Task 7.1 (ffmpeg arg builder + engine) DONE, 204 tests green.** Next: Task 7.2 (RecordingCoordinator + strip).
+> Task 7.1 (ffmpeg arg builder + engine) + 7.2-core (RecordingCoordinator start/stop + audio-device discovery)
+> DONE, 212 tests green.** Ctrl+Shift+5 now records the full screen → MP4 in Videos + Quick Access card + history.
+> Remaining 7.2: the record-strip picker UI (format/toggles/area+window targets). Next firing continues there.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — Task 7.1 done.
+- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — Task 7.1 + 7.2-core done.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **204 passed** (197 + 7 new FfmpegArgs; incl.
-  hardware-gated tests, 0 skipped on this machine).
-- **App TAKES SCREENSHOTS + HISTORY:** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front window) capture → save/copy;
-  captureArea → selection overlay; captureText OCRs primary display → clipboard+HUD. Captures are recorded in
-  **persistent history**; the **History window** (tray → History…) browses thumbnails with copy/annotate/pin/reveal/
-  delete/clear-all, and Restore-Recently-Closed brings back the newest ✕-closed Quick Access card. **Recording:
-  the ffmpeg engine now exists** (`RecordingEngine` builds+drives ffmpeg; verified by a real 3s desktop probe →
-  valid H.264 MP4), **but is not yet wired into `ToggleRecording`/`PauseResumeRecording`** (still no-ops) — that
-  wiring + the record strip + target picking is Task 7.2.
-- **Next task:** Phase 7 Task **7.2 (RecordingCoordinator + record strip)** — `App/Recording/RecordingCoordinator.cs`
-  (state machine via `RecorderState`; targets full/area/window → compute the desktop-relative pixel region and hand
-  it to `RecordingEngine.Start`; resolve `AudioInputs` by enumerating dshow devices — a loopback-capable device for
-  system audio + the default mic; `onStateChange`→tray icon/timer, `onPauseStateChange`→menu) and
-  `App/Recording/RecordStripWindow.xaml(.cs)` (format/toggles/target buttons/cancel, hand-authored icons). Wire
-  `CaptureCoordinator.ToggleRecording()`/`PauseResumeRecording()` to it. See `port-reference/05-recordingkit.md`
-  §"App-level (RecordingCoordinator)" and SPEC §"Recording". Then 7.3 countdown + gapless pause/resume, 7.4
-  camera/click/keystroke overlays, 7.5 GIF export + finalize + recording history card.
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **212 passed** (197 + 7 FfmpegArgs + 8
+  DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine).
+- **App TAKES SCREENSHOTS + HISTORY + RECORDS (full screen):** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front
+  window) capture → save/copy; captureArea → selection overlay; captureText OCRs primary display → clipboard+HUD.
+  Captures are recorded in **persistent history**; the **History window** (tray → History…) browses thumbnails.
+  **Recording now works end-to-end for the full screen:** Ctrl+Shift+5 (or tray → Record Screen…) toggles a
+  ffmpeg recording of the primary display → on stop, saves an MP4 to `Videos\`, records it in history, and shows a
+  Quick Access recording card (Copy file / Open / Show in folder); the tray icon turns red with a live m:ss timer
+  while recording. **Not yet:** the record-strip picker (format/audio/mic/camera toggles + area/window targets) and
+  gapless pause/resume (`PauseResumeRecording` is still a no-op — Task 7.3).
+- **Next task:** finish Phase 7 Task **7.2 — the record-strip window** `App/Recording/RecordStripWindow.xaml(.cs)`
+  (format dropdown, systemAudio/mic/camera toggles, target buttons full/area/window, cancel — hand-authored icons),
+  and route `ToggleRecording` through it (arm → show strip → pick target/region → begin) instead of going straight
+  to full-screen. Extend `RecordingCoordinator` to accept a target (full display / area rect / window hwnd) →
+  region. See `port-reference/05-recordingkit.md` §"App-level (RecordingCoordinator)". Then 7.3 countdown + gapless
+  pause/resume, 7.4 camera/click/keystroke overlays, 7.5 GIF export + finalize.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -41,7 +42,16 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       (start/stop, drains stderr/stdout so ffmpeg can't block, returns the finished path). **Probe passed:** a real
       3s gdigrab→libx264 capture of the live desktop → ffprobe reports valid h264/640×480/mp4/3.0s. Not yet wired
       into `ToggleRecording` (that's 7.2).
-- [ ] 7.2 RecordingCoordinator + record strip (next)
+- [~] 7.2 RecordingCoordinator + record strip — **core done, strip UI remaining.** +8 tests (DshowDeviceList).
+      DONE: `Recording/DshowDeviceList.cs` (PURE — parse ffmpeg `-list_devices` stderr → audio/video names;
+      `PickSystemLoopback` [conservative loopback-name heuristic] + `PickMicrophone`), `Platform/DshowAudioDevices.cs`
+      (runs ffmpeg -list_devices, caches, `ResolveAsync(config)`→`AudioInputs`), `App/Recording/RecordingCoordinator.cs`
+      (RecorderState machine + `RecordingEngine`; full-display target; 1s DispatcherTimer → tray red icon + m:ss;
+      on stop saves MP4 to `Videos\` + thumbnail-at-stop → history `RecordRecording` + Quick Access recording card).
+      Wired: `CaptureCoordinator.ToggleRecording`→coordinator, `App` sets `OnRecordingStateChanged`→`tray.SetRecordingState`.
+      Verified: 212 tests green; real ffmpeg -list_devices output matches the parser; engine→valid MP4 (7.1 probe);
+      app launches to tray with the wiring (no startup crash). REMAINING: record-strip picker window + area/window
+      targets; route Toggle through arm→strip→begin. `PauseResumeRecording` still a no-op (→ 7.3).
 - [ ] 7.3 Countdown + gapless pause/resume
 - [ ] 7.4 Overlays — camera bubble, click highlighter, keystroke
 - [ ] 7.5 GIF export + finalize + recording Quick Access/history card
@@ -151,6 +161,20 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
   `FfmpegArgs.BuildRecording` ignores `config.Format` (always libx264). This mirrors the mac flow
   (record → stop → convert-to-GIF-if-gif).
 - **(7.1) Capture dims are even-floored** for H.264 yuv420p (drops ≤1px per axis), per "round pixel dims to even".
+- **(7.2) System-audio loopback picker is deliberately conservative.** `PickSystemLoopback` only matches genuine
+  loopback names (stereo mix / what u hear / wave out mix / loopback / cable output / voicemeeter out). Generic
+  "virtual audio" devices are NOT auto-selected (some are mics — e.g. this machine's "Voicemod Virtual Audio").
+  Consequence: on a machine with no Stereo-Mix-class device (like this one), system audio is silently dropped and
+  recordings are video-only until the user picks a device (a future record-strip/settings affordance). Honest
+  default over guessing wrong.
+- **(7.2) Recording target defaults to the full primary display** for now (no strip yet). Toggle records the whole
+  primary monitor; area/window targets + the picker come with the record-strip UI (remaining 7.2).
+- **(7.2) Recording thumbnail = a still GDI grab of the primary display at stop** (≈ the final frame) — avoids a
+  second ffmpeg frame-extract pass; falls back to a 2×2 blank if the grab fails.
+- **(7.2) dshow device list is cached** after first enumeration (`DshowAudioDevices`, `InvalidateCache()` to reset)
+  — enumeration spawns ffmpeg and devices change rarely; keeps recording start snappy.
+- **(7.2) Recordings save to `SettingsStore.RecordingsDirectory`** (default `Videos\`), named `Recording {date}.mp4`
+  via `FileNamer` (prefix "Recording"). Dir is created on demand.
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.

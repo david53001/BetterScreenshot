@@ -27,6 +27,7 @@ public partial class App : System.Windows.Application
         _hotkeys = new HotkeyController(commands);
         _hotkeys.Apply(_settings.Hotkeys);
         commands.OnOpenSettings = ShowSettings;
+        commands.OnRecordingStateChanged = _tray.SetRecordingState;
 
         if (!_settings.FirstRunComplete)
         {
