@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows;
 using BetterScreenshot.App.Capture;
 using BetterScreenshot.App.Onboarding;
@@ -19,9 +20,24 @@ public partial class App : System.Windows.Application
     private HotkeyController _hotkeys = null!;
     private CaptureCoordinator _commands = null!;
 
+    // Single-instance guard: a tray agent must only run once per user session, otherwise a second
+    // launch spawns a duplicate tray icon and its global-hotkey registration (RegisterHotKey) fails
+    // because the first instance already owns those combos. Held for the process lifetime.
+    private Mutex? _instanceMutex;
+    private bool _ownsInstance;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _instanceMutex = new Mutex(initiallyOwned: true, @"Local\BetterScreenshot.SingleInstance", out _ownsInstance);
+        if (!_ownsInstance)
+        {
+            // Another instance is already live (in the tray). Exit quietly without touching the tray or hotkeys.
+            Shutdown();
+            return;
+        }
+
         _settings = SettingsStore.Load();
         _commands = new CaptureCoordinator(_settings, Shutdown);
         _tray = new TrayIcon(_commands, _settings.Hotkeys);
@@ -54,6 +70,11 @@ public partial class App : System.Windows.Application
         _commands?.StopRecordingForExit(); // best-effort finalize an in-progress recording before we tear down
         _hotkeys?.Dispose();
         _tray?.Dispose();
+        if (_ownsInstance)
+        {
+            _instanceMutex?.ReleaseMutex();
+            _instanceMutex?.Dispose();
+        }
         base.OnExit(e);
     }
 }

@@ -55,6 +55,20 @@ windows/src/BetterScreenshot.App/bin/Release/net9.0-windows10.0.19041.0/BetterSc
 Left-click (or right-click) the tray icon for the full menu; the first run shows a one-time welcome + hotkey
 cheat-sheet.
 
+### Get a standalone, double-clickable app
+
+To produce a **self-contained** build (bundles the .NET runtime — runs on any Win10 19041+ box with no .NET
+install) plus a Desktop shortcut, run:
+
+```powershell
+pwsh windows/scripts/publish-app.ps1
+```
+
+This publishes `windows/dist/BetterScreenshot/BetterScreenshot.App.exe` (~195 MB folder) and drops a
+**BetterScreenshot** shortcut on your Desktop — double-click it to launch. The app is a single-instance tray
+agent: launching it again just focuses the one already running. (The `dist/` folder is git-ignored; regenerate it
+any time with the script.)
+
 ## Default hotkeys
 
 | Shortcut | Action |
