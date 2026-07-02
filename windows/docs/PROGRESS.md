@@ -6,15 +6,16 @@
 > Ctrl+Shift+5 → record strip → records **MP4 or GIF** (full/area/window) to Videos + Quick Access card + history;
 > tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
 > **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
-> verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Next: Phase 8** (full
-> Icons.xaml set, app `.ico`, end-to-end verification pass per PLAN §V, README-win), then the harden loop.
+> verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Phase 8 IN PROGRESS:**
+> Task 8.1 icon system done — `Resources/Icons.xaml` (38 hand-authored glyphs) + `IconPresenter`, all 38 verified by
+> rendering a glyph sheet. Remaining: migrate consumers to `IconPresenter`, app `.ico` (8.2), e2e pass (8.3), README (8.4).
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–7 COMPLETE ✅ (recording done). **Phase 8 (icons, app icon, polish, end-to-end) NEXT.**
+- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 (icons, app icon, polish, end-to-end) IN PROGRESS** — 8.1 icon system done.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
   GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
@@ -35,13 +36,29 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   bottom-right of the region, draggable) when `camera` is on. If **GIF** format is chosen, on stop the MP4 is
   converted to a looping GIF (960px/10fps/lanczos + palette) and the temp MP4 removed; a recording in progress at
   app quit is finalized best-effort (MP4 saved). **Phase 7 is COMPLETE.**
-- **Next task:** **Phase 8 Task 8.1 — the icon resource dictionary** `App/Resources/Icons.xaml` (all ~38 glyphs as
-  WPF `Geometry` per `port-reference/07-icons.md`) + an `IconPresenter`/lookup, replacing the ad-hoc inline glyph
-  sets used so far (`CardGlyphs`, the record-strip `Glyphs`). Then 8.2 app `.ico` (charcoal squircle #1C1C1C + white
-  camera) + monochrome tray variant; 8.3 end-to-end verification pass (PLAN §V checklist); 8.4 `README-win.md`.
+- **Next task:** finish **Phase 8 Task 8.1 — migrate consumers to `IconPresenter`.** The icon SOURCE now exists
+  (`App/Resources/Icons.xaml` + `App/Controls/IconPresenter.cs`, merged into `App.xaml`). Replace the ad-hoc inline
+  glyph sets — `Overlays/QuickAccessTypes.cs` `CardGlyphs` (used by `QuickAccessWindow`), `RecordStripWindow` local
+  `Glyphs`, the editor toolbar/chrome glyphs (`App/Editor/*`), and `HistoryWindow` action glyphs — with
+  `IconPresenter` (key + brush + size). Re-verify each surface on-screen after migrating (drive the app + screenshot).
+  Then 8.2 app `.ico` (charcoal squircle #1C1C1C + white camera, multi-size) + monochrome tray variant (see
+  `Branding/AppIconFactory`); 8.3 end-to-end verification pass (PLAN §V checklist); 8.4 `README-win.md`; tag `win-v1.0`.
   After Phase 8, run the harden loop (PLAN §V) until a re-scan finds nothing, then write "DONE — nothing left".
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
+
+## Phase 8 task status (Icons, app icon, polish, end-to-end — BetterScreenshot.App)
+- [~] 8.1 Icon resource dictionary + IconPresenter — **icon system done; consumer migration remaining.**
+      `App/Resources/Icons.xaml` = 38 hand-authored 24×24 `StreamGeometry` glyphs (camera/film/photo/warning/gear/
+      keyboard/mic/speaker/video/copy/edit/pin/save/play/folder/cursor/arrow/line/rect(-fill)/ellipse/text/counter/
+      blur/pixelate/crop/stack/bring-front/send-back/trash/undo/redo/close(-circle)/stop-circle/record-circle/
+      check-circle/camera-viewfinder), merged into `App.xaml`. `App/Controls/IconPresenter.cs` renders a glyph by
+      key (stroke for outlines; the `Filled` set is filled with even-odd knockouts), scaled from 24×24, DPI-crisp.
+      **Verified:** build 0/0; a WPF render sheet of all 38 glyphs (reading Icons.xaml) shows every one parses and is
+      recognizable. REMAINING: migrate `CardGlyphs`/RecordStrip `Glyphs`/editor toolbar/History glyphs to IconPresenter.
+- [ ] 8.2 App icon `.ico` (charcoal squircle #1C1C1C + white camera, multi-size) + monochrome tray variant
+- [ ] 8.3 End-to-end verification pass (PLAN §V checklist)
+- [ ] 8.4 `README-win.md`; then tag `win-v1.0`
 
 ## Phase 7 task status (Screen recording — BetterScreenshot.Recording/App)
 - [x] 7.1 ffmpeg arg builder + engine — done, +7 tests. `Recording/FfmpegArgs.cs` (PURE) builds the recording
@@ -268,6 +285,11 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
 - **(7.5) Quit-time finalize pumps the dispatcher (`DispatcherFrame`/`PushFrame`) up to 3s** so the async stop can
   complete during `App.OnExit`; at exit GIF conversion + the Quick Access card are skipped (just save the MP4). Only
   build/code-verified (a graceful tray-Quit isn't easily scriptable) — worth a manual check.
+- **(8.1) Icons live in `Resources/Icons.xaml` as `StreamGeometry` (24×24), rendered by `IconPresenter`** which
+  strokes outline glyphs and fills the ones in `IconPresenter.Filled` (even-odd knockouts). This matches the
+  reference (a WPF Geometry ResourceDictionary + a Path-based presenter). Verification is by rendering a glyph sheet
+  (not a unit test — icon art is visual, not logic). The existing inline glyph sets still work and are left in place
+  until the migration step (so no working UI is broken by adding the icon system).
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
