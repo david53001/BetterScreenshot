@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterScreenshot.App.Controls;
-using Brushes = System.Windows.Media.Brushes;
 using Button = System.Windows.Controls.Button;
 using Color = System.Windows.Media.Color;
 using Cursors = System.Windows.Input.Cursors;
@@ -20,7 +19,7 @@ namespace BetterScreenshot.App.Overlays;
 /// <summary>Post-capture floating card: thumbnail + action buttons; drag the thumbnail to export the file.</summary>
 public partial class QuickAccessWindow : Window
 {
-    private static readonly SolidColorBrush GlyphBrush = new(Color.FromRgb(0x33, 0x33, 0x33));
+    private static readonly SolidColorBrush GlyphBrush = new(Color.FromRgb(0xF2, 0xF2, 0xF5));
 
     private readonly string? _dragFile;
     private Point _dragStart;
@@ -33,9 +32,7 @@ public partial class QuickAccessWindow : Window
         InitializeComponent();
         Thumb.Source = image;
         _dragFile = dragFile;
-        Card.Background = new SolidColorBrush(kind == QuickAccessKind.Recording
-            ? Color.FromRgb(0xE8, 0xF0, 0xFE)
-            : Color.FromRgb(0xFA, 0xFA, 0xFC));
+        // Both kinds share the dark card; the button set below is what differentiates them.
 
         if (kind == QuickAccessKind.Screenshot)
         {
@@ -73,7 +70,8 @@ public partial class QuickAccessWindow : Window
 
         var data = new DataObject();
         data.SetFileDropList(new StringCollection { _dragFile });
-        DragDrop.DoDragDrop(Thumb, data, DragDropEffects.Copy);
+        var result = DragDrop.DoDragDrop(Thumb, data, DragDropEffects.Copy);
+        if (result != DragDropEffects.None) Dismiss(DismissReason.ActionTaken); // Esc-cancel keeps the card
     }
 
     private void Dismiss(DismissReason reason)
@@ -93,8 +91,7 @@ public partial class QuickAccessWindow : Window
             Height = 28,
             Margin = new Thickness(3, 0, 3, 0),
             ToolTip = tip,
-            Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
+            Style = (Style)System.Windows.Application.Current.FindResource("Theme.SubtleButton"),
             Cursor = Cursors.Hand,
         };
         System.Windows.Automation.AutomationProperties.SetName(button, tip); // accessible name for an icon-only button
