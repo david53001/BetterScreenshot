@@ -236,6 +236,9 @@ public sealed class CaptureCoordinator : IAppCommands
         catch { /* best-effort */ }
     }
 
+    /// <summary>Called on app exit: best-effort finalize an in-progress recording so it isn't lost.</summary>
+    public void StopRecordingForExit() => _recording.StopForExit();
+
     public void OpenSettings() => OnOpenSettings?.Invoke();
     public void Quit() => _quit();
 }

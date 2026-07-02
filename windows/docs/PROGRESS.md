@@ -2,22 +2,23 @@
 
 > ▶️ **LOOP RESUMED (2026-07-02).** Restarted from `windows/docs/HANDOFF-2026-07-02.md`; the self-perpetuating
 > firing loop is active again (ScheduleWakeup). Phases 1–6 complete; **Phase 7 (Screen recording) IN PROGRESS —
-> Tasks 7.1–7.4 DONE, 212 tests green.** Ctrl+Shift+5 → record strip → records MP4 (full/area/window) to Videos +
-> Quick Access card + history; tray red icon + m:ss; tray Pause/Resume is **gapless** (segment+concat); optional
-> pre-roll **countdown**; while recording, **click highlights**, a **keystroke overlay**, and a **camera bubble**
-> (webcam preview) render on-screen. All verified on-screen / by ffprobe (camera *preview* unverified — no webcam
-> on this machine; graceful-degrade verified). Next: Task 7.5 (GIF export + quit-time finalize + card polish).
+> **PHASE 7 (Screen recording) COMPLETE — Tasks 7.1–7.5 all done, 214 tests green** (tag `win-v0.7-recording`).
+> Ctrl+Shift+5 → record strip → records **MP4 or GIF** (full/area/window) to Videos + Quick Access card + history;
+> tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
+> **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
+> verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Next: Phase 8** (full
+> Icons.xaml set, app `.ico`, end-to-end verification pass per PLAN §V, README-win), then the harden loop.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — Tasks 7.1–7.4 done. Next: 7.5.
+- **Phase:** Phases 1–7 COMPLETE ✅ (recording done). **Phase 8 (icons, app icon, polish, end-to-end) NEXT.**
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
-- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **212 passed** (197 + 7 FfmpegArgs + 8
-  DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). (7.2's strip is UI — no new unit tests;
-  verified by build + on-screen screenshot.)
+- **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
+  GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
+  by driving the app (synthetic input + UI Automation) + ffprobe.
 - **App TAKES SCREENSHOTS + HISTORY + RECORDS (full screen):** Ctrl+Shift+6 (fullscreen) & Ctrl+Shift+8 (front
   window) capture → save/copy; captureArea → selection overlay; captureText OCRs primary display → clipboard+HUD.
   Captures are recorded in **persistent history**; the **History window** (tray → History…) browses thumbnails.
@@ -31,16 +32,14 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   digit, click-to-skip, Ctrl+Shift+5-cancel) runs before capture starts. While recording, if enabled, **click
   highlights** (Ø36 accent@0.45 dots, 0.4s fade) and a **keystroke overlay** (top-center black pill, glyphs, 1.0s
   fade) render as on-screen click-through windows, plus a **camera bubble** (circular webcam preview Ø160/240,
-  bottom-right of the region, draggable) when `camera` is on. **Not yet:** GIF output is still recorded as MP4 (GIF
-  conversion is Task 7.5).
-- **Next task:** Phase 7 Task **7.5 — GIF export + finalize** (`port-reference/05-recordingkit.md` §"GIFTiming +
-  GIFExporter"): when `RecordingConfig.Format == Gif`, after `RecordingEngine.StopAsync` produces the MP4, convert
-  MP4→GIF via ffmpeg (`fps=10,scale=min(960,iw):-1:flags=lanczos` + `palettegen`/`paletteuse`, loop forever) — build
-  the arg strings in a pure helper (TDD, reuse the existing `GifFps=10`/`GifMaxWidth=960` constants + `GIFTiming`),
-  run via `FfmpegRunner.RunAsync`, delete the temp MP4 on success (keep MP4 on failure). Wire into
-  `RecordingCoordinator.StopAsync` (record the .gif in history + Quick Access card). Also add **quit-time
-  best-effort finalize** (~3s) so a recording in progress at app exit is still saved (`App.OnExit` → coordinator
-  `StopForExit`). Then Phase 8 (icons/app icon/end-to-end) + hardening.
+  bottom-right of the region, draggable) when `camera` is on. If **GIF** format is chosen, on stop the MP4 is
+  converted to a looping GIF (960px/10fps/lanczos + palette) and the temp MP4 removed; a recording in progress at
+  app quit is finalized best-effort (MP4 saved). **Phase 7 is COMPLETE.**
+- **Next task:** **Phase 8 Task 8.1 — the icon resource dictionary** `App/Resources/Icons.xaml` (all ~38 glyphs as
+  WPF `Geometry` per `port-reference/07-icons.md`) + an `IconPresenter`/lookup, replacing the ad-hoc inline glyph
+  sets used so far (`CardGlyphs`, the record-strip `Glyphs`). Then 8.2 app `.ico` (charcoal squircle #1C1C1C + white
+  camera) + monochrome tray variant; 8.3 end-to-end verification pass (PLAN §V checklist); 8.4 `README-win.md`.
+  After Phase 8, run the harden loop (PLAN §V) until a re-scan finds nothing, then write "DONE — nothing left".
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -96,7 +95,16 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       never shows). Verified: build 0/0; recording with `camera=true` on this **webcam-less** machine did NOT crash
       and still produced a valid MP4 (graceful degradation). ⚠️ The live camera *preview* itself is UNVERIFIED here
       (no webcam) — needs a manual check on hardware with a camera.
-- [ ] 7.5 GIF export + finalize + recording Quick Access/history card
+- [x] 7.5 GIF export + finalize — done, +2 tests. `FfmpegArgs.BuildGifConversion` (PURE, TDD'd exact args:
+      `-vf fps=10,scale=min(960\,iw):-1:flags=lanczos,split…palettegen…paletteuse -loop 0`), `App/Recording/GifExporter.cs`
+      (runs it via `FfmpegRunner.RunAsync`; deletes the temp MP4 on success, keeps it on failure). Wired into
+      `RecordingCoordinator.StopAsync`: `Format==Gif` → convert the finished MP4 → `.gif` in Videos (HUD "Converting
+      to GIF…"), then history + Quick Access card. Quit-time: `RecordingCoordinator.StopForExit` (pumps the
+      dispatcher ~3s) via `CaptureCoordinator.StopRecordingForExit` ← `App.OnExit` — saves an in-progress recording
+      (MP4; GIF/card skipped at exit). **Verified end-to-end:** drove a GIF recording → a valid looping GIF
+      (960×691, 10fps, 21 frames) was produced and the temp MP4 was deleted.
+**PHASE 7 COMPLETE — 214 tests green.** Recording is a full MP4/GIF feature (strip, targets, gapless pause/resume,
+countdown, click/keystroke/camera overlays, GIF export, quit-time finalize). Next: Phase 8 (icons, app icon, e2e).
 
 ## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
 - [x] 6.1 HistoryStore (file IO, load-prune, add/remove/clearAll) + ThumbnailRenderer — done, 14 tests (10 store + 4 thumb)
@@ -254,6 +262,12 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
   primary-monitor DIP conversion (consistent with other overlays). ⚠️ Live preview UNVERIFIED on this machine (no
   webcam); only graceful-degradation is proven. Unpackaged desktop apps need no camera capability manifest, but the
   user's Privacy→Camera setting can block access → caught, degrades silently.
+- **(7.5) GIF conversion is a single-pass filtergraph** (`split→palettegen→paletteuse`) at 10fps, ≤960px
+  (`min(960,iw)`, never upscaling), lanczos, `-loop 0` (loop forever). The temp MP4 is deleted on success, KEPT on
+  failure (nothing lost). GIF basename = the recording's timestamp with `.gif`.
+- **(7.5) Quit-time finalize pumps the dispatcher (`DispatcherFrame`/`PushFrame`) up to 3s** so the async stop can
+  complete during `App.OnExit`; at exit GIF conversion + the Quick Access card are skipped (just save the MP4). Only
+  build/code-verified (a graceful tray-Quit isn't easily scriptable) — worth a manual check.
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.

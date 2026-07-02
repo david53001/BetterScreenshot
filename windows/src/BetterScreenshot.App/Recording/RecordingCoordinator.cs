@@ -38,7 +38,9 @@ public sealed class RecordingCoordinator
     private CameraBubbleWindow? _camera;
     private RecorderState _state = RecorderState.Idle;
     private PxRect _region;
+    private RecordingFormat _format;
     private bool _stopping;
+    private bool _exiting;
 
     public RecordingCoordinator(SettingsStore settings, Action<bool, string?> onStateChange,
         Action<bool, bool> onPauseStateChange, Action<string, BitmapSource> onFinished)
@@ -191,6 +193,7 @@ public sealed class RecordingCoordinator
         }
 
         _region = region;
+        _format = config.Format;
         _timer.Start();
 
         // On-screen recording overlays (captured in the video). Start after the engine so they only show while live.
@@ -212,6 +215,27 @@ public sealed class RecordingCoordinator
         _camera = null;
     }
 
+    /// <summary>
+    /// App is quitting: best-effort finalize an in-progress recording so the file isn't lost. Pumps the dispatcher
+    /// (so the async stop's continuations can run on this thread) up to a ~3s deadline. GIF conversion and the
+    /// Quick Access card are skipped — the MP4 is saved by the engine, which is the important part.
+    /// </summary>
+    public void StopForExit()
+    {
+        if (!IsRecording) return;
+        _exiting = true;
+
+        var frame = new DispatcherFrame();
+        _ = StopAsync().ContinueWith(_ => frame.Continue = false, TaskScheduler.FromCurrentSynchronizationContext());
+
+        var deadline = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        deadline.Tick += (_, _) => { deadline.Stop(); frame.Continue = false; };
+        deadline.Start();
+
+        Dispatcher.PushFrame(frame);
+        deadline.Stop();
+    }
+
     private async Task StopAsync()
     {
         if (_stopping) return;
@@ -229,7 +253,17 @@ public sealed class RecordingCoordinator
             _onStateChange(false, null);
             _onPauseStateChange(false, false);
 
-            if (path is not null)
+            if (path is null) return;
+
+            // GIF: convert the finished MP4 (skipped when quitting — keep the MP4 so nothing is lost).
+            if (!_exiting && _format == RecordingFormat.Gif)
+            {
+                HudController.Show("Converting to GIF…");
+                string gifPath = Path.ChangeExtension(path, ".gif");
+                path = await GifExporter.ConvertAsync(path, gifPath) ?? path;
+            }
+
+            if (!_exiting)
                 _onFinished(path, thumb);
         }
         finally

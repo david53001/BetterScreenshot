@@ -122,4 +122,27 @@ public class FfmpegArgsTests
 
         Assert.Equal("2000000", ValueAfter(args, "-b:v"));
     }
+
+    [Fact]
+    public void BuildGifConversion_ProducesExactArgs()
+    {
+        var args = FfmpegArgs.BuildGifConversion(@"C:\in.mp4", @"C:\out.gif");
+
+        Assert.Equal(new[]
+        {
+            "-hide_banner", "-y",
+            "-i", @"C:\in.mp4",
+            "-vf", "fps=10,scale=min(960\\,iw):-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            "-loop", "0",
+            @"C:\out.gif",
+        }, args);
+    }
+
+    [Fact]
+    public void BuildGifConversion_OutputIsLastArg()
+    {
+        var args = FfmpegArgs.BuildGifConversion(@"C:\a.mp4", @"C:\b.gif");
+        Assert.Equal(@"C:\b.gif", args[^1]);
+        Assert.Equal(@"C:\a.mp4", ValueAfter(args, "-i"));
+    }
 }

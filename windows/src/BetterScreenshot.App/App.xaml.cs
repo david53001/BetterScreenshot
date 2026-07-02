@@ -17,18 +17,19 @@ public partial class App : System.Windows.Application
     private SettingsStore _settings = null!;
     private TrayIcon _tray = null!;
     private HotkeyController _hotkeys = null!;
+    private CaptureCoordinator _commands = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         _settings = SettingsStore.Load();
-        var commands = new CaptureCoordinator(_settings, Shutdown);
-        _tray = new TrayIcon(commands, _settings.Hotkeys);
-        _hotkeys = new HotkeyController(commands);
+        _commands = new CaptureCoordinator(_settings, Shutdown);
+        _tray = new TrayIcon(_commands, _settings.Hotkeys);
+        _hotkeys = new HotkeyController(_commands);
         _hotkeys.Apply(_settings.Hotkeys);
-        commands.OnOpenSettings = ShowSettings;
-        commands.OnRecordingStateChanged = _tray.SetRecordingState;
-        commands.OnRecordingPauseChanged = _tray.SetPauseState;
+        _commands.OnOpenSettings = ShowSettings;
+        _commands.OnRecordingStateChanged = _tray.SetRecordingState;
+        _commands.OnRecordingPauseChanged = _tray.SetPauseState;
 
         if (!_settings.FirstRunComplete)
         {
@@ -50,6 +51,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _commands?.StopRecordingForExit(); // best-effort finalize an in-progress recording before we tear down
         _hotkeys?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);
