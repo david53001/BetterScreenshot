@@ -59,6 +59,14 @@ history · recording MP4/GIF/pause · DPI.
   recognized on-screen text (345 chars) → clipboard + HUD "Text copied — 345 characters". No issues found.
   Still to scan for a full clean pass: 01/02/04/06/07 module cross-checks; §V area+window capture, editor
   blur/pixelate/crop drawing, DPI. (05-recordingkit, 08-icons/app-icon were built + verified this session.)
+- **Pass 2 (2026-07-02):** ✅ **02-overlaykit** re-scanned — CLEAN: QA card 220×168 radius 12, thumbnail 200×112
+  radius 6, button-row y-offset 8, stack max 3 margin 24, spacing 6, recording card blue-tinted, temp-PNG cleanup
+  300s — all match. NOTE (not a bug): QA action button is 30×28 vs the reference's 36×30 — an intentional Windows
+  adaptation so 5 buttons fit the 220-wide card's inner width (36 would overflow); renders correctly on-screen.
+  ✅ **Area-capture §V flow** (Ctrl+Shift+4) driven — selection overlay → synthetic drag (450,320)→(980,700) →
+  Quick Access card shows the correctly-CROPPED region (not full screen) with the migrated icons. No issues found.
+  Remaining: 01-capturekit, 04-historykit, 06-app-shell cross-checks; §V window capture (Ctrl+Shift+8), editor
+  blur/pixelate/crop drawing, multi-DPI.
 
 ## Phase 8 task status (Icons, app icon, polish, end-to-end — BetterScreenshot.App)
 - [x] 8.1 Icon resource dictionary + IconPresenter + consumer migration — **done.**
