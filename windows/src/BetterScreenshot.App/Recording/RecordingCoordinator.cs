@@ -33,6 +33,8 @@ public sealed class RecordingCoordinator
 
     private RecordStripWindow? _strip;
     private CountdownOverlayWindow? _countdown;
+    private ClickHighlighter? _clicks;
+    private KeystrokeOverlayWindow? _keystrokes;
     private RecorderState _state = RecorderState.Idle;
     private PxRect _region;
     private bool _stopping;
@@ -189,8 +191,21 @@ public sealed class RecordingCoordinator
 
         _region = region;
         _timer.Start();
+
+        // On-screen recording overlays (captured in the video). Start after the engine so they only show while live.
+        if (config.ClickHighlights) { _clicks = new ClickHighlighter(); _clicks.Start(); }
+        if (config.KeystrokeOverlay) { _keystrokes = new KeystrokeOverlayWindow(); _keystrokes.Start(); }
+
         _onStateChange(true, _state.ElapsedString(DateTime.Now));
         _onPauseStateChange(true, false);
+    }
+
+    private void TearDownOverlays()
+    {
+        _clicks?.Stop();
+        _clicks = null;
+        _keystrokes?.Stop();
+        _keystrokes = null;
     }
 
     private async Task StopAsync()
@@ -201,6 +216,7 @@ public sealed class RecordingCoordinator
         {
             _timer.Stop();
             _state.Transition(RecorderEvent.Finish);
+            TearDownOverlays();
 
             var thumb = CaptureThumb(_region);
             string? path = await _engine.StopAsync();

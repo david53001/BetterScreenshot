@@ -2,17 +2,18 @@
 
 > ▶️ **LOOP RESUMED (2026-07-02).** Restarted from `windows/docs/HANDOFF-2026-07-02.md`; the self-perpetuating
 > firing loop is active again (ScheduleWakeup). Phases 1–6 complete; **Phase 7 (Screen recording) IN PROGRESS —
-> Tasks 7.1, 7.2 & 7.3 DONE, 212 tests green.** Ctrl+Shift+5 → record strip → records MP4 (full/area/window) to
-> Videos + Quick Access card + history; tray red icon + m:ss; tray Pause/Resume is **gapless** (segment+concat);
-> optional pre-roll **countdown** overlay (200×200, 120pt digit, click-skip). All verified on-screen / by ffprobe.
-> Next: Task 7.4 (recording overlays — camera bubble, click highlighter, keystroke).
+> Tasks 7.1–7.3 DONE; 7.4 click + keystroke overlays DONE (camera bubble remaining), 212 tests green.** Ctrl+Shift+5
+> → record strip → records MP4 (full/area/window) to Videos + Quick Access card + history; tray red icon + m:ss;
+> tray Pause/Resume is **gapless** (segment+concat); optional pre-roll **countdown**; while recording, **click
+> highlights** (Ø36 accent dots) and a **keystroke overlay** (top-center pill) render on-screen. All verified
+> on-screen / by ffprobe. Next: finish 7.4 — the **camera bubble** (webcam preview via MediaCapture).
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — Tasks 7.1, 7.2 & 7.3 done.
+- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — 7.1–7.3 done; 7.4 click+keystroke done.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **212 passed** (197 + 7 FfmpegArgs + 8
   DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). (7.2's strip is UI — no new unit tests;
@@ -27,15 +28,17 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   m:ss timer. A second Ctrl+Shift+5 while the strip is up cancels; while recording it stops. The tray **Pause /
   Resume Recording** menu item pauses & resumes **gaplessly** (segment+concat) — the timer freezes at "Paused ·
   m:ss" and the menu label flips. When `countdownSeconds>0`, a **pre-roll countdown** (200×200 dark pill, 120pt
-  digit, click-to-skip, Ctrl+Shift+5-cancel) runs before capture starts. **Not yet:** GIF output is still recorded
-  as MP4 (GIF conversion is Task 7.5); camera bubble / click / keystroke overlays (7.4).
-- **Next task:** Phase 7 Task **7.4 — recording overlays** (`port-reference/05-recordingkit.md` §"Overlay
-  controllers"): `App/Recording/ClickHighlighter.cs` (full-screen click-through window; `WH_MOUSE_LL` via the
-  existing `GlobalHooks`; draws Ø36 accent@0.45 circle at each click, 0.4s fade), `App/Recording/KeystrokeOverlayWindow`
-  (280×44 black@0.75 pill radius 10, top-center 100px from top, 20pt mono white; `WH_KEYBOARD_LL` glyphs, 1.0s fade),
-  `App/Recording/CameraBubbleWindow` (circular webcam preview Ø160/240 via `MediaCapture`, draggable). Start these in
-  `RecordingCoordinator.BeginAsync` per config (clickHighlights/keystrokeOverlay/camera), stop on finish; they are
-  captured because they're on-screen windows. Then 7.5 GIF export + finalize + quit-time best-effort finalize.
+  digit, click-to-skip, Ctrl+Shift+5-cancel) runs before capture starts. While recording, if enabled, **click
+  highlights** (Ø36 accent@0.45 dots, 0.4s fade) and a **keystroke overlay** (top-center black pill, glyphs, 1.0s
+  fade) render as on-screen click-through windows. **Not yet:** the **camera bubble**; GIF output is still recorded
+  as MP4 (GIF conversion is Task 7.5).
+- **Next task:** finish Phase 7 Task **7.4 — the camera bubble** `App/Recording/CameraBubbleWindow.xaml(.cs)`:
+  circular webcam preview (Ø160 small / Ø240 medium per `RecordingConfig.CameraSize`), bottom-right of the recorded
+  region + 24px margin, draggable, aspect-fill, using `Windows.Media.Capture.MediaCapture` rendered into the WPF
+  window (net9.0-windows10.0.19041 already targets WinRT). Start it in `RecordingCoordinator.BeginAsync` when
+  `config.Camera` (add to `TearDownOverlays`). It is captured because it is an on-screen window. If the camera is
+  unavailable, degrade gracefully (skip, HUD note). See `port-reference/05-recordingkit.md` §"Overlay controllers".
+  Then Task 7.5: GIF export (MP4→GIF) + quit-time best-effort finalize + recording history/card polish.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -76,7 +79,15 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       `OnRecordingPauseChanged`→tray. **Verified end-to-end:** drove the app (UIAutomation click "Record Full
       Screen" + synthetic pause/resume/stop hotkeys) → output MP4 decodes cleanly and its duration EXCLUDES the
       2s pause (6.2s for two ~3s spans, not ~8s); standalone 2-segment `-c copy` concat probe also valid.
-- [ ] 7.4 Overlays — camera bubble, click highlighter, keystroke
+- [~] 7.4 Overlays — **click highlighter + keystroke overlay DONE; camera bubble remaining.**
+      `App/Recording/ClickHighlighter.cs` (full-primary transparent **click-through** window [WS_EX_TRANSPARENT via
+      `RecordingOverlayInterop`]; `MouseHook` WH_MOUSE_LL → Ø36 accent@0.45 dot at each click, 0.4s opacity fade;
+      physical→primary-DIP conversion), `App/Recording/KeystrokeOverlayWindow.xaml(.cs)` (280×44 black@0.75 pill
+      radius 10, top-center 100px, 20pt Consolas white; `KeyboardHook` WH_KEYBOARD_LL glyphs, 1.0s fade). Started
+      in `RecordingCoordinator.BeginAsync` per `ClickHighlights`/`KeystrokeOverlay`; stopped in `TearDownOverlays`
+      (StopAsync). **Verified on-screen:** drove a recording + synthetic click & 'A' keypress → screenshot shows the
+      "A" pill top-center and a fading click dot; the click also passed THROUGH to the app beneath (click-through OK).
+- [ ] 7.4b Camera bubble (webcam preview via MediaCapture) — remaining part of 7.4
 - [ ] 7.5 GIF export + finalize + recording Quick Access/history card
 
 ## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
@@ -224,6 +235,12 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
 - **(7.3) Countdown is centered on the PRIMARY screen** (`SystemParameters.PrimaryScreen*`), not the recorded
   monitor. It runs before capture starts so it is never in the recording — a pure pre-roll for the user — so the
   monitor choice is cosmetic; primary-centered is consistent with the strip. Digit font is Consolas (monospaced).
+- **(7.4) Click/keystroke overlays cover the PRIMARY monitor** (consistent with strip/countdown). The click
+  highlighter converts physical click points → primary-monitor DIPs via `Screens.Primary().DpiScale`; clicks on
+  other monitors fall outside its window (not highlighted). Full-virtual-desktop coverage is a hardening refinement.
+- **(7.4) Overlays are click-through** (`WS_EX_TRANSPARENT | LAYERED | TOOLWINDOW` set in `SourceInitialized`) so
+  they never steal input — verified (a synthetic click passed through to the app beneath). Started after the engine,
+  torn down on stop; pause/resume leaves them running (harmless — ffmpeg isn't capturing while paused).
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
