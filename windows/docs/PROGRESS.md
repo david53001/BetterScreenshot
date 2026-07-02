@@ -49,6 +49,17 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
+## Harden scan log (post-v1.0 — track each fresh re-scan; DONE when a full pass finds nothing new)
+Scan targets: port-reference modules 01-capturekit · 02-overlaykit · 03-editorkit · 04-historykit · 05-recordingkit ·
+06-app-shell · 07-icons; §V flows: area capture · window capture · fullscreen · OCR · editor draw/blur/pixelate/crop ·
+history · recording MP4/GIF/pause · DPI.
+- **Pass 1 (2026-07-02):** ✅ **03-editorkit** re-scanned vs impl — CLEAN: preset swatches exact (Red 1,.27,.23 …
+  Black 0,0,0), weights 2/4/7, text sizes 18/24/36, HitSlop 6, counter Ø max(28,fs*1.6), arrow head 28°, selection
+  handle #0A84FF — all match; pure-logic constants unit-tested. ✅ **OCR §V flow** (Ctrl+Shift+7) driven on-screen —
+  recognized on-screen text (345 chars) → clipboard + HUD "Text copied — 345 characters". No issues found.
+  Still to scan for a full clean pass: 01/02/04/06/07 module cross-checks; §V area+window capture, editor
+  blur/pixelate/crop drawing, DPI. (05-recordingkit, 08-icons/app-icon were built + verified this session.)
+
 ## Phase 8 task status (Icons, app icon, polish, end-to-end — BetterScreenshot.App)
 - [x] 8.1 Icon resource dictionary + IconPresenter + consumer migration — **done.**
       `App/Resources/Icons.xaml` = 38 hand-authored 24×24 `StreamGeometry` glyphs, merged into `App.xaml`;
