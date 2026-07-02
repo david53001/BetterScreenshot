@@ -84,4 +84,38 @@ public class HotkeyTests
         Assert.Equal(HotkeyAction.CaptureArea.DefaultCombo(), round.Combo(HotkeyAction.CaptureArea));
         Assert.Null(round.Combo(HotkeyAction.OpenHistory));
     }
+
+    [Theory]
+    [InlineData(0xBAu, ";")]
+    [InlineData(0xBBu, "=")]
+    [InlineData(0xBCu, ",")]
+    [InlineData(0xBDu, "-")]
+    [InlineData(0xBEu, ".")]
+    [InlineData(0xBFu, "/")]
+    [InlineData(0xC0u, "`")]
+    [InlineData(0xDBu, "[")]
+    [InlineData(0xDCu, "\\")]
+    [InlineData(0xDDu, "]")]
+    [InlineData(0xDEu, "'")]
+    [InlineData(0x2Cu, "PrtSc")]
+    [InlineData(0x2Du, "Ins")]
+    [InlineData(0x2Eu, "Del")]
+    [InlineData(0x21u, "PgUp")]
+    [InlineData(0x22u, "PgDn")]
+    [InlineData(0x23u, "End")]
+    [InlineData(0x24u, "Home")]
+    [InlineData(0x13u, "Pause")]
+    [InlineData(0x60u, "Num0")]
+    [InlineData(0x69u, "Num9")]
+    [InlineData(0x6Au, "Num*")]
+    [InlineData(0x6Bu, "Num+")]
+    [InlineData(0x6Du, "Num-")]
+    [InlineData(0x6Eu, "Num.")]
+    [InlineData(0x6Fu, "Num/")]
+    public void KeyName_maps_oem_navigation_and_numpad_keys(uint vk, string expected)
+        => Assert.Equal(expected, HotkeyCombo.KeyName(vk));
+
+    [Fact]
+    public void DisplayString_renders_the_users_alt_period_binding()
+        => Assert.Equal("Alt+.", new HotkeyCombo(0xBE, HotkeyModifiers.Alt).DisplayString);
 }

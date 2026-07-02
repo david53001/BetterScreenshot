@@ -96,6 +96,7 @@ public readonly record struct HotkeyCombo(uint Vk, HotkeyModifiers Modifiers)
         >= 0x30 and <= 0x39 => ((char)vk).ToString(),  // 0-9
         >= 0x41 and <= 0x5A => ((char)vk).ToString(),  // A-Z
         >= 0x70 and <= 0x7B => $"F{vk - 0x6F}",         // F1-F12
+        >= 0x60 and <= 0x69 => $"Num{vk - 0x60}",       // numpad digits
         0x20 => "Space",
         0x0D => "Enter",
         0x1B => "Esc",
@@ -105,6 +106,31 @@ public readonly record struct HotkeyCombo(uint Vk, HotkeyModifiers Modifiers)
         0x26 => "↑", // up
         0x27 => "→", // right
         0x28 => "↓", // down
+        0x21 => "PgUp",
+        0x22 => "PgDn",
+        0x23 => "End",
+        0x24 => "Home",
+        0x2C => "PrtSc",
+        0x2D => "Ins",
+        0x2E => "Del",
+        0x13 => "Pause",
+        0x6A => "Num*",
+        0x6B => "Num+",
+        0x6D => "Num-",
+        0x6E => "Num.",
+        0x6F => "Num/",
+        // OEM punctuation (VK_OEM_1..VK_OEM_7) — US-layout labels; the recorder stores raw VKs.
+        0xBA => ";",
+        0xBB => "=",
+        0xBC => ",",
+        0xBD => "-",
+        0xBE => ".",
+        0xBF => "/",
+        0xC0 => "`",
+        0xDB => "[",
+        0xDC => "\\",
+        0xDD => "]",
+        0xDE => "'",
         _ => $"(vk {vk})",
     };
 }
