@@ -17,29 +17,21 @@ public static class AppIconFactory
 
     public static Icon CreateTrayIcon(bool recording) => Create(32, Charcoal, recording ? RecordRed : White);
 
+    /// <summary>Renders the app icon (charcoal squircle + white camera) to a fresh 32bpp bitmap — used to author the multi-size .ico.</summary>
+    public static Bitmap RenderBitmap(int size)
+    {
+        var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        DrawInto(g, size, Charcoal, White);
+        return bmp;
+    }
+
     private static Icon Create(int size, Color bg, Color fg)
     {
         using var bmp = new Bitmap(size, size);
         using (var g = Graphics.FromImage(bmp))
         {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Color.Transparent);
-
-            using var bgBrush = new SolidBrush(bg);
-            using var fgBrush = new SolidBrush(fg);
-
-            FillRounded(g, bgBrush, new Rectangle(0, 0, size - 1, size - 1), size / 5);
-
-            int bodyW = (int)(size * 0.60), bodyH = (int)(size * 0.40);
-            int bodyX = (size - bodyW) / 2, bodyY = (int)(size * 0.34);
-
-            // viewfinder hump
-            g.FillRectangle(fgBrush, bodyX + bodyW / 6, bodyY - (int)(size * 0.07), bodyW / 4, (int)(size * 0.09));
-            // camera body
-            FillRounded(g, fgBrush, new Rectangle(bodyX, bodyY, bodyW, bodyH), size / 12);
-            // lens (knocked out to the background color)
-            int lens = (int)(size * 0.20);
-            g.FillEllipse(bgBrush, (size - lens) / 2, bodyY + (bodyH - lens) / 2, lens, lens);
+            DrawInto(g, size, bg, fg);
         }
 
         IntPtr hIcon = bmp.GetHicon();
@@ -52,6 +44,31 @@ public static class AppIconFactory
         {
             DestroyIcon(hIcon);
         }
+    }
+
+    /// <summary>The single source of the icon art: charcoal rounded-square background + white camera (viewfinder hump, body, flash, lens knockout).</summary>
+    private static void DrawInto(Graphics g, int size, Color bg, Color fg)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Color.Transparent);
+
+        using var bgBrush = new SolidBrush(bg);
+        using var fgBrush = new SolidBrush(fg);
+
+        FillRounded(g, bgBrush, new Rectangle(0, 0, size - 1, size - 1), size / 5);
+
+        int bodyW = (int)(size * 0.60), bodyH = (int)(size * 0.40);
+        int bodyX = (size - bodyW) / 2, bodyY = (int)(size * 0.34);
+
+        // viewfinder hump
+        g.FillRectangle(fgBrush, bodyX + bodyW / 6, bodyY - (int)(size * 0.07), bodyW / 4, (int)(size * 0.09));
+        // camera body
+        FillRounded(g, fgBrush, new Rectangle(bodyX, bodyY, bodyW, bodyH), size / 12);
+        // tiny flash window (top-left of the body), knocked out to the background
+        g.FillRectangle(bgBrush, bodyX + bodyW / 8, bodyY + bodyH / 5, Math.Max(1, bodyW / 9), Math.Max(1, bodyH / 6));
+        // lens (knocked out to the background color)
+        int lens = (int)(size * 0.27);
+        g.FillEllipse(bgBrush, (size - lens) / 2, bodyY + (bodyH - lens) / 2, lens, lens);
     }
 
     private static void FillRounded(Graphics g, Brush brush, Rectangle r, int radius)

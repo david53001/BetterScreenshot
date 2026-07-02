@@ -7,17 +7,17 @@
 > tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
 > **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
 > verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Phase 8 IN PROGRESS:**
-> Task 8.1 DONE — `Resources/Icons.xaml` (38 hand-authored glyphs) + `IconPresenter`; all consumers (QuickAccess
-> card, record strip, History badges) migrated to `IconPresenter` and the inline glyph sets removed (editor uses
-> text labels — nothing to migrate). Verified: 38-glyph render sheet + the migrated record strip on-screen.
-> Next: 8.2 app `.ico`, 8.3 end-to-end pass (PLAN §V), 8.4 README-win → tag win-v1.0.
+> Tasks 8.1 (icons) + 8.2 (app icon) DONE. 8.1: `Icons.xaml` (38 glyphs) + `IconPresenter`, all consumers migrated.
+> 8.2: `Resources/AppIcon.ico` (7-size DIB, hand-drawn charcoal squircle + white camera) wired via `<ApplicationIcon>`;
+> `AppIconFactory` unified as the single art source (tray + .ico); verified the exe's embedded icon renders as the
+> camera. Next: 8.3 end-to-end pass (PLAN §V), 8.4 README-win → tag win-v1.0, then harden.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 IN PROGRESS** — 8.1 icons DONE. Next: 8.2 app icon.
+- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 IN PROGRESS** — 8.1 icons + 8.2 app icon DONE. Next: 8.3 e2e pass.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
   GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
@@ -38,13 +38,12 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   bottom-right of the region, draggable) when `camera` is on. If **GIF** format is chosen, on stop the MP4 is
   converted to a looping GIF (960px/10fps/lanczos + palette) and the temp MP4 removed; a recording in progress at
   app quit is finalized best-effort (MP4 saved). **Phase 7 is COMPLETE.**
-- **Next task:** **Phase 8 Task 8.2 — the app icon.** Author a vector app icon (charcoal squircle **#1C1C1C** +
-  centered white camera: rounded body ~60%×40%, circular lens ~27%, small viewfinder hump, tiny flash) and render it
-  multi-size (16/32/48/64/128/256) into `App/Resources/AppIcon.ico`; also a monochrome camera-viewfinder tray
-  variant. Wire via `App/Branding/AppIconFactory` (currently generates the tray icon in code — see how `TrayIcon`
-  uses `AppIconFactory.CreateTrayIcon`) and set the app/window icon. Then 8.3 end-to-end verification pass
-  (PLAN §V full checklist); 8.4 `README-win.md`; tag `win-v1.0`. After Phase 8, run the harden loop (PLAN §V) until
-  a re-scan finds nothing, then write "DONE — nothing left".
+- **Next task:** **Phase 8 Task 8.3 — end-to-end verification pass** (PLAN §V full checklist): build 0/0; tests
+  green; no-network grep (`HttpClient|WebClient|Socket|WebRequest|http://|https://`) over product source → none;
+  launch to tray; capture area/fullscreen/window/text; editor tools; history; recording MP4+GIF; pause/resume;
+  DPI sanity. Fix any issue found (one per firing if several). Then 8.4 `README-win.md` (install/build/run, mac
+  differences, ffmpeg note); tag `win-v1.0`. After Phase 8, run the harden loop (PLAN §V) until a re-scan finds
+  nothing, then write "DONE — nothing left".
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -58,7 +57,14 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       toolbar uses text labels (no glyphs) — nothing to migrate. **Verified:** build 0/0; 214 tests; a 38-glyph WPF
       render sheet (all parse + recognizable) + the migrated record strip on-screen (speaker/mic accent-on, icons
       render via IconPresenter incl. the dynamic accent-Brush toggle).
-- [ ] 8.2 App icon `.ico` (charcoal squircle #1C1C1C + white camera, multi-size) + monochrome tray variant
+- [x] 8.2 App icon `.ico` + tray — done. `AppIconFactory` refactored to a single `DrawInto(g,size,bg,fg)` art
+      source (charcoal #1C1C1C squircle + white camera: viewfinder hump, body, tiny flash knockout, lens 27%);
+      `CreateTrayIcon` + a new `RenderBitmap(size)` both use it. `Resources/AppIcon.ico` = 7 sizes (16/24/32/48/64/
+      128/256) as 32-bit **DIB** frames (GDI+/shell/exe all handle DIB; PNG frames tripped a GDI+ limitation),
+      authored by rendering the same drawing. Wired `<ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>` in
+      the App csproj → embedded in the exe (WPF windows use the exe icon by default). **Verified:** build 0/0;
+      rendered the .ico frames + extracted the exe's embedded icon → both show the camera. (A pure-monochrome
+      viewfinder-only tray variant is optional polish, deferred; the charcoal+white camera tray icon is legible.)
 - [ ] 8.3 End-to-end verification pass (PLAN §V checklist)
 - [ ] 8.4 `README-win.md`; then tag `win-v1.0`
 
@@ -287,6 +293,11 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
 - **(7.5) Quit-time finalize pumps the dispatcher (`DispatcherFrame`/`PushFrame`) up to 3s** so the async stop can
   complete during `App.OnExit`; at exit GIF conversion + the Quick Access card are skipped (just save the MP4). Only
   build/code-verified (a graceful tray-Quit isn't easily scriptable) — worth a manual check.
+- **(8.2) `AppIcon.ico` uses 32-bit DIB frames, not PNG frames** — GDI+ `Icon.ToBitmap`/`DrawIcon` can't decode
+  PNG-in-ICO frames (they threw "range extends past end of array"), which also blocks previewing; DIB frames work
+  everywhere (shell, exe embed, GDI+). File is ~365KB (the 256 DIB frame dominates) — acceptable for an app icon.
+  Generated by a throwaway PowerShell script that replicates `AppIconFactory.DrawInto` (kept in sync by matching the
+  same proportions); not committed as app code.
 - **(8.1) Icons live in `Resources/Icons.xaml` as `StreamGeometry` (24×24), rendered by `IconPresenter`** which
   strokes outline glyphs and fills the ones in `IconPresenter.Filled` (even-odd knockouts). This matches the
   reference (a WPF Geometry ResourceDictionary + a Path-based presenter). Verification is by rendering a glyph sheet
