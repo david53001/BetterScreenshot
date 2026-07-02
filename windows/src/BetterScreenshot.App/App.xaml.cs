@@ -61,6 +61,7 @@ public partial class App : System.Windows.Application
     {
         if (_settingsWindow != null) { _settingsWindow.Activate(); return; }
         _settingsWindow = new SettingsWindow(_settings, _hotkeys);
+        _settingsWindow.HotkeysChanged += () => _tray.UpdateShortcuts(_settings.Hotkeys);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
     }

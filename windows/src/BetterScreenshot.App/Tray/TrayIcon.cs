@@ -16,31 +16,34 @@ public sealed class TrayIcon : IDisposable
     private readonly Icon _recordingIcon;
     private readonly WF.ToolStripMenuItem _recordItem;
     private readonly WF.ToolStripMenuItem _pauseResumeItem;
+    private readonly Dictionary<HotkeyAction, WF.ToolStripMenuItem> _actionItems = new();
 
     public TrayIcon(IAppCommands commands, HotkeyBindings bindings)
     {
         _normalIcon = AppIconFactory.CreateTrayIcon(recording: false);
         _recordingIcon = AppIconFactory.CreateTrayIcon(recording: true);
 
-        _recordItem = Item("Record Screen…", bindings.Combo(HotkeyAction.Record)?.DisplayString, commands.ToggleRecording);
-        _pauseResumeItem = Item("Pause Recording", bindings.Combo(HotkeyAction.PauseResumeRecording)?.DisplayString, commands.PauseResumeRecording);
+        _recordItem = Item("Record Screen…", bindings.Combo(HotkeyAction.Record)?.DisplayString, commands.ToggleRecording, HotkeyAction.Record);
+        _pauseResumeItem = Item("Pause Recording", bindings.Combo(HotkeyAction.PauseResumeRecording)?.DisplayString, commands.PauseResumeRecording, HotkeyAction.PauseResumeRecording);
         _pauseResumeItem.Visible = false;
 
         var menu = new WF.ContextMenuStrip();
+        menu.Renderer = new DarkMenuRenderer();
+        menu.ShowImageMargin = false;
         menu.Items.AddRange(new WF.ToolStripItem[]
         {
-            Item("Capture Area", bindings.Combo(HotkeyAction.CaptureArea)?.DisplayString, commands.CaptureArea),
-            Item("Capture Window", bindings.Combo(HotkeyAction.CaptureWindow)?.DisplayString, commands.CaptureWindow),
-            Item("Capture Fullscreen", bindings.Combo(HotkeyAction.CaptureFullscreen)?.DisplayString, commands.CaptureFullscreen),
-            Item("Capture Text", bindings.Combo(HotkeyAction.CaptureText)?.DisplayString, commands.CaptureText),
+            Item("Capture Area", bindings.Combo(HotkeyAction.CaptureArea)?.DisplayString, commands.CaptureArea, HotkeyAction.CaptureArea),
+            Item("Capture Window", bindings.Combo(HotkeyAction.CaptureWindow)?.DisplayString, commands.CaptureWindow, HotkeyAction.CaptureWindow),
+            Item("Capture Fullscreen", bindings.Combo(HotkeyAction.CaptureFullscreen)?.DisplayString, commands.CaptureFullscreen, HotkeyAction.CaptureFullscreen),
+            Item("Capture Text", bindings.Combo(HotkeyAction.CaptureText)?.DisplayString, commands.CaptureText, HotkeyAction.CaptureText),
             new WF.ToolStripSeparator(),
             _recordItem,
             _pauseResumeItem,
             new WF.ToolStripSeparator(),
-            Item("Pin from Clipboard", bindings.Combo(HotkeyAction.PinFromClipboard)?.DisplayString, commands.PinFromClipboard),
+            Item("Pin from Clipboard", bindings.Combo(HotkeyAction.PinFromClipboard)?.DisplayString, commands.PinFromClipboard, HotkeyAction.PinFromClipboard),
             new WF.ToolStripSeparator(),
-            Item("History…", bindings.Combo(HotkeyAction.OpenHistory)?.DisplayString, commands.OpenHistory),
-            Item("Restore Recently Closed", bindings.Combo(HotkeyAction.RestoreRecentlyClosed)?.DisplayString, commands.RestoreRecentlyClosed),
+            Item("History…", bindings.Combo(HotkeyAction.OpenHistory)?.DisplayString, commands.OpenHistory, HotkeyAction.OpenHistory),
+            Item("Restore Recently Closed", bindings.Combo(HotkeyAction.RestoreRecentlyClosed)?.DisplayString, commands.RestoreRecentlyClosed, HotkeyAction.RestoreRecentlyClosed),
             new WF.ToolStripSeparator(),
             Item("Settings…", null, commands.OpenSettings),
             Item("Quit", null, commands.Quit),
@@ -75,16 +78,24 @@ public sealed class TrayIcon : IDisposable
         _pauseResumeItem.Text = paused ? "Resume Recording" : "Pause Recording";
     }
 
+    /// <summary>Refreshes the shortcut hints after a rebind in Settings (the menu is long-lived).</summary>
+    public void UpdateShortcuts(HotkeyBindings bindings)
+    {
+        foreach (var (action, item) in _actionItems)
+            item.ShortcutKeyDisplayString = bindings.Combo(action)?.DisplayString ?? string.Empty;
+    }
+
     private static void ShowMenu(WF.ContextMenuStrip menu)
     {
         menu.Show(WF.Cursor.Position);
     }
 
-    private static WF.ToolStripMenuItem Item(string text, string? shortcut, Action onClick)
+    private WF.ToolStripMenuItem Item(string text, string? shortcut, Action onClick, HotkeyAction? action = null)
     {
         var item = new WF.ToolStripMenuItem(text);
         if (!string.IsNullOrEmpty(shortcut)) item.ShortcutKeyDisplayString = shortcut;
         item.Click += (_, _) => onClick();
+        if (action is { } a) _actionItems[a] = item;
         return item;
     }
 

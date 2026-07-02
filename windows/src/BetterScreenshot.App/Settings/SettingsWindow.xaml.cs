@@ -2,20 +2,27 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using BetterScreenshot.App.Controls;
 using BetterScreenshot.Capture;
 using BetterScreenshot.Platform;
 using BetterScreenshot.Recording;
 // Disambiguate WPF types from the WinForms types the App project also references (for the tray NotifyIcon).
+using Border = System.Windows.Controls.Border;
+using Brush = System.Windows.Media.Brush;
 using Button = System.Windows.Controls.Button;
 using FontFamily = System.Windows.Media.FontFamily;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
 using Orientation = System.Windows.Controls.Orientation;
 
 namespace BetterScreenshot.App.Settings;
 
-/// <summary>Tabbed settings (General / Shortcuts / Recording). Persists to <see cref="SettingsStore"/> on Save;
-/// the shortcut recorder rebinds hotkeys live via the <see cref="HotkeyController"/> (reverted on Cancel).</summary>
+/// <summary>Tabbed settings (General / Shortcuts / Recording). Instant-apply: every control change
+/// persists to <see cref="SettingsStore"/> immediately, so closing with ✕ never loses changes (the old
+/// Save/Cancel model silently reverted hotkeys on ✕ — the "settings don't save" trap). Hotkey rebinds
+/// re-register live via the <see cref="HotkeyController"/> and raise <see cref="HotkeysChanged"/> so the
+/// tray menu hints stay in sync.</summary>
 public partial class SettingsWindow : Window
 {
     private static readonly int[] PinRadii = { 0, 4, 8, 12, 16, 20 };
@@ -23,22 +30,25 @@ public partial class SettingsWindow : Window
 
     private readonly SettingsStore _settings;
     private readonly HotkeyController _hotkeys;
-    private readonly Dictionary<string, string> _hotkeySnapshot;
     private readonly Dictionary<HotkeyAction, TextBlock> _shortcutLabels = new();
 
     private HotkeyAction? _recordingAction;
     private Button? _recordingButton;
-    private bool _saved;
+    private bool _loading = true;
+
+    /// <summary>Raised after a shortcut is set or cleared (already persisted + re-registered).</summary>
+    public event Action? HotkeysChanged;
 
     public SettingsWindow(SettingsStore settings, HotkeyController hotkeys)
     {
         _settings = settings;
         _hotkeys = hotkeys;
-        _hotkeySnapshot = settings.Hotkeys.ToDictionary();
         InitializeComponent();
         LoadGeneral();
         LoadRecording();
         BuildShortcutRows();
+        _loading = false;
+        WindowThemer.ApplyDark(this);
     }
 
     private void LoadGeneral()
@@ -88,23 +98,38 @@ public partial class SettingsWindow : Window
         foreach (var action in HotkeyActionInfo.All)
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 5, 0, 5) };
-            row.Children.Add(new TextBlock { Text = action.Title(), Width = 190, VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(new TextBlock
+            {
+                Text = action.Title(),
+                Width = 180,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = (Brush)FindResource("Theme.SecondaryTextBrush"),
+            });
 
             var label = new TextBlock
             {
                 Text = _settings.Hotkeys.Combo(action)?.DisplayString ?? "(unbound)",
-                Width = 130,
+                FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+                FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
-                FontFamily = new FontFamily("Consolas"),
+                HorizontalAlignment = HorizontalAlignment.Center,
             };
             _shortcutLabels[action] = label;
-            row.Children.Add(label);
+            row.Children.Add(new Border
+            {
+                Child = label,
+                Width = 130,
+                Padding = new Thickness(8, 4, 8, 4),
+                CornerRadius = new CornerRadius(5),
+                Background = (Brush)FindResource("Theme.ControlBrush"),
+                Margin = new Thickness(0, 0, 10, 0),
+            });
 
-            var change = new Button { Content = "Change", Padding = new Thickness(8, 2, 8, 2), Tag = action };
+            var change = new Button { Content = "Change", Padding = new Thickness(10, 3, 10, 3), Tag = action };
             change.Click += StartRecording;
             row.Children.Add(change);
 
-            var clear = new Button { Content = "Clear", Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(6, 0, 0, 0), Tag = action };
+            var clear = new Button { Content = "Clear", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), Tag = action };
             clear.Click += ClearBinding;
             row.Children.Add(clear);
 
@@ -126,7 +151,15 @@ public partial class SettingsWindow : Window
         var action = (HotkeyAction)((Button)sender).Tag;
         _settings.Hotkeys.Clear(action);
         _shortcutLabels[action].Text = "(unbound)";
+        ApplyHotkeys();
+    }
+
+    /// <summary>Persist + re-register hotkeys after a rebind/clear, and let the app refresh the tray hints.</summary>
+    private void ApplyHotkeys()
+    {
+        _settings.Save();
         _hotkeys.Apply(_settings.Hotkeys);
+        HotkeysChanged?.Invoke();
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -154,6 +187,7 @@ public partial class SettingsWindow : Window
         _settings.Hotkeys.Set(action, combo);
         _shortcutLabels[action].Text = combo.DisplayString;
         StopRecording();
+        ApplyHotkeys();
     }
 
     private void StopRecording()
@@ -168,10 +202,21 @@ public partial class SettingsWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Choose save folder" };
         if (!string.IsNullOrWhiteSpace(SaveDirBox.Text)) dialog.InitialDirectory = SaveDirBox.Text;
-        if (dialog.ShowDialog(this) == true) SaveDirBox.Text = dialog.FolderName;
+        if (dialog.ShowDialog(this) == true)
+        {
+            SaveDirBox.Text = dialog.FolderName;
+            Apply();
+        }
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    /// <summary>Instant-apply: shared handler for every General/Recording control.</summary>
+    private void Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        Apply();
+    }
+
+    private void Apply()
     {
         _settings.Capture = new CaptureSettings
         {
@@ -214,17 +259,11 @@ public partial class SettingsWindow : Window
         _settings.LaunchAtLogin = LaunchAtLoginCheck.IsChecked == true;
         _settings.CaptureSoundEnabled = CaptureSoundCheck.IsChecked == true;
         _settings.Save();
-
-        _saved = true;
-        Close();
     }
-
-    private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
 
     protected override void OnClosed(EventArgs e)
     {
-        if (!_saved) _settings.Hotkeys = HotkeyBindings.FromDictionary(_hotkeySnapshot);
-        _hotkeys.Apply(_settings.Hotkeys);
+        _hotkeys.Apply(_settings.Hotkeys); // re-arm in case the window closed mid-shortcut-recording
         base.OnClosed(e);
     }
 }
