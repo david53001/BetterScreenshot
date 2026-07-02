@@ -38,6 +38,7 @@ public sealed class CaptureCoordinator : IAppCommands
         _recording = new RecordingCoordinator(
             settings,
             (recording, elapsed) => OnRecordingStateChanged?.Invoke(recording, elapsed),
+            (active, paused) => OnRecordingPauseChanged?.Invoke(active, paused),
             OnRecordingFinished);
     }
 
@@ -46,6 +47,9 @@ public sealed class CaptureCoordinator : IAppCommands
 
     /// <summary>Set by the app to reflect recording state (icon + elapsed timer) in the tray.</summary>
     public Action<bool, string?>? OnRecordingStateChanged { get; set; }
+
+    /// <summary>Set by the app to reflect pause state (active?, paused?) on the tray Pause/Resume menu item.</summary>
+    public Action<bool, bool>? OnRecordingPauseChanged { get; set; }
 
     public void CaptureFullscreen()
     {
@@ -195,11 +199,11 @@ public sealed class CaptureCoordinator : IAppCommands
         }
     }
 
-    /// <summary>Start/stop a screen recording (full display for now — target picking arrives with the record strip).</summary>
+    /// <summary>Start/stop a screen recording (record strip → target picking).</summary>
     public void ToggleRecording() => _recording.Toggle();
 
-    // Gapless pause/resume is Task 7.3; the record strip + target picking is the remaining part of Task 7.2.
-    public void PauseResumeRecording() { }
+    /// <summary>Pause or resume the active recording (gapless via segment+concat).</summary>
+    public void PauseResumeRecording() => _recording.PauseResume();
 
     /// <summary>A finished recording: record it in history and show a Quick Access recording card.</summary>
     private void OnRecordingFinished(string path, BitmapSource thumbnail)

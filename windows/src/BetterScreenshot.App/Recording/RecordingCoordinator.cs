@@ -26,6 +26,7 @@ public sealed class RecordingCoordinator
     private readonly RecordingEngine _engine = new();
     private readonly DispatcherTimer _timer;
     private readonly Action<bool, string?> _onStateChange;
+    private readonly Action<bool, bool> _onPauseStateChange;
     private readonly Action<string, BitmapSource> _onFinished;
     private readonly SelectionOverlayController _selection = new();
     private readonly WindowPickerController _picker = new();
@@ -36,16 +37,42 @@ public sealed class RecordingCoordinator
     private bool _stopping;
 
     public RecordingCoordinator(SettingsStore settings, Action<bool, string?> onStateChange,
-        Action<string, BitmapSource> onFinished)
+        Action<bool, bool> onPauseStateChange, Action<string, BitmapSource> onFinished)
     {
         _settings = settings;
         _onStateChange = onStateChange;
+        _onPauseStateChange = onPauseStateChange;
         _onFinished = onFinished;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => _onStateChange(true, _state.ElapsedString(DateTime.Now));
     }
 
     public bool IsRecording => _state.Phase is RecorderPhase.Recording or RecorderPhase.Paused;
+    private bool IsPaused => _state.Phase == RecorderPhase.Paused;
+
+    /// <summary>Pause a running recording or resume a paused one (no-op otherwise). Gapless via segment+concat.</summary>
+    public void PauseResume() => _ = PauseResumeAsync();
+
+    private async Task PauseResumeAsync()
+    {
+        switch (_state.Phase)
+        {
+            case RecorderPhase.Recording:
+                if (!_state.Transition(RecorderEvent.Pause, DateTime.Now)) return;
+                _timer.Stop();
+                await _engine.PauseAsync();
+                _onStateChange(true, _state.ElapsedString(DateTime.Now)); // "Paused · m:ss" (frozen)
+                _onPauseStateChange(true, true);
+                break;
+            case RecorderPhase.Paused:
+                if (!_state.Transition(RecorderEvent.Resume, DateTime.Now)) return;
+                _engine.Resume();
+                _timer.Start();
+                _onStateChange(true, _state.ElapsedString(DateTime.Now));
+                _onPauseStateChange(true, false);
+                break;
+        }
+    }
 
     /// <summary>The Ctrl+Shift+5 entry point: idle → strip · armed → cancel · recording/paused → stop.</summary>
     public void Toggle()
@@ -151,6 +178,7 @@ public sealed class RecordingCoordinator
         _region = region;
         _timer.Start();
         _onStateChange(true, _state.ElapsedString(DateTime.Now));
+        _onPauseStateChange(true, false);
     }
 
     private async Task StopAsync()
@@ -167,6 +195,7 @@ public sealed class RecordingCoordinator
 
             _state = RecorderState.Idle;
             _onStateChange(false, null);
+            _onPauseStateChange(false, false);
 
             if (path is not null)
                 _onFinished(path, thumb);

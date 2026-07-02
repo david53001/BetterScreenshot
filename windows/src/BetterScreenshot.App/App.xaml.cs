@@ -28,6 +28,7 @@ public partial class App : System.Windows.Application
         _hotkeys.Apply(_settings.Hotkeys);
         commands.OnOpenSettings = ShowSettings;
         commands.OnRecordingStateChanged = _tray.SetRecordingState;
+        commands.OnRecordingPauseChanged = _tray.SetPauseState;
 
         if (!_settings.FirstRunComplete)
         {

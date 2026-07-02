@@ -68,6 +68,13 @@ public sealed class TrayIcon : IDisposable
         _pauseResumeItem.Visible = recording;
     }
 
+    /// <summary>Reflects pause state on the Pause/Resume menu item: visible while a session is active, text flips.</summary>
+    public void SetPauseState(bool active, bool paused)
+    {
+        _pauseResumeItem.Visible = active;
+        _pauseResumeItem.Text = paused ? "Resume Recording" : "Pause Recording";
+    }
+
     private static void ShowMenu(WF.ContextMenuStrip menu)
     {
         menu.Show(WF.Cursor.Position);
