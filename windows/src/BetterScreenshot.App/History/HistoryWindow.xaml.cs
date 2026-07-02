@@ -42,6 +42,7 @@ public partial class HistoryWindow : Window
     public HistoryWindow(HistoryService history, HistoryWindowActions actions)
     {
         InitializeComponent();
+        Controls.WindowThemer.ApplyDark(this);
         _history = history;
         _actions = actions;
         Reload();

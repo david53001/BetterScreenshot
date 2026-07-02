@@ -4,9 +4,10 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
         SizeToContent="WidthAndHeight" WindowStartupLocation="Manual">
-    <Border x:Name="Card" CornerRadius="12" Background="#FFFAFAFC" Margin="8" Padding="12,8">
+    <Border x:Name="Card" CornerRadius="12" Background="{StaticResource Theme.CardBrush}"
+            BorderBrush="{StaticResource Theme.BorderBrush}" BorderThickness="1" Margin="8" Padding="12,8">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.32"/>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.45"/>
         </Border.Effect>
         <StackPanel x:Name="ControlRow" Orientation="Horizontal" VerticalAlignment="Center"/>
     </Border>

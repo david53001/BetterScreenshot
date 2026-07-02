@@ -4,11 +4,13 @@
         Title="Welcome to BetterScreenshot"
         Width="460" SizeToContent="Height"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
-        Background="#FFF9F9FB" FontFamily="Segoe UI">
+        Background="{StaticResource Theme.WindowBrush}" FontFamily="Segoe UI"
+        Foreground="{StaticResource Theme.TextBrush}">
     <StackPanel Margin="36,32,36,28">
 
         <!-- App icon: charcoal rounded square with a white camera glyph (hand-authored vector) -->
-        <Border Width="72" Height="72" CornerRadius="16" Background="#1C1C1C" HorizontalAlignment="Center">
+        <Border Width="72" Height="72" CornerRadius="16" Background="#1C1C1C"
+                BorderBrush="{StaticResource Theme.BorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
             <Canvas Width="72" Height="72">
                 <Rectangle Canvas.Left="30" Canvas.Top="20" Width="12" Height="6" RadiusX="2" RadiusY="2" Fill="#F5F5F5"/>
                 <Border Canvas.Left="18" Canvas.Top="26" Width="36" Height="26" CornerRadius="6" Background="#F5F5F5"/>
@@ -18,36 +20,36 @@
 
         <TextBlock Text="Welcome to BetterScreenshot" FontSize="19" FontWeight="Bold"
                    Margin="0,18,0,0" HorizontalAlignment="Center"/>
-        <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="#666" Margin="0,8,0,0"
+        <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource Theme.SecondaryTextBrush}" Margin="0,8,0,0"
                    Text="A free, 100% local screenshot &amp; recording tool that lives in your system tray — no cloud, no accounts."/>
 
-        <Border Background="#FFEFEFF3" CornerRadius="10" Margin="0,18,0,0" Padding="16,12">
+        <Border Background="#14FFFFFF" CornerRadius="10" Margin="0,18,0,0" Padding="16,12">
             <StackPanel>
                 <Grid Margin="0,3">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="Ctrl+Shift+4" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#333"/>
-                    <TextBlock Grid.Column="1" Text="Capture an area" Foreground="#555"/>
+                    <TextBlock Text="Ctrl+Shift+4" FontFamily="Cascadia Mono, Consolas" FontWeight="SemiBold" Foreground="{StaticResource Theme.TextBrush}"/>
+                    <TextBlock Grid.Column="1" Text="Capture an area" Foreground="{StaticResource Theme.SecondaryTextBrush}"/>
                 </Grid>
                 <Grid Margin="0,3">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="Ctrl+Shift+5" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#333"/>
-                    <TextBlock Grid.Column="1" Text="Record the screen" Foreground="#555"/>
+                    <TextBlock Text="Ctrl+Shift+5" FontFamily="Cascadia Mono, Consolas" FontWeight="SemiBold" Foreground="{StaticResource Theme.TextBrush}"/>
+                    <TextBlock Grid.Column="1" Text="Record the screen" Foreground="{StaticResource Theme.SecondaryTextBrush}"/>
                 </Grid>
                 <Grid Margin="0,3">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="Ctrl+Shift+6" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#333"/>
-                    <TextBlock Grid.Column="1" Text="Capture the full screen" Foreground="#555"/>
+                    <TextBlock Text="Ctrl+Shift+6" FontFamily="Cascadia Mono, Consolas" FontWeight="SemiBold" Foreground="{StaticResource Theme.TextBrush}"/>
+                    <TextBlock Grid.Column="1" Text="Capture the full screen" Foreground="{StaticResource Theme.SecondaryTextBrush}"/>
                 </Grid>
                 <Grid Margin="0,3">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="Ctrl+Shift+8" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#333"/>
-                    <TextBlock Grid.Column="1" Text="Capture a window" Foreground="#555"/>
+                    <TextBlock Text="Ctrl+Shift+8" FontFamily="Cascadia Mono, Consolas" FontWeight="SemiBold" Foreground="{StaticResource Theme.TextBrush}"/>
+                    <TextBlock Grid.Column="1" Text="Capture a window" Foreground="{StaticResource Theme.SecondaryTextBrush}"/>
                 </Grid>
             </StackPanel>
         </Border>
 
         <Button Content="Start Capturing" IsDefault="True" Click="Start_Click"
-                Margin="0,20,0,0" Padding="0,9" FontSize="14" Foreground="White"
-                Background="#0A84FF" BorderThickness="0" Cursor="Hand"/>
+                Style="{StaticResource Theme.AccentButton}"
+                Margin="0,20,0,0" Padding="0,9" FontSize="14" Cursor="Hand"/>
     </StackPanel>
 </Window>

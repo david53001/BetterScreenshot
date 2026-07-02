@@ -8,6 +8,7 @@ public partial class WelcomeWindow : Window
     public WelcomeWindow()
     {
         InitializeComponent();
+        Controls.WindowThemer.ApplyDark(this);
     }
 
     private void Start_Click(object sender, RoutedEventArgs e) => Close();
