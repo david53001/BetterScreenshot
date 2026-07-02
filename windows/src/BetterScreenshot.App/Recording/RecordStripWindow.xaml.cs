@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using BetterScreenshot.App.Controls;
 using BetterScreenshot.Platform;
 using BetterScreenshot.Recording;
 using Border = System.Windows.Controls.Border;
@@ -50,14 +51,14 @@ public partial class RecordStripWindow : Window
         ControlRow.Children.Add(TextButton("Record Area…", () => OnArea?.Invoke()));
         ControlRow.Children.Add(Separator());
         ControlRow.Children.Add(BuildFormatSegment());
-        ControlRow.Children.Add(IconToggle(Glyphs.Speaker, "Record system audio", _settings.Recording.SystemAudio,
+        ControlRow.Children.Add(IconToggle("speaker", "Record system audio", _settings.Recording.SystemAudio,
             on => Persist(_settings.Recording with { SystemAudio = on })));
-        ControlRow.Children.Add(IconToggle(Glyphs.Mic, "Record microphone", _settings.Recording.Microphone,
+        ControlRow.Children.Add(IconToggle("mic", "Record microphone", _settings.Recording.Microphone,
             on => Persist(_settings.Recording with { Microphone = on })));
-        ControlRow.Children.Add(IconToggle(Glyphs.Video, "Show camera bubble", _settings.Recording.Camera,
+        ControlRow.Children.Add(IconToggle("video", "Show camera bubble", _settings.Recording.Camera,
             on => Persist(_settings.Recording with { Camera = on })));
         ControlRow.Children.Add(Separator());
-        ControlRow.Children.Add(IconButton(Glyphs.Close, "Cancel", () => OnCancel?.Invoke()));
+        ControlRow.Children.Add(IconButton("close", "Cancel", () => OnCancel?.Invoke()));
     }
 
     private void Persist(RecordingConfig config)
@@ -118,13 +119,13 @@ public partial class RecordStripWindow : Window
         b.Foreground = selected ? GlyphOn : GlyphOff;
     }
 
-    private static Button IconToggle(string glyph, string tip, bool initial, Action<bool> onChanged)
+    private static Button IconToggle(string iconKey, string tip, bool initial, Action<bool> onChanged)
     {
         bool state = initial;
-        var path = GlyphPath(glyph);
+        var icon = new IconPresenter { IconKey = iconKey, Width = 18, Height = 18 };
         var b = new Button
         {
-            Content = path,
+            Content = icon,
             Width = 34,
             Height = 30,
             Margin = new Thickness(2, 0, 2, 0),
@@ -135,18 +136,18 @@ public partial class RecordStripWindow : Window
         void Apply()
         {
             b.Background = state ? AccentBrush : Brushes.Transparent;
-            path.Stroke = state ? GlyphOn : GlyphOff;
+            icon.Brush = state ? GlyphOn : GlyphOff;
         }
         Apply();
         b.Click += (_, _) => { state = !state; Apply(); onChanged(state); };
         return b;
     }
 
-    private static Button IconButton(string glyph, string tip, Action onClick)
+    private static Button IconButton(string iconKey, string tip, Action onClick)
     {
         var b = new Button
         {
-            Content = GlyphPath(glyph),
+            Content = new IconPresenter { IconKey = iconKey, Brush = GlyphOff, Width = 18, Height = 18 },
             Width = 30,
             Height = 30,
             Margin = new Thickness(2, 0, 0, 0),
@@ -159,19 +160,6 @@ public partial class RecordStripWindow : Window
         return b;
     }
 
-    private static Path GlyphPath(string data) => new()
-    {
-        Data = Geometry.Parse(data),
-        Stretch = Stretch.Uniform,
-        Width = 18,
-        Height = 18,
-        Stroke = GlyphOff,
-        StrokeThickness = 1.6,
-        StrokeStartLineCap = PenLineCap.Round,
-        StrokeEndLineCap = PenLineCap.Round,
-        StrokeLineJoin = PenLineJoin.Round,
-    };
-
     private static UIElement Separator() => new Border
     {
         Width = 1,
@@ -180,20 +168,4 @@ public partial class RecordStripWindow : Window
         Margin = new Thickness(6, 0, 6, 0),
         VerticalAlignment = VerticalAlignment.Center,
     };
-
-    /// <summary>Hand-authored 24×24 stroke glyphs for the strip toggles (approximate the mac SF Symbols).</summary>
-    private static class Glyphs
-    {
-        // mic: capsule + arc + stand + base.
-        public const string Mic =
-            "M12,4 C10.3,4 9,5.3 9,7 L9,11 C9,12.7 10.3,14 12,14 C13.7,14 15,12.7 15,11 L15,7 C15,5.3 13.7,4 12,4 Z " +
-            "M6.5,11 C6.5,14 9,16.5 12,16.5 C15,16.5 17.5,14 17.5,11 M12,16.5 L12,20 M9,20 L15,20";
-        // speaker.wave.2: speaker cone + two waves.
-        public const string Speaker =
-            "M4,9 L7,9 L11,5.5 L11,18.5 L7,15 L4,15 Z M14.5,9.5 C16,11 16,13 14.5,14.5 M16.5,7.5 C19,10 19,14 16.5,16.5";
-        // video: camcorder body + lens.
-        public const string Video = "M4,7 L13,7 L13,17 L4,17 Z M13,10.5 L18.5,7.5 L18.5,16.5 L13,13.5 Z";
-        // xmark.
-        public const string Close = "M7,7 L17,17 M17,7 L7,17";
-    }
 }

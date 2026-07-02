@@ -7,15 +7,17 @@
 > tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
 > **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
 > verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Phase 8 IN PROGRESS:**
-> Task 8.1 icon system done — `Resources/Icons.xaml` (38 hand-authored glyphs) + `IconPresenter`, all 38 verified by
-> rendering a glyph sheet. Remaining: migrate consumers to `IconPresenter`, app `.ico` (8.2), e2e pass (8.3), README (8.4).
+> Task 8.1 DONE — `Resources/Icons.xaml` (38 hand-authored glyphs) + `IconPresenter`; all consumers (QuickAccess
+> card, record strip, History badges) migrated to `IconPresenter` and the inline glyph sets removed (editor uses
+> text labels — nothing to migrate). Verified: 38-glyph render sheet + the migrated record strip on-screen.
+> Next: 8.2 app `.ico`, 8.3 end-to-end pass (PLAN §V), 8.4 README-win → tag win-v1.0.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 (icons, app icon, polish, end-to-end) IN PROGRESS** — 8.1 icon system done.
+- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 IN PROGRESS** — 8.1 icons DONE. Next: 8.2 app icon.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
   GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
@@ -36,26 +38,26 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   bottom-right of the region, draggable) when `camera` is on. If **GIF** format is chosen, on stop the MP4 is
   converted to a looping GIF (960px/10fps/lanczos + palette) and the temp MP4 removed; a recording in progress at
   app quit is finalized best-effort (MP4 saved). **Phase 7 is COMPLETE.**
-- **Next task:** finish **Phase 8 Task 8.1 — migrate consumers to `IconPresenter`.** The icon SOURCE now exists
-  (`App/Resources/Icons.xaml` + `App/Controls/IconPresenter.cs`, merged into `App.xaml`). Replace the ad-hoc inline
-  glyph sets — `Overlays/QuickAccessTypes.cs` `CardGlyphs` (used by `QuickAccessWindow`), `RecordStripWindow` local
-  `Glyphs`, the editor toolbar/chrome glyphs (`App/Editor/*`), and `HistoryWindow` action glyphs — with
-  `IconPresenter` (key + brush + size). Re-verify each surface on-screen after migrating (drive the app + screenshot).
-  Then 8.2 app `.ico` (charcoal squircle #1C1C1C + white camera, multi-size) + monochrome tray variant (see
-  `Branding/AppIconFactory`); 8.3 end-to-end verification pass (PLAN §V checklist); 8.4 `README-win.md`; tag `win-v1.0`.
-  After Phase 8, run the harden loop (PLAN §V) until a re-scan finds nothing, then write "DONE — nothing left".
+- **Next task:** **Phase 8 Task 8.2 — the app icon.** Author a vector app icon (charcoal squircle **#1C1C1C** +
+  centered white camera: rounded body ~60%×40%, circular lens ~27%, small viewfinder hump, tiny flash) and render it
+  multi-size (16/32/48/64/128/256) into `App/Resources/AppIcon.ico`; also a monochrome camera-viewfinder tray
+  variant. Wire via `App/Branding/AppIconFactory` (currently generates the tray icon in code — see how `TrayIcon`
+  uses `AppIconFactory.CreateTrayIcon`) and set the app/window icon. Then 8.3 end-to-end verification pass
+  (PLAN §V full checklist); 8.4 `README-win.md`; tag `win-v1.0`. After Phase 8, run the harden loop (PLAN §V) until
+  a re-scan finds nothing, then write "DONE — nothing left".
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
 ## Phase 8 task status (Icons, app icon, polish, end-to-end — BetterScreenshot.App)
-- [~] 8.1 Icon resource dictionary + IconPresenter — **icon system done; consumer migration remaining.**
-      `App/Resources/Icons.xaml` = 38 hand-authored 24×24 `StreamGeometry` glyphs (camera/film/photo/warning/gear/
-      keyboard/mic/speaker/video/copy/edit/pin/save/play/folder/cursor/arrow/line/rect(-fill)/ellipse/text/counter/
-      blur/pixelate/crop/stack/bring-front/send-back/trash/undo/redo/close(-circle)/stop-circle/record-circle/
-      check-circle/camera-viewfinder), merged into `App.xaml`. `App/Controls/IconPresenter.cs` renders a glyph by
-      key (stroke for outlines; the `Filled` set is filled with even-odd knockouts), scaled from 24×24, DPI-crisp.
-      **Verified:** build 0/0; a WPF render sheet of all 38 glyphs (reading Icons.xaml) shows every one parses and is
-      recognizable. REMAINING: migrate `CardGlyphs`/RecordStrip `Glyphs`/editor toolbar/History glyphs to IconPresenter.
+- [x] 8.1 Icon resource dictionary + IconPresenter + consumer migration — **done.**
+      `App/Resources/Icons.xaml` = 38 hand-authored 24×24 `StreamGeometry` glyphs, merged into `App.xaml`;
+      `App/Controls/IconPresenter.cs` renders a glyph by key (stroke for outlines; the `Filled` set is filled with
+      even-odd knockouts), scaled from 24×24, DPI-crisp. **Migrated all consumers to `IconPresenter`** and removed
+      the inline glyph code: `QuickAccessWindow` (was `CardGlyphs` → copy/edit/pin/save/close/play/folder), record
+      strip (was local `Glyphs` → speaker/mic/video/close), `HistoryWindow` badge (→ camera/film). The editor
+      toolbar uses text labels (no glyphs) — nothing to migrate. **Verified:** build 0/0; 214 tests; a 38-glyph WPF
+      render sheet (all parse + recognizable) + the migrated record strip on-screen (speaker/mic accent-on, icons
+      render via IconPresenter incl. the dynamic accent-Brush toggle).
 - [ ] 8.2 App icon `.ico` (charcoal squircle #1C1C1C + white camera, multi-size) + monochrome tray variant
 - [ ] 8.3 End-to-end verification pass (PLAN §V checklist)
 - [ ] 8.4 `README-win.md`; then tag `win-v1.0`

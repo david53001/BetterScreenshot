@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using BetterScreenshot.App.Controls;
 using BetterScreenshot.History;
 using Border = System.Windows.Controls.Border;
 using Brush = System.Windows.Media.Brush;
@@ -33,10 +34,6 @@ public partial class HistoryWindow : Window
     private static readonly Brush SelectedBorder = new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF));
     private static readonly Brush BadgeBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB5));
     private static readonly Brush WarnBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
-
-    // Hand-authored vector glyphs (24×24 viewbox), stroked. Never a rasterized/cropped icon.
-    private const string CameraGlyph = "M4,8 h3 l1.5,-2 h5 l1.5,2 h3 v10 h-14 z M9,13 a3,3 0 1 0 6,0 a3,3 0 1 0 -6,0";
-    private const string FilmGlyph = "M5,6 h14 v12 h-14 z M5,10 h14 M5,14 h14 M9,6 v12 M15,6 v12";
 
     private readonly HistoryService _history;
     private readonly HistoryWindowActions _actions;
@@ -100,15 +97,12 @@ public partial class HistoryWindow : Window
         };
 
         var badgeRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 4, 0, 0) };
-        badgeRow.Children.Add(new Path
+        badgeRow.Children.Add(new IconPresenter
         {
-            Data = Geometry.Parse(entry.Kind == HistoryKind.Recording ? FilmGlyph : CameraGlyph),
-            Stretch = Stretch.Uniform,
+            IconKey = entry.Kind == HistoryKind.Recording ? "film" : "camera",
+            Brush = BadgeBrush,
             Width = 15,
             Height = 15,
-            Stroke = BadgeBrush,
-            StrokeThickness = 1.5,
-            StrokeLineJoin = PenLineJoin.Round,
             VerticalAlignment = VerticalAlignment.Center,
         });
         badgeRow.Children.Add(new TextBlock

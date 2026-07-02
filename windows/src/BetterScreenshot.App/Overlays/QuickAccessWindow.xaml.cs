@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using BetterScreenshot.App.Controls;
 using Brushes = System.Windows.Media.Brushes;
 using Button = System.Windows.Controls.Button;
 using Color = System.Windows.Media.Color;
@@ -38,18 +39,18 @@ public partial class QuickAccessWindow : Window
 
         if (kind == QuickAccessKind.Screenshot)
         {
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Copy, "Copy", actions.OnCopy));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Edit, "Edit", () => { actions.OnEdit(); Dismiss(DismissReason.ActionTaken); }));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Pin, "Pin to screen", () => { actions.OnPin(); Dismiss(DismissReason.ActionTaken); }));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Save, "Save", () => { actions.OnSave(); Dismiss(DismissReason.ActionTaken); }));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Close, "Close", () => Dismiss(DismissReason.Closed)));
+            ButtonRow.Children.Add(MakeButton("copy", "Copy", actions.OnCopy));
+            ButtonRow.Children.Add(MakeButton("edit", "Edit", () => { actions.OnEdit(); Dismiss(DismissReason.ActionTaken); }));
+            ButtonRow.Children.Add(MakeButton("pin", "Pin to screen", () => { actions.OnPin(); Dismiss(DismissReason.ActionTaken); }));
+            ButtonRow.Children.Add(MakeButton("save", "Save", () => { actions.OnSave(); Dismiss(DismissReason.ActionTaken); }));
+            ButtonRow.Children.Add(MakeButton("close", "Close", () => Dismiss(DismissReason.Closed)));
         }
         else
         {
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Copy, "Copy file", actions.OnCopy));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Play, "Open", () => { actions.OnOpen(); Dismiss(DismissReason.ActionTaken); }));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Folder, "Show in folder", () => { actions.OnReveal(); Dismiss(DismissReason.ActionTaken); }));
-            ButtonRow.Children.Add(MakeButton(CardGlyphs.Close, "Close", () => Dismiss(DismissReason.Closed)));
+            ButtonRow.Children.Add(MakeButton("copy", "Copy file", actions.OnCopy));
+            ButtonRow.Children.Add(MakeButton("play", "Open", () => { actions.OnOpen(); Dismiss(DismissReason.ActionTaken); }));
+            ButtonRow.Children.Add(MakeButton("folder", "Show in folder", () => { actions.OnReveal(); Dismiss(DismissReason.ActionTaken); }));
+            ButtonRow.Children.Add(MakeButton("close", "Close", () => Dismiss(DismissReason.Closed)));
         }
 
         Thumb.MouseLeftButtonDown += (_, e) => _dragStart = e.GetPosition(this);
@@ -83,25 +84,11 @@ public partial class QuickAccessWindow : Window
         Close();
     }
 
-    private static Button MakeButton(CardGlyph glyph, string tip, Action onClick)
+    private static Button MakeButton(string iconKey, string tip, Action onClick)
     {
-        var path = new Path { Data = Geometry.Parse(glyph.Data), Stretch = Stretch.Uniform, Width = 17, Height = 17 };
-        if (glyph.Filled)
-        {
-            path.Fill = GlyphBrush;
-        }
-        else
-        {
-            path.Stroke = GlyphBrush;
-            path.StrokeThickness = 1.6;
-            path.StrokeStartLineCap = PenLineCap.Round;
-            path.StrokeEndLineCap = PenLineCap.Round;
-            path.StrokeLineJoin = PenLineJoin.Round;
-        }
-
         var button = new Button
         {
-            Content = path,
+            Content = new IconPresenter { IconKey = iconKey, Brush = GlyphBrush, Width = 17, Height = 17 },
             Width = 30,
             Height = 28,
             Margin = new Thickness(3, 0, 3, 0),
