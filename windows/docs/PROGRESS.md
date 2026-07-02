@@ -2,18 +2,18 @@
 
 > ▶️ **LOOP RESUMED (2026-07-02).** Restarted from `windows/docs/HANDOFF-2026-07-02.md`; the self-perpetuating
 > firing loop is active again (ScheduleWakeup). Phases 1–6 complete; **Phase 7 (Screen recording) IN PROGRESS —
-> Tasks 7.1–7.3 DONE; 7.4 click + keystroke overlays DONE (camera bubble remaining), 212 tests green.** Ctrl+Shift+5
-> → record strip → records MP4 (full/area/window) to Videos + Quick Access card + history; tray red icon + m:ss;
-> tray Pause/Resume is **gapless** (segment+concat); optional pre-roll **countdown**; while recording, **click
-> highlights** (Ø36 accent dots) and a **keystroke overlay** (top-center pill) render on-screen. All verified
-> on-screen / by ffprobe. Next: finish 7.4 — the **camera bubble** (webcam preview via MediaCapture).
+> Tasks 7.1–7.4 DONE, 212 tests green.** Ctrl+Shift+5 → record strip → records MP4 (full/area/window) to Videos +
+> Quick Access card + history; tray red icon + m:ss; tray Pause/Resume is **gapless** (segment+concat); optional
+> pre-roll **countdown**; while recording, **click highlights**, a **keystroke overlay**, and a **camera bubble**
+> (webcam preview) render on-screen. All verified on-screen / by ffprobe (camera *preview* unverified — no webcam
+> on this machine; graceful-degrade verified). Next: Task 7.5 (GIF export + quit-time finalize + card polish).
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — 7.1–7.3 done; 7.4 click+keystroke done.
+- **Phase:** Phases 1–6 COMPLETE ✅. **Phase 7 (Screen recording) IN PROGRESS** — Tasks 7.1–7.4 done. Next: 7.5.
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **212 passed** (197 + 7 FfmpegArgs + 8
   DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). (7.2's strip is UI — no new unit tests;
@@ -30,15 +30,17 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   m:ss" and the menu label flips. When `countdownSeconds>0`, a **pre-roll countdown** (200×200 dark pill, 120pt
   digit, click-to-skip, Ctrl+Shift+5-cancel) runs before capture starts. While recording, if enabled, **click
   highlights** (Ø36 accent@0.45 dots, 0.4s fade) and a **keystroke overlay** (top-center black pill, glyphs, 1.0s
-  fade) render as on-screen click-through windows. **Not yet:** the **camera bubble**; GIF output is still recorded
-  as MP4 (GIF conversion is Task 7.5).
-- **Next task:** finish Phase 7 Task **7.4 — the camera bubble** `App/Recording/CameraBubbleWindow.xaml(.cs)`:
-  circular webcam preview (Ø160 small / Ø240 medium per `RecordingConfig.CameraSize`), bottom-right of the recorded
-  region + 24px margin, draggable, aspect-fill, using `Windows.Media.Capture.MediaCapture` rendered into the WPF
-  window (net9.0-windows10.0.19041 already targets WinRT). Start it in `RecordingCoordinator.BeginAsync` when
-  `config.Camera` (add to `TearDownOverlays`). It is captured because it is an on-screen window. If the camera is
-  unavailable, degrade gracefully (skip, HUD note). See `port-reference/05-recordingkit.md` §"Overlay controllers".
-  Then Task 7.5: GIF export (MP4→GIF) + quit-time best-effort finalize + recording history/card polish.
+  fade) render as on-screen click-through windows, plus a **camera bubble** (circular webcam preview Ø160/240,
+  bottom-right of the region, draggable) when `camera` is on. **Not yet:** GIF output is still recorded as MP4 (GIF
+  conversion is Task 7.5).
+- **Next task:** Phase 7 Task **7.5 — GIF export + finalize** (`port-reference/05-recordingkit.md` §"GIFTiming +
+  GIFExporter"): when `RecordingConfig.Format == Gif`, after `RecordingEngine.StopAsync` produces the MP4, convert
+  MP4→GIF via ffmpeg (`fps=10,scale=min(960,iw):-1:flags=lanczos` + `palettegen`/`paletteuse`, loop forever) — build
+  the arg strings in a pure helper (TDD, reuse the existing `GifFps=10`/`GifMaxWidth=960` constants + `GIFTiming`),
+  run via `FfmpegRunner.RunAsync`, delete the temp MP4 on success (keep MP4 on failure). Wire into
+  `RecordingCoordinator.StopAsync` (record the .gif in history + Quick Access card). Also add **quit-time
+  best-effort finalize** (~3s) so a recording in progress at app exit is still saved (`App.OnExit` → coordinator
+  `StopForExit`). Then Phase 8 (icons/app icon/end-to-end) + hardening.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -87,7 +89,13 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       in `RecordingCoordinator.BeginAsync` per `ClickHighlights`/`KeystrokeOverlay`; stopped in `TearDownOverlays`
       (StopAsync). **Verified on-screen:** drove a recording + synthetic click & 'A' keypress → screenshot shows the
       "A" pill top-center and a fading click dot; the click also passed THROUGH to the app beneath (click-through OK).
-- [ ] 7.4b Camera bubble (webcam preview via MediaCapture) — remaining part of 7.4
+- [x] 7.4b Camera bubble — done. `App/Recording/CameraBubbleWindow.xaml(.cs)`: circular (Ø160/240) black bubble,
+      bottom-right of the recorded region +24 (primary-DIP), draggable (`DragMove`), aspect-fill; frames from a
+      `MediaCapture` + `MediaFrameReader` (Bgra8) blitted into a `WriteableBitmap`. Started in `BeginAsync` when
+      `config.Camera`, stopped in `TearDownOverlays`. **Degrades silently** if no camera / access denied (bubble
+      never shows). Verified: build 0/0; recording with `camera=true` on this **webcam-less** machine did NOT crash
+      and still produced a valid MP4 (graceful degradation). ⚠️ The live camera *preview* itself is UNVERIFIED here
+      (no webcam) — needs a manual check on hardware with a camera.
 - [ ] 7.5 GIF export + finalize + recording Quick Access/history card
 
 ## Phase 6 task status (Capture history — BetterScreenshot.History/Platform/App)
@@ -241,6 +249,11 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
 - **(7.4) Overlays are click-through** (`WS_EX_TRANSPARENT | LAYERED | TOOLWINDOW` set in `SourceInitialized`) so
   they never steal input — verified (a synthetic click passed through to the app beneath). Started after the engine,
   torn down on stop; pause/resume leaves them running (harmless — ffmpeg isn't capturing while paused).
+- **(7.4b) Camera bubble uses MediaCapture + MediaFrameReader → WriteableBitmap** (not a UWP CaptureElement, which
+  isn't a WPF control). It is NOT click-through (it's draggable). Positioned bottom-right of the region via
+  primary-monitor DIP conversion (consistent with other overlays). ⚠️ Live preview UNVERIFIED on this machine (no
+  webcam); only graceful-degradation is proven. Unpackaged desktop apps need no camera capability manifest, but the
+  user's Privacy→Camera setting can block access → caught, degrades silently.
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.

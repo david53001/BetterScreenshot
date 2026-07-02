@@ -1,0 +1,120 @@
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using BetterScreenshot.Core;
+using BetterScreenshot.Platform;
+using Windows.Graphics.Imaging;
+using Windows.Media.Capture;
+using Windows.Media.Capture.Frames;
+using Windows.Media.MediaProperties;
+using Point = System.Windows.Point;
+
+namespace BetterScreenshot.App.Recording;
+
+/// <summary>
+/// A circular live-camera preview shown while recording (mac <c>CameraBubbleController</c>): Ø160/240, black backing,
+/// bottom-right of the recorded region + 24px, draggable, aspect-fill. Frames come from a <see cref="MediaCapture"/>
+/// <see cref="MediaFrameReader"/> (BGRA8) blitted into a <see cref="WriteableBitmap"/>. Captured because it is an
+/// on-screen window. Degrades silently if there is no camera or access is denied — the bubble simply never shows.
+/// </summary>
+public partial class CameraBubbleWindow : Window
+{
+    private const double EdgeMargin = 24;
+
+    private MediaCapture? _capture;
+    private MediaFrameReader? _reader;
+    private WriteableBitmap? _bitmap;
+
+    public CameraBubbleWindow(double diameter, PxRect region)
+    {
+        InitializeComponent();
+        Width = diameter;
+        Height = diameter;
+        Preview.Clip = new EllipseGeometry(new Point(diameter / 2, diameter / 2), diameter / 2, diameter / 2);
+        PositionBottomRight(diameter, region);
+        MouseLeftButtonDown += (_, _) => { try { DragMove(); } catch { /* ignore mid-drag races */ } };
+    }
+
+    private void PositionBottomRight(double diameter, PxRect region)
+    {
+        double scale = Math.Max(0.1, Screens.Primary().DpiScale);
+        var work = SystemParameters.WorkArea; // DIPs on the primary monitor
+        double left = region.Right / scale - diameter - EdgeMargin;
+        double top = region.Bottom / scale - diameter - EdgeMargin;
+        Left = Math.Max(work.Left, Math.Min(left, work.Right - diameter));
+        Top = Math.Max(work.Top, Math.Min(top, work.Bottom - diameter));
+    }
+
+    /// <summary>Initialize the default camera and start previewing. Any failure degrades silently (bubble never shows).</summary>
+    public async Task StartAsync()
+    {
+        try
+        {
+            _capture = new MediaCapture();
+            await _capture.InitializeAsync(new MediaCaptureInitializationSettings
+            {
+                StreamingCaptureMode = StreamingCaptureMode.Video,
+                MemoryPreference = MediaCaptureMemoryPreference.Cpu,
+                SharingMode = MediaCaptureSharingMode.ExclusiveControl,
+            });
+
+            var source = _capture.FrameSources.Values.FirstOrDefault(s =>
+                             s.Info.SourceKind == MediaFrameSourceKind.Color &&
+                             s.Info.MediaStreamType == MediaStreamType.VideoPreview)
+                         ?? _capture.FrameSources.Values.FirstOrDefault(s => s.Info.SourceKind == MediaFrameSourceKind.Color);
+            if (source is null) { Stop(); return; }
+
+            _reader = await _capture.CreateFrameReaderAsync(source, MediaEncodingSubtypes.Bgra8);
+            _reader.FrameArrived += OnFrameArrived;
+            await _reader.StartAsync();
+            Show();
+        }
+        catch
+        {
+            Stop(); // no camera, access denied, or device busy — degrade
+        }
+    }
+
+    private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
+    {
+        using var frame = sender.TryAcquireLatestFrame();
+        var software = frame?.VideoMediaFrame?.SoftwareBitmap;
+        if (software is null) return;
+
+        SoftwareBitmap bmp = software;
+        SoftwareBitmap? converted = null;
+        if (bmp.BitmapPixelFormat != BitmapPixelFormat.Bgra8 || bmp.BitmapAlphaMode != BitmapAlphaMode.Premultiplied)
+            bmp = converted = SoftwareBitmap.Convert(bmp, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+
+        int w = bmp.PixelWidth, h = bmp.PixelHeight;
+        var pixels = new byte[w * h * 4];
+        bmp.CopyToBuffer(pixels.AsBuffer());
+        converted?.Dispose();
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_bitmap is null || _bitmap.PixelWidth != w || _bitmap.PixelHeight != h)
+            {
+                _bitmap = new WriteableBitmap(w, h, 96, 96, PixelFormats.Pbgra32, null);
+                Preview.Source = _bitmap;
+            }
+            _bitmap.WritePixels(new Int32Rect(0, 0, w, h), pixels, w * 4, 0);
+        });
+    }
+
+    public void Stop()
+    {
+        if (_reader is not null)
+        {
+            _reader.FrameArrived -= OnFrameArrived;
+            try { _ = _reader.StopAsync(); } catch { /* best-effort */ }
+            _reader.Dispose();
+            _reader = null;
+        }
+        _capture?.Dispose();
+        _capture = null;
+        Close();
+    }
+}

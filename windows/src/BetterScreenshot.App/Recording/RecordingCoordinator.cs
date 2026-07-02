@@ -35,6 +35,7 @@ public sealed class RecordingCoordinator
     private CountdownOverlayWindow? _countdown;
     private ClickHighlighter? _clicks;
     private KeystrokeOverlayWindow? _keystrokes;
+    private CameraBubbleWindow? _camera;
     private RecorderState _state = RecorderState.Idle;
     private PxRect _region;
     private bool _stopping;
@@ -195,6 +196,7 @@ public sealed class RecordingCoordinator
         // On-screen recording overlays (captured in the video). Start after the engine so they only show while live.
         if (config.ClickHighlights) { _clicks = new ClickHighlighter(); _clicks.Start(); }
         if (config.KeystrokeOverlay) { _keystrokes = new KeystrokeOverlayWindow(); _keystrokes.Start(); }
+        if (config.Camera) { _camera = new CameraBubbleWindow(config.CameraSize.Diameter(), region); _ = _camera.StartAsync(); }
 
         _onStateChange(true, _state.ElapsedString(DateTime.Now));
         _onPauseStateChange(true, false);
@@ -206,6 +208,8 @@ public sealed class RecordingCoordinator
         _clicks = null;
         _keystrokes?.Stop();
         _keystrokes = null;
+        _camera?.Stop();
+        _camera = null;
     }
 
     private async Task StopAsync()

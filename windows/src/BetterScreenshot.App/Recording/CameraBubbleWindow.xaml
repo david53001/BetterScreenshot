@@ -1,0 +1,15 @@
+<Window x:Class="BetterScreenshot.App.Recording.CameraBubbleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        WindowStartupLocation="Manual">
+    <Grid x:Name="Root">
+        <Grid.Effect>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.45"/>
+        </Grid.Effect>
+        <Ellipse Fill="Black"/>
+        <Image x:Name="Preview" Stretch="UniformToFill"/>
+        <Ellipse Stroke="#66FFFFFF" StrokeThickness="2"/>
+    </Grid>
+</Window>
