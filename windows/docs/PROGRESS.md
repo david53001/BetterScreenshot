@@ -7,19 +7,18 @@
 > tray red icon + m:ss; gapless Pause/Resume (segment+concat); pre-roll countdown; click/keystroke/camera overlays;
 > **GIF export** (MP4→GIF, 960px/10fps/lanczos+palette, temp MP4 deleted); quit-time best-effort finalize. All
 > verified on-screen / by ffprobe (a real GIF was produced: 960×691, 10fps, 21 frames). **Phase 8 IN PROGRESS:**
-> Tasks 8.1 (icons) + 8.2 (app icon) + 8.3 (end-to-end §V pass) DONE. §V passed: build 0/0; 214 tests; **no-network
-> audit clean** (zero HttpClient/WebClient/Socket/WebRequest/http in product .cs; only MS schema xmlns in XAML);
-> fullscreen capture → Quick Access card (migrated copy/edit/pin/save/close icons render) → **editor opens** (all 11
-> tools + inspector + Done/Stack/Save/Copy, captured image on canvas); the **app icon shows in the window titlebar +
-> taskbar**. Fixed one issue found: icon-only buttons now set `AutomationProperties.Name` (accessibility). Next:
-> 8.4 README-win → tag win-v1.0, then the harden loop.
+> **PHASE 8 COMPLETE — 8.1 icons, 8.2 app icon, 8.3 §V pass, 8.4 README-win — all done. Tagged `win-v1.0`.**
+> Every PLAN.md task checkbox is checked; build 0/0; 214 tests; §V passed (no-network audit clean; capture→card→
+> editor + app icon verified on-screen). `windows/README-win.md` documents build/test/run, hotkeys, features, and
+> the mac differences. **Remaining before the final "DONE — nothing left": the HARDEN loop** — one fresh re-scan
+> per firing for correctness/fidelity issues, fixing the top one each time, until a re-scan finds nothing new.
 
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
 ## Current pointer
 - **Branch:** `windows-port`
-- **Phase:** Phases 1–7 COMPLETE ✅. **Phase 8 IN PROGRESS** — 8.1 + 8.2 + 8.3 DONE. Next: 8.4 README-win → tag v1.0.
+- **Phase:** Phases 1–8 COMPLETE ✅ — **`win-v1.0` tagged.** Now in the **HARDEN loop** (re-scan → fix top issue → repeat).
 - **Build:** `dotnet build windows/BetterScreenshot.sln -c Release` → **clean (0/0)**.
 - **Tests:** `dotnet test windows/tests/BetterScreenshot.Tests` → **214 passed** (197 + 9 FfmpegArgs [7 record + 2
   GIF] + 8 DshowDeviceList; incl. hardware-gated tests, 0 skipped on this machine). Recording UI/overlays verified
@@ -40,14 +39,13 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
   bottom-right of the region, draggable) when `camera` is on. If **GIF** format is chosen, on stop the MP4 is
   converted to a looping GIF (960px/10fps/lanczos + palette) and the temp MP4 removed; a recording in progress at
   app quit is finalized best-effort (MP4 saved). **Phase 7 is COMPLETE.**
-- **Next task:** **Phase 8 Task 8.4 — `README-win.md`** at `windows/README-win.md` (or repo root): what it is (a
-  free, 100%-local Windows port of BetterScreenshot/CleanShot X); prerequisites (.NET 9 SDK, ffmpeg on PATH or
-  `windows/tools/ffmpeg.exe`); build (`dotnet build windows/BetterScreenshot.sln -c Release`) + test
-  (`dotnet test windows/tests/BetterScreenshot.Tests -c Release`) + run (the App exe → tray); the hotkeys
-  (Ctrl+Shift+4/5/6/7/8); feature list; differences from macOS (no cloud, ffmpeg recording, pause/resume via
-  segment+concat, camera bubble needs a webcam, permissions dropped); 100%-local guarantee. Then **tag `win-v1.0`**
-  (all Phase-8 tasks done). After that: HARDEN — re-run §V; fix the single most important issue per firing until a
-  fresh re-scan finds nothing new; then write "DONE — nothing left" in PROGRESS.md and stop (ends the loop).
+- **Next task:** **HARDEN loop.** All planned tasks are done and `win-v1.0` is tagged, but the DONE condition also
+  requires "a fresh re-scan finds no new correctness/fidelity issue." Each firing: do ONE fresh re-scan (read a
+  module's port-reference doc vs. its Windows impl, or spot-check a §V flow not yet driven — OCR HUD, area/window
+  capture, blur/pixelate drawing, DPI) and fix the single most important issue found; keep green + committed. When a
+  full re-scan turns up nothing new, write **"DONE — nothing left"** in PROGRESS.md and STOP (no further ScheduleWakeup).
+  Candidate items: deferred editor 8-handle resize + marquee multi-select; captureText→region select (currently OCRs
+  the whole primary display); cursor-monitor placement for strip/countdown; a pure-monochrome tray icon variant.
   DEFERRED (hardening): editor 8-handle resize + marquee multi-select; icon-glyph toolbar (Phase 8);
   captureText→region select.
 
@@ -81,7 +79,11 @@ finished tasks, move the pointer, log assumptions/known-issues. One firing = one
       covered by unit tests / prior verification, not re-driven this cycle): OCR HUD (Ctrl+Shift+7), area/window
       capture interactive, blur/pixelate drawing, multi-DPI visual — all have unit tests and/or earlier app-launch
       verification.
-- [ ] 8.4 `README-win.md`; then tag `win-v1.0`
+- [x] 8.4 `README-win.md` — done. `windows/README-win.md`: what it is (free, 100%-local tray app), feature list,
+      prerequisites (.NET 9 SDK, Win10 19041+, ffmpeg for recording), build/test/run commands, default hotkeys, save
+      locations, macOS differences (ffmpeg engine, segment+concat pause/resume, loopback system audio, dropped
+      permission flows, top-left coords), the 100%-local guarantee, and a short architecture overview.
+**PHASE 8 COMPLETE — `win-v1.0` tagged.** All PLAN.md tasks checked. Next: HARDEN loop → then "DONE — nothing left".
 
 ## Phase 7 task status (Screen recording — BetterScreenshot.Recording/App)
 - [x] 7.1 ffmpeg arg builder + engine — done, +7 tests. `Recording/FfmpegArgs.cs` (PURE) builds the recording
