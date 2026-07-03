@@ -28,4 +28,21 @@ let quickAccessContrastTests: [TestCase] = [
         t.equal(l.pressedARGB, 0x45FFFFFF)
         t.isFalse(l.scrimIsWhite)
     },
+    TestCase("cardSizeSquareImage") { t in
+        let s = QuickAccessCardSize.contentSize(imagePixelWidth: 1000, imagePixelHeight: 1000)
+        t.approxEqual(Double(s.width), 210, tol: 0.001)
+        t.approxEqual(Double(s.height), 210, tol: 0.001)
+    },
+    TestCase("cardSizeWideClampsToFloor") { t in
+        let s = QuickAccessCardSize.contentSize(imagePixelWidth: 2000, imagePixelHeight: 500)
+        t.approxEqual(Double(s.height), 150, tol: 0.001)
+    },
+    TestCase("cardSizeTallClampsToCeiling") { t in
+        let s = QuickAccessCardSize.contentSize(imagePixelWidth: 500, imagePixelHeight: 2000)
+        t.approxEqual(Double(s.height), 280, tol: 0.001)
+    },
+    TestCase("cardSizeZeroHeightFallback") { t in
+        let s = QuickAccessCardSize.contentSize(imagePixelWidth: 1600, imagePixelHeight: 0)
+        t.approxEqual(Double(s.height), min(max(210.0/(16.0/9.0),150),280), tol: 0.001)
+    },
 ]
