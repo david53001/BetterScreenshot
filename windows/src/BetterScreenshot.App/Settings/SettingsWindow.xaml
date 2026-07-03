@@ -42,7 +42,8 @@
             <!-- Header -->
             <StackPanel Grid.Row="0" Margin="2,0,0,14">
                 <TextBlock Text="BetterScreenshot" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                <TextBlock Text="Capture &amp; recording preferences" FontSize="11.5"
+                <TextBlock Text="Capture &amp; recording preferences — hover the &#8505; next to any setting for a plain-language explanation and example."
+                           FontSize="11.5" TextWrapping="Wrap"
                            Foreground="{StaticResource Theme.SubtleTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
 
@@ -63,7 +64,13 @@
                     <!-- CAPTURE -->
                     <ctl:DarkSection HeaderText="Capture">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="After a capture"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="After a capture" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="After a capture"
+                                    Explanation="What happens the instant you take a screenshot. Overlay shows a small floating thumbnail with quick actions; Copy puts the image on the clipboard; Save writes it to your folder; Both copies and saves."
+                                    Example="Pick Copy if you mostly paste screenshots straight into chats; pick Save to build a folder of them."/>
+                            </StackPanel>
                             <UniformGrid Rows="1">
                                 <RadioButton x:Name="AfterOverlay" Content="Overlay" GroupName="AfterCapture" ToolTip="Show Quick Access overlay" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="AfterCopy" Content="Copy" GroupName="AfterCapture" ToolTip="Copy to clipboard" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
@@ -71,7 +78,13 @@
                                 <RadioButton x:Name="AfterBoth" Content="Both" GroupName="AfterCapture" ToolTip="Copy and save" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
                             </UniformGrid>
 
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Image format" Margin="0,14,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Image format" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="Image format"
+                                    Explanation="The file type used when a screenshot is saved. PNG is lossless and razor-sharp for text and interfaces; JPG is smaller but slightly lossy and can smear fine text."
+                                    Example="Use PNG for crisp shots of apps and code; JPG to save disk space on photo-heavy captures."/>
+                            </StackPanel>
                             <UniformGrid Rows="1" HorizontalAlignment="Left" Width="160">
                                 <RadioButton x:Name="FmtPng" Content="PNG" GroupName="Format" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="FmtJpg" Content="JPG" GroupName="Format" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
@@ -79,7 +92,13 @@
 
                             <Grid Margin="0,14,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Play a sound on capture" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Play a sound on capture" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Play a sound on capture"
+                                        Explanation="Plays a short shutter click each time a screenshot is taken, as audible confirmation that the capture happened."
+                                        Example="Turn on if you like the camera-click sound a phone makes when it screenshots."/>
+                                </StackPanel>
                                 <CheckBox x:Name="CaptureSoundCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
                         </StackPanel>
@@ -88,7 +107,13 @@
                     <!-- OVERLAY -->
                     <ctl:DarkSection HeaderText="Quick Access Overlay">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Screen corner"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Screen corner" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="Screen corner"
+                                    Explanation="Which corner of the screen the Quick Access thumbnail card pops up in after a capture."
+                                    Example="Bottom Right keeps the card clear of most app menus and toolbars, which sit up top."/>
+                            </StackPanel>
                             <UniformGrid Rows="1" HorizontalAlignment="Left" Width="180">
                                 <RadioButton x:Name="CornerTL" Content="&#x2196;" FontSize="15" GroupName="Corner" ToolTip="Top Left" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="CornerTR" Content="&#x2197;" FontSize="15" GroupName="Corner" ToolTip="Top Right" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
@@ -96,7 +121,13 @@
                                 <RadioButton x:Name="CornerBR" Content="&#x2198;" FontSize="15" GroupName="Corner" ToolTip="Bottom Right" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
                             </UniformGrid>
 
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Auto-dismiss after" Margin="0,14,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Auto-dismiss after" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="Auto-dismiss after"
+                                    Explanation="How long the Quick Access card stays on screen before it disappears on its own. Hovering the card pauses the countdown, so a card you are using never vanishes."
+                                    Example="At 6s the card fades away 6 seconds after capture if you don't touch it. Bring a dismissed one back from the tray's &#8220;Restore Recently Closed&#8221;."/>
+                            </StackPanel>
                             <UniformGrid Rows="1" HorizontalAlignment="Left" Width="180">
                                 <RadioButton x:Name="Dismiss3" Content="3s" GroupName="Dismiss" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="Dismiss6" Content="6s" GroupName="Dismiss" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
@@ -110,7 +141,13 @@
                         <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Corner radius" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Corner radius" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Pin corner radius"
+                                        Explanation="How rounded the corners of a pinned floating image are, in pixels. 0 keeps them perfectly square; larger numbers round them more."
+                                        Example="12 gives gently rounded corners like a card; 0 keeps hard right-angle corners."/>
+                                </StackPanel>
                                 <ComboBox x:Name="PinRadiusCombo" Grid.Column="1" Width="88" SelectionChanged="Changed">
                                     <ComboBoxItem Content="0"/>
                                     <ComboBoxItem Content="4"/>
@@ -122,7 +159,13 @@
                             </Grid>
                             <Grid Margin="0,14,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Drop shadow" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Drop shadow" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Pin drop shadow"
+                                        Explanation="Adds a soft shadow behind a pinned image so it stands out from whatever is behind it."
+                                        Example="Turn on to make a pinned reference image clearly &#8220;float&#8221; above your other windows."/>
+                                </StackPanel>
                                 <CheckBox x:Name="PinShadowCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
                         </StackPanel>
@@ -139,12 +182,24 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                    <TextBlock Style="{StaticResource RowTitle}" Text="Remember capture history"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource RowTitle}" Text="Remember capture history" VerticalAlignment="Center"/>
+                                        <ctl:InfoTip Margin="6,0,0,0"
+                                            Title="Remember capture history"
+                                            Explanation="Keeps a local, browsable list of your recent captures so you can re-open, copy, annotate or pin them later. Everything stays on this PC — nothing is uploaded."
+                                            Example="With this on, open the tray's &#8220;History&#8230;&#8221; to grab a screenshot you took an hour ago."/>
+                                    </StackPanel>
                                     <TextBlock Style="{StaticResource RowSub}" Text="Keep a local index of recent captures"/>
                                 </StackPanel>
                                 <CheckBox x:Name="HistoryEnabledCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Keep at most" Margin="0,14,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Keep at most" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="Keep at most"
+                                    Explanation="The maximum number of past captures history remembers. Once you hit the limit, the oldest entry is dropped to make room for each new one."
+                                    Example="At 50, taking your 51st capture quietly removes the oldest one from history."/>
+                            </StackPanel>
                             <UniformGrid Rows="1" HorizontalAlignment="Left" Width="180">
                                 <RadioButton x:Name="Cap10" Content="10" GroupName="HistoryCap" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="Cap50" Content="50" GroupName="HistoryCap" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
@@ -158,7 +213,13 @@
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                <TextBlock Style="{StaticResource RowTitle}" Text="Launch at login"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Launch at login" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Launch at login"
+                                        Explanation="Starts BetterScreenshot automatically (in the system tray) each time you sign in to Windows, so your capture hotkeys always work."
+                                        Example="Turn on so you never have to open the app first before pressing your screenshot shortcut."/>
+                                </StackPanel>
                                 <TextBlock Style="{StaticResource RowSub}" Text="Start BetterScreenshot when you sign in"/>
                             </StackPanel>
                             <CheckBox x:Name="LaunchAtLoginCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
@@ -168,7 +229,13 @@
                     <!-- SAVE LOCATION -->
                     <ctl:DarkSection HeaderText="Save Location">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource RowSub}" Text="Where saved captures &amp; recordings are written" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Style="{StaticResource RowSub}" Text="Where saved captures &amp; recordings are written" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="Save folder"
+                                    Explanation="The folder on disk where screenshots and recordings are written when you Save them. Type a path or click Browse to pick one."
+                                    Example="e.g. C:\Users\You\Pictures\Screenshots — every saved capture lands here."/>
+                            </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <TextBox x:Name="SaveDirBox" Grid.Column="0" VerticalContentAlignment="Center" LostFocus="Changed"/>
@@ -187,7 +254,13 @@
                         <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="Format" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Format" Margin="0" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Recording format"
+                                        Explanation="The file type for screen recordings. MP4 is a compact video that can include audio; GIF is a short, silent, looping animation that plays anywhere."
+                                        Example="Use MP4 for a narrated tutorial; GIF for a quick, shareable loop of a button click or animation."/>
+                                </StackPanel>
                                 <UniformGrid Grid.Column="1" Rows="1" Width="150">
                                     <RadioButton x:Name="RecMp4" Content="MP4" GroupName="RecFormat" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                     <RadioButton x:Name="RecGif" Content="GIF" GroupName="RecFormat" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
@@ -195,7 +268,13 @@
                             </Grid>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="Frame rate" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Frame rate" Margin="0" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Frame rate"
+                                        Explanation="How many frames per second recordings capture. Higher looks smoother but makes bigger files and uses more CPU."
+                                        Example="30 fps is plenty for app demos; 60 fps is smoother for fast motion or gameplay."/>
+                                </StackPanel>
                                 <UniformGrid Grid.Column="1" Rows="1" Width="150">
                                     <RadioButton x:Name="Fps30" Content="30 fps" GroupName="Fps" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                     <RadioButton x:Name="Fps60" Content="60 fps" GroupName="Fps" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
@@ -206,22 +285,46 @@
 
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Record system audio" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Record system audio" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Record system audio"
+                                        Explanation="Includes the sound coming out of your computer — apps, videos, music — in the recording. Needs a loopback input such as &#8220;Stereo Mix&#8221; or a virtual audio cable; without one the recording is silent."
+                                        Example="Turn on to capture a video's audio along with the picture."/>
+                                </StackPanel>
                                 <CheckBox x:Name="SysAudioCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Record microphone" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Record microphone" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Record microphone"
+                                        Explanation="Includes your microphone in the recording — your voice narration, on its own audio track."
+                                        Example="Turn on to talk over a tutorial while you record it."/>
+                                </StackPanel>
                                 <CheckBox x:Name="MicCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Show camera bubble" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Show camera bubble" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Show camera bubble"
+                                        Explanation="Overlays a small circular webcam preview on the recording, so your face appears in the corner of the video. Needs a connected webcam."
+                                        Example="Great for reaction videos or a personal walkthrough where viewers see you talking."/>
+                                </StackPanel>
                                 <CheckBox x:Name="CameraCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Text="Camera size" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Camera size" Margin="0" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Camera size"
+                                        Explanation="How large the webcam bubble is on screen while recording."
+                                        Example="Small tucks your face neatly in a corner; Medium makes it more prominent."/>
+                                </StackPanel>
                                 <UniformGrid Grid.Column="1" Rows="1" Width="150">
                                     <RadioButton x:Name="CamSmall" Content="Small" GroupName="CamSize" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                     <RadioButton x:Name="CamMedium" Content="Medium" GroupName="CamSize" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
@@ -229,16 +332,34 @@
                             </Grid>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Highlight mouse clicks" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Highlight mouse clicks" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Highlight mouse clicks"
+                                        Explanation="Draws a brief circle at the pointer each time you click during a recording, so viewers can see exactly where you clicked."
+                                        Example="Turn on for tutorials so every click is easy to follow."/>
+                                </StackPanel>
                                 <CheckBox x:Name="ClicksCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
                             <Grid Margin="0,12,0,0">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Style="{StaticResource RowTitle}" Text="Show keystrokes" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource RowTitle}" Text="Show keystrokes" VerticalAlignment="Center"/>
+                                    <ctl:InfoTip Margin="6,0,0,0"
+                                        Title="Show keystrokes"
+                                        Explanation="Shows the keys you press as an on-screen overlay during a recording, so keyboard actions are visible in the video."
+                                        Example="Viewers see &#8220;Ctrl+C&#8221; pop up when you copy — handy for demoing keyboard shortcuts."/>
+                                </StackPanel>
                                 <CheckBox x:Name="KeystrokesCheck" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource Theme.MonoSwitch}" Checked="Changed" Unchecked="Changed"/>
                             </Grid>
 
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Countdown before recording" Margin="0,14,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,6">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Countdown before recording" Margin="0" VerticalAlignment="Center"/>
+                                <ctl:InfoTip Margin="6,0,0,0"
+                                    Title="Countdown before recording"
+                                    Explanation="Shows a 3&#8211;2&#8211;1 style countdown before recording actually starts, giving you a moment to get ready. The countdown itself is never part of the video."
+                                    Example="At 3s you get three seconds after pressing Record before capture begins; Off starts instantly."/>
+                            </StackPanel>
                             <UniformGrid Rows="1" HorizontalAlignment="Left" Width="220">
                                 <RadioButton x:Name="Cd0" Content="Off" GroupName="Countdown" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="Cd3" Content="3s" GroupName="Countdown" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
@@ -254,7 +375,7 @@
             <!-- SHORTCUTS (full width) -->
             <ctl:DarkSection Grid.Row="2" HeaderText="Keyboard Shortcuts">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource RowSub}" Text="Click Change, then press the new key combination (Esc cancels)." Margin="0,0,0,10"/>
+                    <TextBlock Style="{StaticResource RowSub}" Text="Click Change, then press the new key combination (Esc cancels). Hover the &#8505; on any row to see what that shortcut does." Margin="0,0,0,10"/>
                     <StackPanel x:Name="ShortcutsPanel"/>
                 </StackPanel>
             </ctl:DarkSection>

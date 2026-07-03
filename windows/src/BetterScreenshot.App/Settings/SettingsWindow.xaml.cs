@@ -48,9 +48,11 @@ public partial class SettingsWindow : Window
         BuildShortcutRows();
         _loading = false;
         WindowThemer.ApplyDark(this);
-        // The card layout sizes to content (SizeToContent=Height); clamp so a tall window never runs
-        // past the work area (keeps the title-bar ✕ reachable). The outer ScrollViewer handles overflow.
-        MaxHeight = SystemParameters.WorkArea.Height * 0.94;
+        // The card layout sizes to content (SizeToContent=Height); clamp just under the work area so a
+        // genuinely oversized window can't run past it (keeps the title-bar ✕ reachable) while leaving the
+        // normal ~970px settings comfortably unclamped — no spurious outer scrollbar. The ScrollViewer only
+        // kicks in on a very short screen.
+        MaxHeight = SystemParameters.WorkArea.Height * 0.98;
     }
 
     private void LoadGeneral()
@@ -97,23 +99,37 @@ public partial class SettingsWindow : Window
 
     private void BuildShortcutRows()
     {
-        foreach (var action in HotkeyActionInfo.All)
+        // Two-column layout (the window is 960 wide) halves the shortcut list's height so the settings
+        // window fits without the outer scrollbar. Even index = left column (gutter on the right), odd =
+        // right column (gutter on the left) → a centered gutter between the two columns.
+        var actions = HotkeyActionInfo.All;
+        for (int i = 0; i < actions.Count; i++)
         {
-            var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+            var action = actions[i];
+            var row = new Grid { Margin = i % 2 == 0 ? new Thickness(0, 4, 14, 4) : new Thickness(14, 4, 0, 4) };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var title = new TextBlock
+            var titleRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            titleRow.Children.Add(new TextBlock
             {
                 Text = action.Title(),
                 FontSize = 12.5,
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = (Brush)FindResource("Theme.TextW85"),
-            };
-            Grid.SetColumn(title, 0);
-            row.Children.Add(title);
+            });
+            var (explanation, example) = ShortcutHelp(action);
+            titleRow.Children.Add(new InfoTip
+            {
+                Title = action.Title(),
+                Explanation = explanation,
+                Example = example,
+                Margin = new Thickness(6, 0, 0, 0),
+            });
+            Grid.SetColumn(titleRow, 0);
+            row.Children.Add(titleRow);
 
             var label = new TextBlock
             {
