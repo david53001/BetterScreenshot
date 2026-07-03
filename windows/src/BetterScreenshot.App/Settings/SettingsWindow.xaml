@@ -125,14 +125,24 @@
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="Auto-dismiss after" Margin="0" VerticalAlignment="Center"/>
                                 <ctl:InfoTip Margin="6,0,0,0"
                                     Title="Auto-dismiss after"
-                                    Explanation="How long the Quick Access card stays on screen before it disappears on its own. Hovering the card pauses the countdown, so a card you are using never vanishes."
-                                    Example="At 6s the card fades away 6 seconds after capture if you don't touch it. Bring a dismissed one back from the tray's &#8220;Restore Recently Closed&#8221;."/>
+                                    Explanation="How long the Quick Access card stays on screen before it disappears on its own. Drag the bar to set the time — drag it all the way to Never to keep the card up until you close it yourself. Hovering the card always pauses the countdown, so a card you are using never vanishes."
+                                    Example="At 6s the card fades away 6 seconds after capture if you don't touch it; at Never it stays put until you dismiss it. Bring a dismissed one back from the tray's &#8220;Restore Recently Closed&#8221;."/>
                             </StackPanel>
-                            <UniformGrid Rows="1" HorizontalAlignment="Left" Width="180">
-                                <RadioButton x:Name="Dismiss3" Content="3s" GroupName="Dismiss" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
-                                <RadioButton x:Name="Dismiss6" Content="6s" GroupName="Dismiss" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
-                                <RadioButton x:Name="Dismiss10" Content="10s" GroupName="Dismiss" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
-                            </UniformGrid>
+                            <Grid Width="240" HorizontalAlignment="Left">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="DismissSlider" Grid.Column="0" VerticalAlignment="Center"
+                                        Minimum="2" Maximum="31" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        SmallChange="1" LargeChange="2"
+                                        Style="{StaticResource Theme.Slider}"
+                                        ValueChanged="DismissSlider_ValueChanged"/>
+                                <TextBlock x:Name="DismissValueLabel" Grid.Column="1" MinWidth="46"
+                                           Margin="12,0,0,0" VerticalAlignment="Center" TextAlignment="Right"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{StaticResource Theme.TextW85}"/>
+                            </Grid>
                         </StackPanel>
                     </ctl:DarkSection>
 

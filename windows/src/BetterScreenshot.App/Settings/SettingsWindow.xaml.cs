@@ -73,7 +73,8 @@ public partial class SettingsWindow : Window
             SettingsOverlayCorner.BottomLeft => CornerBL,
             _ => CornerBR,
         }).IsChecked = true;
-        (c.OverlayAutoDismissSeconds switch { 3 => Dismiss3, 10 => Dismiss10, _ => Dismiss6 }).IsChecked = true;
+        DismissSlider.Value = OverlayDismissScale.SecondsToPosition(c.OverlayAutoDismissSeconds);
+        UpdateDismissLabel();
         SaveDirBox.Text = _settings.SaveDirectory;
         PinRadiusCombo.SelectedIndex = Math.Max(0, Array.IndexOf(PinRadii, c.PinCornerRadius));
         PinShadowCheck.IsChecked = c.PinShadow;
@@ -295,6 +296,24 @@ public partial class SettingsWindow : Window
         Apply();
     }
 
+    /// <summary>The auto-dismiss slider: keep the "6s"/"Never" readout live as the user drags, then instant-apply
+    /// like every other control (guarded by <see cref="_loading"/> so the initial <c>LoadGeneral</c> set doesn't save).</summary>
+    private void DismissSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        UpdateDismissLabel();
+        if (_loading) return;
+        Apply();
+    }
+
+    /// <summary>Refresh the text beside the slider to match its current position ("6s" … "30s", or "Never").
+    /// Null-guarded because the slider can coerce its value (and raise ValueChanged) during XAML parse, before
+    /// the label field is assigned.</summary>
+    private void UpdateDismissLabel()
+    {
+        if (DismissValueLabel is null) return;
+        DismissValueLabel.Text = OverlayDismissScale.Label(OverlayDismissScale.PositionToSeconds(DismissSlider.Value));
+    }
+
     private void Apply()
     {
         _settings.Capture = new CaptureSettings
@@ -308,7 +327,7 @@ public partial class SettingsWindow : Window
                 : CornerTR.IsChecked == true ? SettingsOverlayCorner.TopRight
                 : CornerBL.IsChecked == true ? SettingsOverlayCorner.BottomLeft
                 : SettingsOverlayCorner.BottomRight,
-            OverlayAutoDismissSeconds = Dismiss3.IsChecked == true ? 3 : Dismiss10.IsChecked == true ? 10 : 6,
+            OverlayAutoDismissSeconds = OverlayDismissScale.PositionToSeconds(DismissSlider.Value),
             PinCornerRadius = PinRadii[Math.Max(0, PinRadiusCombo.SelectedIndex)],
             PinShadow = PinShadowCheck.IsChecked == true,
             HistoryEnabled = HistoryEnabledCheck.IsChecked == true,
