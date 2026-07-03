@@ -17,6 +17,10 @@ A free, open-source screenshot and annotation tool for macOS, living in your men
 
 **Requires macOS 14 (Sonoma) or later.**
 
+## Windows
+
+A native **Windows port** (.NET 9 + WPF, C#) lives under [`windows/`](windows/) on the `windows-port` branch. It keeps the same **100%-local** philosophy — a tray agent (no main window) with area/window/full-screen capture, the annotation editor, screen recording (via ffmpeg), on-device OCR + QR, pin-to-screen, and capture history. See **[`windows/README-win.md`](windows/README-win.md)** for prerequisites, build/run, and how it differs from the macOS app.
+
 ## Install
 
 1. Download `BetterScreenshot.app.zip` from the [latest release](../../releases/latest)

@@ -15,7 +15,8 @@ capture history. **No cloud, no accounts, no uploads, ever.**
 - **Quick Access overlay** — a floating post-capture card (copy / edit / pin / save / close), stacking up to 3,
   drag-to-export.
 - **Annotation editor** — arrow, line, rectangle (outline/filled), ellipse, text, counter, blur, pixelate, crop,
-  select/move; color + size inspector; undo/redo; sticky last-used style; Copy / Save / Stack / Done.
+  select/move; color + size inspector; undo/redo; sticky last-used style; Copy / Save / Stack / Done. The window
+  sizes itself to your capture's aspect ratio, so the image fills the canvas instead of floating in gray margins.
 - **Pin to screen** — keep an always-on-top floating image (drag, zoom, multi-pin); pin from the clipboard.
 - **Screen recording** (`Ctrl+Shift+5`) — a record strip picks **Full Screen / Window / Area** and **MP4 or GIF**,
   with **system-audio / microphone / camera** toggles. While recording: an optional **countdown**, **click
@@ -44,7 +45,7 @@ From the repo root (`C:\...\BetterScreenshot`):
 # Build (expect: 0 warnings, 0 errors)
 dotnet build windows/BetterScreenshot.sln -c Release
 
-# Test (xUnit; ~214 tests — pure logic + hardware-gated integration)
+# Test (xUnit; ~241 tests — pure logic + hardware-gated integration)
 dotnet test windows/tests/BetterScreenshot.Tests -c Release
 
 # Run — launches to the system tray (a windowless agent; look for the camera icon)

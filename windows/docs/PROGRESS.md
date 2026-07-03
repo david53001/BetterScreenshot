@@ -422,5 +422,29 @@ card; Alt+, (Capture Text) now shows the overlay first and OCRs only the region.
 Note: the owner hit this while a fullscreen game (Minecraft) was up — if a truly exclusive-fullscreen app
 ever hides the overlay, that's a separate visibility problem, not this bug.
 
+## Quick Access + editor UI fixes (2026-07-03) — owner-reported "hover boxes bleed into the thumbnail / editor has empty gray sidebars"
+Two post-v1.0 polish bugs the owner hit on real captures; root causes found by reading the layout + reproducing
+with `--ui-preview` PrintWindow captures (portrait + landscape editor, QA card idle + hovered):
+- **Quick Access action buttons bled into the thumbnail on hover.** The card was a `Grid` with the thumbnail
+  pinned top (`y=10..122`) and the button row pinned bottom (`y≈118..146`) inside a card whose content was
+  ~12px too short — so they **physically overlapped ~4px** and each button's hover pill (`Theme.SubtleButton`
+  rounded fill) drew over the bottom edge of the image. Fix: rebuilt the card interior as a `DockPanel`
+  (buttons docked bottom with an 8px gap, thumbnail fills) and grew the window `168→184`; kept
+  `QuickAccessStackController.CardHeight` (184) in sync so stacked cards still position correctly.
+  (`Overlays/QuickAccessWindow.xaml`, `Overlays/QuickAccessStackController.cs`.)
+- **Editor showed wide gray dead-zones around the image.** The canvas is a `Uniform` `Viewbox`, so any capture
+  whose aspect ratio didn't match the fixed 960×720 content area left pillar/letterbox gaps that showed the flat
+  window background and — being outside `Stage` — ate drags (mouse did nothing there). Fix: added
+  `EditorWindow.FitToImage()` (runs once on `Loaded`) that sizes the window so its **canvas area matches the base
+  image's aspect ratio**, clamped to 94% of the work area and the window minimums (lowered to 560×460 so tall
+  captures hug tighter; `maxUpscale=2.0` so tiny captures don't blow up into a blurry wall). Also gave the canvas
+  a darker "pasteboard" backdrop (`Theme.ChromeBrush`) so any residual mat reads as intentional, not empty.
+  (`Editor/EditorWindow.xaml`, `Editor/EditorWindow.xaml.cs`.)
+Verified: build clean (0/0); 241 tests green. `--ui-preview editor` hugs a portrait sample to 576×970 and a
+landscape sample to 1295×970 (image fills the canvas, toolbar/inspector still fit); the QA card shows a clean gap
+and the hovered button's pill stays inside its band. **Assumption:** `FitToImage` runs only on initial load, not
+after a Crop (avoids a jarring mid-edit window jump; the pasteboard backdrop covers any post-crop mat); it clamps
+to the primary monitor's `SystemParameters.WorkArea`.
+
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
