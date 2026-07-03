@@ -44,6 +44,48 @@ black buttons, and detect the palette on hover too."*
   the white image, white glyphs on the dark + gradient images, full-bleed rounding correct. **Published to `dist/`**
   and relaunched the tray agent. Committed on `windows-port` (not pushed).
 
+## 2026-07-03 — Capture black-bar fix + editor FPS + on-screen "walls" (owner-reported)
+Three owner-reported issues on a **dual-monitor, stretched-resolution** rig (primary = a **stretched 1500×1080**
+on a native-1920 panel; secondary = native **1920×1080**). Root-caused with live GDI diagnostics (PerMonitorV2
+harness mirroring `Screens`/`ScreenCapture`); all four fixes are pure-logic-tested where possible + a new capture
+regression test.
+- **Capture "massive black bar on the side" (the main one).** The proof was in the owner's screenshot: the
+  captured desktop's **taskbar cut off at the content edge** with black beyond — a Windows taskbar spans the whole
+  monitor, so the *framebuffer* was ~1500 wide but the BitBlt requested ~1920. The app only sizes captures from
+  `GetMonitorInfo` (`MonitorInfo.Bounds`), which reports the logical/native size; a full-screen game or a custom
+  **stretched** scanout leaves the real framebuffer narrower, so BitBlt over-reads past the desktop → black
+  padding. Fix: **`Screens.RealFramebufferSize(deviceName)`** queries the display DC's real framebuffer
+  (`CreateDC("DISPLAY",…)` + `GetDeviceCaps(DESKTOPHORZRES/VERTRES)`), and **`ScreenCapture.CaptureDisplay`** clamps
+  the monitor bounds to it (`RealBounds`); `CaptureRegion` also clamps to the live virtual screen
+  (`SM_*VIRTUALSCREEN`) as a backstop. Confirmed the DC caps report the true framebuffer (1500 vs 1920) on this rig;
+  a white-window probe proved GDI offset-reads onto the secondary work (so it was never a multimon offset bug).
+  In the normal case (reported == real) the clamp is a harmless no-op. New hardware test
+  `CaptureDisplayIsClampedToRealFramebuffer`.
+- **Area selection could run off-screen.** Mouse capture keeps delivering points past the monitor edge, so a drag
+  could select (and capture) beyond the screen. Added pure **`SelectionMath.ClampToBounds`** (+3 tests) and clamp
+  the DIP selection rect to the monitor's DIP extent (`RootCanvas` size) in `SelectionOverlayWindow`
+  move + up — a physical wall.
+- **Editor annotations could be dragged out of the image.** `EditorWindow.Pos` now clamps the pointer to
+  `[0,imgW]×[0,imgH]` (covers drawn shapes, marquee, counter, text placement), and a Select-tool **move** clamps the
+  moved annotation's bounding box inside the image (`MovedWithinBounds`).
+- **Editor "staggering FPS" while annotating.** Root cause: the draw-preview re-rasterized a **full-resolution
+  `RenderTargetBitmap` of the whole document every mouse-move** (≈8 MB/frame at 1080p → GC thrash → stutter). Fix:
+  shape tools (arrow/line/rect/filled-rect/ellipse) now draw a **lightweight WPF vector preview** on the
+  interaction canvas during the drag (`ShowVectorPreview`/`BuildPreviewElements`) — zero per-frame raster — and
+  flatten to the document only on mouse-up via the unchanged, unit-tested `DocumentRenderer`. Select-**move** now
+  redraws a **one-time pre-flattened background** (base + all *other* annotations) + only the moved annotation,
+  instead of re-flattening the whole document each frame. The commit path is byte-for-byte the old (working) code,
+  so committed output is identical — only the live preview changed.
+- **Verified:** solution build **0/0**; `dotnet test` **256 passed / 0 failed** (incl. new SelectionMath /
+  Screens / ScreenCapture tests); `CaptureDisplay` returns the clean real-framebuffer size on this rig (no black
+  bar); editor opens, renders edge-to-edge, and tool-select works (driven via UI Automation — a synthetic *drag*
+  can't be injected into WPF here, but the draw **commit** path is unchanged from shipped v1.0). **Republished to
+  `dist/` and relaunched the tray agent** (new exe 18:47). Committed on `windows-port` (not pushed).
+- **Owner note:** the black-bar fix can't be reproduced on-screen right now (this rig's reported size == real
+  framebuffer, so no bar today) — it triggers only when a game/app leaves the scanout stretched. The fix is proven
+  safe (no-op when sizes agree) and correct against the DC-caps ground truth. Worth a spin next time you capture
+  right after a stretched-res game. (Owner's capture hotkey is **Alt+.**, not the Ctrl+Shift defaults.)
+
 ## 2026-07-03 — JVoice monochrome UI revamp (owner request)
 Re-skinned the **whole Windows app** to the sibling **JVoice-Windows** black-and-white identity (owner: "take a
 look at how JVoice's UI looks and incorporate it throughout, especially settings"). Spec + rationale:

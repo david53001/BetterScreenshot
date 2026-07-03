@@ -16,9 +16,14 @@ public static class ScreenCapture
     private const int Srccopy = 0x00CC0020;
     private const int Captureblt = 0x40000000;
     private const uint PwRenderFullContent = 0x00000002;
+    private const int SmXVirtualScreen = 76;
+    private const int SmYVirtualScreen = 77;
+    private const int SmCxVirtualScreen = 78;
+    private const int SmCyVirtualScreen = 79;
 
     public static BitmapSource CaptureRegion(PxRect region)
     {
+        region = ClampToVirtualScreen(region);
         int x = (int)Math.Round(region.X);
         int y = (int)Math.Round(region.Y);
         int w = Math.Max(1, (int)Math.Round(region.Width));
@@ -42,7 +47,38 @@ public static class ScreenCapture
         }
     }
 
-    public static BitmapSource CaptureDisplay(MonitorInfo monitor) => CaptureRegion(monitor.Bounds);
+    public static BitmapSource CaptureDisplay(MonitorInfo monitor) => CaptureRegion(RealBounds(monitor));
+
+    /// <summary>
+    /// The monitor's bounds clamped to its real current framebuffer (<see cref="Screens.RealFramebufferSize"/>).
+    /// A full-screen game or a custom "stretched" resolution can leave the scanout narrower/shorter than
+    /// GetMonitorInfo reports; capturing the reported (larger) bounds would BitBlt past the real desktop and bake a
+    /// black bar into the image. Clamping to the real framebuffer removes that. In the normal case (reported size ==
+    /// real size) this is a no-op.
+    /// </summary>
+    private static PxRect RealBounds(MonitorInfo monitor)
+    {
+        if (Screens.RealFramebufferSize(monitor.DeviceName) is not { } fb) return monitor.Bounds;
+        double w = Math.Min(monitor.Bounds.Width, fb.Width);
+        double h = Math.Min(monitor.Bounds.Height, fb.Height);
+        return new PxRect(monitor.Bounds.X, monitor.Bounds.Y, w, h);
+    }
+
+    /// <summary>Clamps a capture region to the live virtual-screen bounds so a stray/oversized rect can't
+    /// BitBlt outside the desktop (which reads back as black).</summary>
+    private static PxRect ClampToVirtualScreen(PxRect region)
+    {
+        int vx = GetSystemMetrics(SmXVirtualScreen);
+        int vy = GetSystemMetrics(SmYVirtualScreen);
+        int vw = GetSystemMetrics(SmCxVirtualScreen);
+        int vh = GetSystemMetrics(SmCyVirtualScreen);
+        if (vw <= 0 || vh <= 0) return region; // metrics unavailable — leave untouched
+        double left = Math.Max(region.X, vx);
+        double top = Math.Max(region.Y, vy);
+        double right = Math.Min(region.Right, vx + vw);
+        double bottom = Math.Min(region.Bottom, vy + vh);
+        return right > left && bottom > top ? PxRect.FromLtrb(left, top, right, bottom) : region;
+    }
 
     public static BitmapSource CaptureWindow(IntPtr hwnd)
     {
@@ -80,6 +116,7 @@ public static class ScreenCapture
     [DllImport("user32.dll")] private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);
     [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int nIndex);
 
     [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleDC(IntPtr hDc);
     [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleBitmap(IntPtr hDc, int w, int h);

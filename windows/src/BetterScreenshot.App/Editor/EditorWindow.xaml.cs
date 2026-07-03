@@ -42,9 +42,19 @@ public partial class EditorWindow : Window
     private PxPoint? _dragStart;
     private bool _dragging;
     private Guid? _selectedId;
-    private Point _lastMove;
     private Rectangle? _marquee;
     private TextBox? _textBox;
+
+    // Select-tool move state: the annotation being dragged, its start pointer position, and a one-time flattened
+    // render of the rest of the document (base image + all *other* annotations). During a move we redraw only that
+    // cached background + the single moved annotation, instead of re-flattening the whole document every frame.
+    private IAnnotation? _moveOriginal;
+    private PxPoint _moveDownPos;
+    private BitmapSource? _moveBackground;
+
+    // Live vector preview for shape tools (arrow/line/rect/ellipse): drawn as lightweight WPF shapes on the
+    // interaction canvas while dragging, so we never rasterize a full-resolution frame per mouse-move.
+    private readonly List<UIElement> _previewElements = new();
 
     public Action<BitmapSource>? OnCopy { get; set; }
     public Action<BitmapSource>? OnSave { get; set; }
@@ -238,10 +248,15 @@ public partial class EditorWindow : Window
     private void SetWeight(double w) { _style = _style with { LineWidth = w }; StyleChanged?.Invoke(_style); RefreshInspector(); }
     private void SetSize(double s) { _style = _style with { FontSize = s }; StyleChanged?.Invoke(_style); RefreshInspector(); }
 
+    /// <summary>
+    /// Pointer position in base-image pixel space, clamped to the image bounds. Mouse capture keeps delivering
+    /// points outside the canvas during a drag; clamping keeps drawn/placed/moved annotations inside the image
+    /// (the "wall") so nothing gets dragged off the edge and lost when the document is flattened.
+    /// </summary>
     private PxPoint Pos(MouseEventArgs e)
     {
         var p = e.GetPosition(InteractionLayer);
-        return new PxPoint(p.X, p.Y);
+        return new PxPoint(Math.Clamp(p.X, 0, _baseImage.PixelWidth), Math.Clamp(p.Y, 0, _baseImage.PixelHeight));
     }
 
     private void OnDown(object sender, MouseButtonEventArgs e)
@@ -253,8 +268,18 @@ public partial class EditorWindow : Window
         {
             case EditorTool.Select:
                 _selectedId = _document.TopmostHit(p);
-                if (_selectedId != null) PushUndo();
-                _lastMove = e.GetPosition(InteractionLayer);
+                _moveOriginal = null;
+                _moveBackground = null;
+                if (_selectedId is { } hitId)
+                {
+                    PushUndo();
+                    _moveOriginal = _document.Annotations.FirstOrDefault(a => a.Id == hitId);
+                    _moveDownPos = p;
+                    // Flatten everything except the annotation being moved, once, so per-frame we only draw
+                    // this cached background + the single moved annotation.
+                    var rest = new EditorDocument(_document.Size, _document.Annotations.Where(a => a.Id != hitId));
+                    _moveBackground = DocumentRenderer.Render(rest, _baseImage);
+                }
                 InteractionLayer.CaptureMouse();
                 return;
             case EditorTool.Counter:
@@ -276,12 +301,12 @@ public partial class EditorWindow : Window
 
     private void OnMove(object sender, MouseEventArgs e)
     {
-        if (_tool == EditorTool.Select && _selectedId is { } id && e.LeftButton == MouseButtonState.Pressed)
+        if (_tool == EditorTool.Select && _moveOriginal is { } original && _moveBackground is { } background
+            && e.LeftButton == MouseButtonState.Pressed)
         {
-            var now = e.GetPosition(InteractionLayer);
-            _document.Move(id, now.X - _lastMove.X, now.Y - _lastMove.Y);
-            _lastMove = now;
-            Redraw();
+            var moved = MovedWithinBounds(original, Pos(e));
+            // background is already the base image + every other annotation flattened; draw only the moved one.
+            CanvasImage.Source = DocumentRenderer.Render(new EditorDocument(_document.Size), background, moved);
             return;
         }
 
@@ -298,14 +323,35 @@ public partial class EditorWindow : Window
         }
         else
         {
-            var preview = AnnotationFactory.CreateDrag(_tool, start, p, _style);
-            CanvasImage.Source = DocumentRenderer.Render(_document, _baseImage, preview);
+            ShowVectorPreview(start, p);
         }
+    }
+
+    /// <summary>The moved annotation, with its drag delta clamped so its bounding box stays inside the image.</summary>
+    private IAnnotation MovedWithinBounds(IAnnotation original, PxPoint pointer)
+    {
+        double dx = pointer.X - _moveDownPos.X, dy = pointer.Y - _moveDownPos.Y;
+        var b = original.BoundingBox();
+        // Keep the box within [0,W] × [0,H]: shift no further left/up than its own origin, no further right/down
+        // than the remaining room. (max<min only if the box is larger than the image — then pin to the edge.)
+        double minDx = -b.X, maxDx = Math.Max(minDx, _baseImage.PixelWidth - b.Right);
+        double minDy = -b.Y, maxDy = Math.Max(minDy, _baseImage.PixelHeight - b.Bottom);
+        return original.MovedBy(Math.Clamp(dx, minDx, maxDx), Math.Clamp(dy, minDy, maxDy));
     }
 
     private void OnUp(object sender, MouseButtonEventArgs e)
     {
         InteractionLayer.ReleaseMouseCapture();
+
+        // Commit a Select-tool move: write the final (clamped) position back into the document.
+        if (_tool == EditorTool.Select && _selectedId is { } movedId && _moveOriginal is { } original)
+        {
+            _document.Replace(movedId, MovedWithinBounds(original, Pos(e)));
+            _moveOriginal = null;
+            _moveBackground = null;
+            Redraw();
+            return;
+        }
 
         if (!_dragging || _dragStart is not { } start)
         {
@@ -313,6 +359,7 @@ public partial class EditorWindow : Window
             return;
         }
         _dragging = false;
+        ClearVectorPreview();
         var end = Pos(e);
         var frame = SelectionMath.Normalize(start, end);
 
@@ -407,6 +454,91 @@ public partial class EditorWindow : Window
         if (_marquee != null) InteractionLayer.Children.Remove(_marquee);
         _marquee = null;
     }
+
+    /// <summary>
+    /// Draws the in-progress shape (arrow/line/rect/ellipse) as lightweight WPF vector shapes on the interaction
+    /// canvas. Replaces the old per-frame full-resolution <see cref="RenderTargetBitmap"/> flatten — which stuttered
+    /// on large captures — so the drag stays smooth regardless of image size. The shape is flattened into the
+    /// document only once, on mouse-up.
+    /// </summary>
+    private void ShowVectorPreview(PxPoint start, PxPoint end)
+    {
+        ClearVectorPreview();
+        foreach (var el in BuildPreviewElements(_tool, start, end, _style))
+        {
+            InteractionLayer.Children.Add(el);
+            _previewElements.Add(el);
+        }
+    }
+
+    private void ClearVectorPreview()
+    {
+        foreach (var el in _previewElements) InteractionLayer.Children.Remove(el);
+        _previewElements.Clear();
+    }
+
+    // Coordinates are base-image pixels = InteractionLayer space (it's inside the Uniform Viewbox), so these mirror
+    // what DocumentRenderer will draw on commit.
+    private static IEnumerable<UIElement> BuildPreviewElements(EditorTool tool, PxPoint s, PxPoint e, AnnotationStyle style)
+    {
+        var stroke = PreviewBrush(style.StrokeColor);
+        switch (tool)
+        {
+            case EditorTool.Line:
+                yield return StrokeLine(s, e, stroke, style.LineWidth);
+                break;
+            case EditorTool.Arrow:
+            {
+                double headLen = Math.Max(12, style.LineWidth * 3);
+                var shaftEnd = ArrowGeometry.ShaftEnd(s, e, headLen);
+                yield return StrokeLine(s, shaftEnd, stroke, style.LineWidth);
+                var (left, right) = ArrowGeometry.HeadWings(s, e, headLen);
+                yield return new System.Windows.Shapes.Polygon
+                {
+                    Points = new PointCollection { new Point(e.X, e.Y), new Point(left.X, left.Y), new Point(right.X, right.Y) },
+                    Fill = stroke,
+                };
+                break;
+            }
+            case EditorTool.Rectangle:
+            {
+                var r = SelectionMath.Normalize(s, e);
+                var rect = new Rectangle { Width = r.Width, Height = r.Height, Stroke = stroke, StrokeThickness = style.LineWidth };
+                Canvas.SetLeft(rect, r.X);
+                Canvas.SetTop(rect, r.Y);
+                yield return rect;
+                break;
+            }
+            case EditorTool.FilledRectangle:
+            {
+                var r = SelectionMath.Normalize(s, e);
+                var rect = new Rectangle { Width = r.Width, Height = r.Height, Fill = PreviewBrush(style.FillColor) };
+                Canvas.SetLeft(rect, r.X);
+                Canvas.SetTop(rect, r.Y);
+                yield return rect;
+                break;
+            }
+            case EditorTool.Ellipse:
+            {
+                var r = SelectionMath.Normalize(s, e);
+                var el = new System.Windows.Shapes.Ellipse { Width = r.Width, Height = r.Height, Stroke = stroke, StrokeThickness = style.LineWidth };
+                Canvas.SetLeft(el, r.X);
+                Canvas.SetTop(el, r.Y);
+                yield return el;
+                break;
+            }
+        }
+    }
+
+    private static System.Windows.Shapes.Line StrokeLine(PxPoint a, PxPoint b, System.Windows.Media.Brush stroke, double thickness) => new()
+    {
+        X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
+        Stroke = stroke, StrokeThickness = thickness,
+        StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+    };
+
+    private static SolidColorBrush PreviewBrush(RGBAColor c) =>
+        new(Color.FromArgb((byte)(c.A * 255), (byte)(c.R * 255), (byte)(c.G * 255), (byte)(c.B * 255)));
 
     private void ApplyRedaction(PxRect frame, bool blur)
     {
