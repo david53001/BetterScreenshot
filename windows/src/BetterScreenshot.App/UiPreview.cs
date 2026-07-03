@@ -16,14 +16,78 @@ namespace BetterScreenshot.App;
 
 /// <summary>
 /// Dev-only window gallery: `BetterScreenshot.exe --ui-preview &lt;name&gt;` opens one window with sample
-/// data and NO tray/hotkeys/single-instance mutex, so the themed UI can be screenshotted (even while a
-/// real instance is running). Settings are in-memory defaults — nothing is persisted from a preview.
+/// data and NO hotkeys / NO single-instance mutex, so the themed UI can be screenshotted even while a
+/// real instance is running. Settings are in-memory defaults — nothing is persisted from a preview.
+///
+/// Like the shipped app it stays <b>resident in the tray</b> under <see cref="ShutdownMode.OnExplicitShutdown"/>:
+/// closing a preview window (e.g. Settings) returns to the tray instead of quitting the whole process — the
+/// preview used to run under OnLastWindowClose, which made "close Settings" read as "close the whole app".
+/// Reopen Settings or Quit from the tray icon.
+///
 /// Names: settings (default) | editor | quickaccess | welcome | strip.
 /// </summary>
 internal static class UiPreview
 {
-    private sealed class NullCommands : IAppCommands
+    // Held for the process lifetime so the tray icon + command surface aren't garbage-collected.
+    private static TrayIcon? _tray;
+    private static PreviewCommands? _commands;
+
+    public static void Show(string name)
     {
+        // Resident like the real tray agent: a closed window must not tear down the process.
+        Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        _commands = new PreviewCommands(name);
+        _tray = new TrayIcon(_commands, new SettingsStore().Hotkeys);
+        Application.Current.Exit += (_, _) => _tray?.Dispose(); // remove the tray icon cleanly on Quit
+        _commands.OpenInitialWindow();
+    }
+
+    /// <summary>Tray-facing command surface for the preview: reopen Settings and Quit cleanly. The
+    /// capture/recording/history actions are no-ops — a static preview has no live pipeline behind them.</summary>
+    private sealed class PreviewCommands : IAppCommands
+    {
+        private readonly string _name;
+        private SettingsWindow? _settingsWindow;
+
+        public PreviewCommands(string name) => _name = name;
+
+        /// <summary>Opens the window the preview was launched for (settings by default).</summary>
+        public void OpenInitialWindow()
+        {
+            switch (_name)
+            {
+                case "editor":
+                    new EditorWindow(SampleImage(900, 560)).Show();
+                    break;
+                case "quickaccess":
+                    var qa = new QuickAccessWindow(SampleImage(400, 224), QuickAccessKind.Screenshot,
+                        new QuickAccessActions(), dragFile: null);
+                    qa.MoveTo(320, 280);
+                    qa.Show();
+                    break;
+                case "welcome":
+                    new WelcomeWindow().Show();
+                    break;
+                case "strip":
+                    new RecordStripWindow(new SettingsStore()).Show();
+                    break;
+                default: // "settings", "shortcuts" (the Shortcuts card is in the same scroll)
+                    OpenSettings();
+                    break;
+            }
+        }
+
+        public void OpenSettings()
+        {
+            if (_settingsWindow != null) { _settingsWindow.Activate(); return; }
+            _settingsWindow = new SettingsWindow(new SettingsStore(), new HotkeyController(this));
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Show();
+        }
+
+        public void Quit() => Application.Current.Shutdown();
+
+        // No live capture/recording/history surface behind a static preview.
         public void CaptureArea() { }
         public void CaptureWindow() { }
         public void CaptureFullscreen() { }
@@ -33,34 +97,6 @@ internal static class UiPreview
         public void PinFromClipboard() { }
         public void OpenHistory() { }
         public void RestoreRecentlyClosed() { }
-        public void OpenSettings() { }
-        public void Quit() { }
-    }
-
-    public static void Show(string name)
-    {
-        Application.Current.ShutdownMode = ShutdownMode.OnLastWindowClose;
-        switch (name)
-        {
-            case "editor":
-                new EditorWindow(SampleImage(900, 560)).Show();
-                break;
-            case "quickaccess":
-                var qa = new QuickAccessWindow(SampleImage(400, 224), QuickAccessKind.Screenshot,
-                    new QuickAccessActions(), dragFile: null);
-                qa.MoveTo(320, 280);
-                qa.Show();
-                break;
-            case "welcome":
-                new WelcomeWindow().Show();
-                break;
-            case "strip":
-                new RecordStripWindow(new SettingsStore()).Show();
-                break;
-            default: // "settings", "shortcuts" (the Shortcuts card is in the same scroll)
-                new SettingsWindow(new SettingsStore(), new HotkeyController(new NullCommands())).Show();
-                break;
-        }
     }
 
     /// <summary>A recognizable sample bitmap (diagonal gradient + a light panel) for thumbnails/canvas.</summary>
