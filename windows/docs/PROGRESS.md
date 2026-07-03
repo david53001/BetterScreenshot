@@ -18,6 +18,32 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-03 — Quick Access card: full-bleed image + auto-contrast overlay (owner request)
+Redesigned the post-capture Quick Access card (`Overlays/QuickAccessWindow.xaml[.cs]`) per owner: *"the image
+should be the full thing / the full block, rounded; the UI overlays above it and auto-contrasts — white image →
+black buttons, and detect the palette on hover too."*
+- **Full-bleed rounded image:** dropped the separate dark thumbnail-band + button-strip DockPanel. The captured
+  image now fills the entire rounded card edge-to-edge (`Image` `UniformToFill`, `Root.Clip` = rounded rect since
+  a `Border` CornerRadius won't clip children). The card is **sized to the image's aspect ratio** (width 236,
+  height derived, clamped 132–280) so the whole capture shows with no letterbox; extreme ratios crop via
+  UniformToFill. Rounded drop-shadow + subtle hairline retained.
+- **Overlaid, auto-contrasting toolbar:** the action buttons float over the bottom of the image. New
+  `Overlays/QuickAccessContrast.cs` samples the average luminance of the image's bottom ~30% strip
+  (crop→downscale→BGRA→Rec.709 mean) and picks a coherent palette: bright strip → near-black glyphs + faint white
+  scrim + translucent-black hover/pressed pills; dark strip → near-white glyphs + faint black scrim +
+  translucent-white pills. Hover/pressed pills come from the same decision, so hover contrast is automatic. A
+  gentle bottom scrim (shares the image tone) guarantees legibility over busy/mixed content.
+- **Variable-height stack:** cards now differ in height, so `QuickAccessStackController.Restack` stacks them
+  cumulatively from the corner using each card's actual `Width`/`Height` (was the fixed-step `OverlayPositioner.
+  StackedOrigin`; that pure fn + its tests are untouched and still used for single-window origins).
+- **Decisions (owner away):** kept the bottom scrim (subtle, tone-matched) as a legibility guarantee for the
+  auto-contrast — the alternative (glyph-only) fails over photos; documented here as the one judgment call. One
+  toolbar tone (not per-button) so the row reads as one intentional unit.
+- **Verified:** App build **0/0**; `dotnet test` **250 passed / 0 failed** (8 new pure luminance/threshold tests);
+  rendered the card offscreen for **light / dark / wide** sample images and eyeballed the PNGs — black glyphs on
+  the white image, white glyphs on the dark + gradient images, full-bleed rounding correct. **Published to `dist/`**
+  and relaunched the tray agent. Committed on `windows-port` (not pushed).
+
 ## 2026-07-03 — JVoice monochrome UI revamp (owner request)
 Re-skinned the **whole Windows app** to the sibling **JVoice-Windows** black-and-white identity (owner: "take a
 look at how JVoice's UI looks and incorporate it throughout, especially settings"). Spec + rationale:
