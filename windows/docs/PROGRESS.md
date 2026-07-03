@@ -372,5 +372,32 @@ live hotkey rebind, first-run welcome). Next: Phase 4 (Overlays).
   (not a unit test — icon art is visual, not logic). The existing inline glyph sets still work and are left in place
   until the migration step (so no working UI is broken by adding the icon system).
 
+## UI revamp (2026-07-03) — owner-requested dark/macOS-like restyle + fixes
+Spec: `docs/UI-REVAMP-SPEC.md` · Plan: `docs/UI-REVAMP-PLAN.md` (all 7 tasks executed). Key decisions:
+- **App-wide dark theme lives in `Resources/Theme.xaml`** (merged in App.xaml after Icons.xaml): palette
+  tokens (`Theme.*Brush`) + implicit templated styles for Button/ToggleButton/ComboBox/CheckBox/TextBox/
+  TabControl/ScrollBar/ToolTip (rounded 6–8px, no default WPF chrome) and keyed styles
+  `Theme.AccentButton` / `Theme.DangerButton` / `Theme.SubtleButton` / `Theme.ToolButton` / `Theme.SwatchButton`.
+  Titled windows call `Controls.WindowThemer.ApplyDark(window)` (DWMWA_USE_IMMERSIVE_DARK_MODE=20; no-op pre-20H1).
+- **Settings is now instant-apply** (no Save/Cancel). Root cause of the owner's "settings don't save":
+  values *did* persist on Save, but closing with ✕ reverted hotkey changes (old snapshot/revert model) and
+  rebound keys displayed as `(vk 190)` which read as corruption. Now every change persists immediately,
+  hotkey rebinds re-register + raise `SettingsWindow.HotkeysChanged` → `TrayIcon.UpdateShortcuts` keeps
+  menu hints live. `HotkeyCombo.KeyName` gained OEM/numpad/navigation names (US-layout labels — assumption;
+  a `MapVirtualKeyW` per-layout lookup is a possible refinement). Tests: 241 green (27 new).
+- **Quick Access drag-out now dismisses the card** when `DoDragDrop` returns a non-None effect
+  (Esc-cancelled drags keep it), matching macOS. Card + record strip are dark `Theme.CardBrush` cards.
+- **Editor toolbar is icon-based** (existing Icons.xaml glyphs via IconPresenter) with an accent
+  selected-tool state; inspector has round swatches with selection rings + dot/A-size toggles that track
+  the sticky style. The in-canvas text box forces black-on-white (implicit dark TextBox style would have
+  made it white-on-white).
+- **Tray menu is dark** via `Tray/DarkMenu.cs` (`ToolStripProfessionalRenderer` + custom color table);
+  `ShowImageMargin=false`. Native dialogs (MessageBox, folder picker) stay OS-themed — out of scope.
+- **`--ui-preview <settings|shortcuts|editor|quickaccess|welcome|strip>` dev flag** (`UiPreview.cs`,
+  checked at the top of `App.OnStartup` before the single-instance mutex): opens one window with sample
+  data and no tray/hotkeys/mutex so the UI can be screenshotted next to a running instance; settings are
+  in-memory defaults, nothing persists. Verified all surfaces by PrintWindow captures (foreground
+  screenshots race the user's live desktop — use `PrintWindow(hwnd, hdc, 2)`).
+
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.

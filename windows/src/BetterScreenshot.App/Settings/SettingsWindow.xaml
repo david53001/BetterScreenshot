@@ -13,7 +13,7 @@
             <Setter Property="Foreground" Value="{StaticResource Theme.SecondaryTextBrush}"/>
         </Style>
     </Window.Resources>
-    <TabControl Margin="14,12">
+    <TabControl x:Name="Tabs" Margin="14,12">
         <TabItem Header="General">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="18,8">
@@ -52,7 +52,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,6">
                         <TextBlock Text="Save folder" Style="{StaticResource RowLabel}"/>
-                        <TextBox x:Name="SaveDirBox" Width="220" VerticalContentAlignment="Center" LostFocus="Changed"/>
+                        <TextBox x:Name="SaveDirBox" Width="195" VerticalContentAlignment="Center" LostFocus="Changed"/>
                         <Button x:Name="BrowseBtn" Content="Browse…" Margin="8,0,0,0" Padding="10,4" Click="Browse_Click"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,6">

@@ -30,6 +30,13 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        // Dev-only UI gallery (see UiPreview): no mutex/tray/hotkeys, coexists with a live instance.
+        if (e.Args.Length >= 1 && e.Args[0] == "--ui-preview")
+        {
+            UiPreview.Show(e.Args.Length > 1 ? e.Args[1] : "settings");
+            return;
+        }
+
         _instanceMutex = new Mutex(initiallyOwned: true, @"Local\BetterScreenshot.SingleInstance", out _ownsInstance);
         if (!_ownsInstance)
         {
