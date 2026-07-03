@@ -43,4 +43,11 @@ let captureSettingsTests: [TestCase] = [
         let restored = CaptureSettings(dictionary: s.dictionary)
         t.equal(restored, s)
     },
+    TestCase("playSoundDefaultsOnAndRoundTrips") { t in
+        t.isTrue(CaptureSettings.default.playSound)
+        var s = CaptureSettings.default
+        s.playSound = false
+        let back = CaptureSettings(dictionary: s.dictionary)
+        t.isFalse(back.playSound)
+    },
 ]

@@ -122,6 +122,7 @@ final class CaptureCoordinator {
     private func handle(_ image: CGImage, sourceRect: CGRect?) {
         // Silent bookkeeping first, so even copy-only captures are recoverable.
         let historyID = history?.recordScreenshot(image)
+        if settings.settings.playSound { CaptureSound.play() }
         switch settings.settings.afterCapture {
         case .copyOnly:    copy(image)
         case .saveOnly:    save(image)

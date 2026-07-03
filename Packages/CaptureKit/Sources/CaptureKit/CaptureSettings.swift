@@ -21,6 +21,7 @@ public struct CaptureSettings: Equatable {
     public var pinShadow: Bool
     public var historyEnabled: Bool
     public var historyCap: Int
+    public var playSound: Bool
 
     public static let `default` = CaptureSettings(
         afterCapture: .showOverlay, format: .png,
@@ -34,13 +35,15 @@ public struct CaptureSettings: Equatable {
          "pinCornerRadius": String(pinCornerRadius),
          "pinShadow": pinShadow ? "true" : "false",
          "historyEnabled": historyEnabled ? "true" : "false",
-         "historyCap": String(historyCap)]
+         "historyCap": String(historyCap),
+         "playSound": playSound ? "1" : "0"]
     }
 
     public init(afterCapture: AfterCaptureBehavior, format: SettingsImageFormat,
                 overlayCorner: OverlayCorner, overlayAutoDismissSeconds: Int,
                 pinCornerRadius: Int = 8, pinShadow: Bool = true,
-                historyEnabled: Bool = true, historyCap: Int = 50) {
+                historyEnabled: Bool = true, historyCap: Int = 50,
+                playSound: Bool = true) {
         self.afterCapture = afterCapture
         self.format = format
         self.overlayCorner = overlayCorner
@@ -49,6 +52,7 @@ public struct CaptureSettings: Equatable {
         self.pinShadow = pinShadow
         self.historyEnabled = historyEnabled
         self.historyCap = historyCap
+        self.playSound = playSound
     }
 
     public init(dictionary: [String: String]) {
@@ -61,5 +65,6 @@ public struct CaptureSettings: Equatable {
         self.pinShadow = dictionary["pinShadow"].map { $0 == "true" } ?? d.pinShadow
         self.historyEnabled = dictionary["historyEnabled"].map { $0 == "true" } ?? d.historyEnabled
         self.historyCap = Int(dictionary["historyCap"] ?? "") ?? d.historyCap
+        self.playSound = (dictionary["playSound"] ?? "1") != "0"
     }
 }
