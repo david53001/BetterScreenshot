@@ -21,8 +21,9 @@ namespace BetterScreenshot.App.Overlays;
 /// </summary>
 public partial class QuickAccessWindow : Window
 {
-    private const double ContentWidth = 236;      // image (card) width in DIPs; height derives from the image aspect
-    private const double MinContentHeight = 132;
+    private const double ContentWidth = 210;      // image (card) width in DIPs; height derives from the image aspect
+    private const double MinContentHeight = 150;  // widest card ~= 210/150 = 1.40:1 — a mild rectangle, not a 16:9 sliver,
+                                                  // so the button row hugs the width instead of floating in bare image
     private const double MaxContentHeight = 280;
     private const double CornerRadiusPx = 14;     // must match the Hairline CornerRadius in the XAML
     private const double ShadowMargin = 6;        // must match the shadow-host Border Margin in the XAML
