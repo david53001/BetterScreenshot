@@ -38,7 +38,9 @@ look at how JVoice's UI looks and incorporate it throughout, especially settings
 - **Decisions (owner away):** Windows-only (macOS Swift app untouched — it's the behavioral source of truth and not
   verifiable here); destructive buttons are monochrome (no red) to match JVoice, guarded by confirm dialogs.
 - **Verified:** solution build **0/0**; `dotnet test` **241 passed / 0 failed**; every window screenshotted via
-  `--ui-preview`; **published to `dist/`** and the tray agent relaunched. Uncommitted on `windows-port`.
+  `--ui-preview`; **published to `dist/`** and the tray agent relaunched. Committed on `windows-port`
+  (`64a05fe` code + `adcd560` docs) and **pushed to `origin/windows-port`** (2026-07-03). `main` not merged —
+  merge/PR when ready.
 
 ## Current pointer
 - **Branch:** `windows-port`
