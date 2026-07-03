@@ -31,4 +31,28 @@ public enum OverlayPositioner {
         }
         return o
     }
+
+    /// Variable-height cumulative stacking. sizes[0] is the newest card (nearest the corner).
+    /// Bottom corners stack upward; top corners stack downward. Cocoa bottom-left origins.
+    public static func stackedOrigins(corner: OverlayCorner, sizes: [CGSize],
+                                      screenFrame: CGRect, margin: CGFloat,
+                                      spacing: CGFloat = 12) -> [CGPoint] {
+        let isRight = (corner == .topRight || corner == .bottomRight)
+        let isBottom = (corner == .bottomLeft || corner == .bottomRight)
+        var origins: [CGPoint] = []
+        var advance: CGFloat = 0
+        for size in sizes {
+            let x = isRight ? screenFrame.maxX - size.width - margin
+                            : screenFrame.minX + margin
+            let y: CGFloat
+            if isBottom {
+                y = screenFrame.minY + margin + advance
+            } else {
+                y = screenFrame.maxY - margin - size.height - advance
+            }
+            origins.append(CGPoint(x: x, y: y))
+            advance += size.height + spacing
+        }
+        return origins
+    }
 }
