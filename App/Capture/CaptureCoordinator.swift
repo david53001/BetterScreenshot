@@ -146,16 +146,15 @@ final class CaptureCoordinator {
         // visibleFrame excludes the Dock and menu bar, so the overlay sits above
         // the Dock instead of being tucked into the very bottom corner behind it.
         let frame = screen.visibleFrame
-        quickAccess.present(image: nsImage, actions: actions, onDismissed: { [weak self] reason in
+        quickAccess.present(image: nsImage, actions: actions,
+                            autoDismissSeconds: settings.settings.overlayAutoDismissSeconds,
+                            corner: corner, screenFrame: frame, margin: 24,
+                            onDismissed: { [weak self] reason in
             // ✕-close and eviction are "accidental" — deliberate actions aren't restorable.
             if reason == .closed || reason == .evicted {
                 self?.history?.noteOverlayClosed(historyID: historyID)
             }
-        }) { index in
-            OverlayPositioner.stackedOrigin(corner: corner,
-                                            overlaySize: CGSize(width: 220, height: 168),
-                                            screenFrame: frame, margin: 24, index: index)
-        }
+        })
     }
 
     /// Re-presents a Quick Access card for a history entry (Restore Recently Closed).
