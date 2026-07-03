@@ -18,6 +18,38 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-03 — Quick Access auto-dismiss: drag-a-bar slider (2s … Never) replaces 3/6/10s (owner request)
+Owner asked to change the Quick Access overlay so *"it stays there for as long as the user wants … drag a little bar
+to change how long it stays there."* Clarified with the owner up front → a **draggable slider in Settings** whose far
+end is **Never (stays until you dismiss it)**. Key simplifier: `QuickAccessWindow.StartAutoDismiss` already treats
+`OverlayAutoDismissSeconds <= 0` as "never dismiss", so **Never persists as 0** and the overlay timer needed **no
+change** — this was purely a Settings-UI + persistence-mapping change.
+- **New pure `Capture/OverlayDismissScale.cs`** maps slider position (2..31) ⟷ persisted seconds (0 = Never) ⟷ label
+  ("6s" / "Never"): `SecondsToPosition`, `PositionToSeconds` (rounds + clamps to 2..30, ≥31 ⇒ 0), `Label`. One pure,
+  tested place so the slider and the persisted int can't drift. 25 xUnit cases in `OverlayDismissScaleTests.cs`.
+- **New monochrome `Theme.Slider`** (+ `SliderTrackFill` / `SliderTrackEmpty` / `SliderThumb`) in `Resources/Theme.xaml`
+  — the app had **no Slider style at all**. Faint full-width base track, white fill left-of-thumb (painted via the
+  `Track.DecreaseRepeatButton`), round white thumb (accent hover/pressed on hover/drag). Standard WPF `PART_Track`
+  template, so a malformed one would fail the XAML compile.
+- **`Settings/SettingsWindow.xaml`**: replaced the 3/6/10s segmented `RadioButton` group under "Auto-dismiss after"
+  with a `Slider` (`DismissSlider`, Min 2 / Max 31, snap-to-integer, `IsMoveToPointEnabled`) + a live "6s"/"Never"
+  readout (`DismissValueLabel`). InfoTip copy updated to mention dragging + the Never end.
+- **`SettingsWindow.xaml.cs`**: load = `DismissSlider.Value = OverlayDismissScale.SecondsToPosition(...)` +
+  `UpdateDismissLabel()`; save = `OverlayAutoDismissSeconds = OverlayDismissScale.PositionToSeconds(DismissSlider.Value)`;
+  new `DismissSlider_ValueChanged` (live label + instant-apply, `_loading`-guarded) and null-guarded `UpdateDismissLabel`
+  (the slider can raise `ValueChanged` during XAML parse before the label field is assigned). Dropped `Dismiss3/6/10`.
+- **No temp-file edge case for Never:** the drag PNG's 5-min delete is scheduled *on card dismissal*
+  (`CaptureCoordinator.ShowOverlayCard`, line ~129), **not** at creation — so a Never card keeps its drag file for its
+  whole (possibly indefinite) life, then cleans up 5 min after the owner finally closes it. Nothing to change there.
+- **Verified:** build **0/0**; `dotnet test` **289 passed / 0 failed** (+25 `OverlayDismissScaleTests`). Settings
+  rendered via `--ui-preview settings` (PrintWindow, since the owner's monitors were busy with a topmost app) shows the
+  slider at the default **6s** with the white fill + thumb, matching the JVoice theme. **Republished `dist/` and
+  relaunched the tray agent.** Committed, not pushed.
+- **NOTE: a concurrent agent's dist instance (started 8:26 PM) was running in this shared tree** — see
+  `concurrent-agents-shared-tree` memory (that agent's InfoTip commits `3d03014`/`db88ab0`/`a6e7467` are in history and
+  are compiled into my republished binary). I stopped its running dist instance to release the locked exe, published, and
+  relaunched my build (single instance confirmed). Last-writer-wins if it republishes again.
+
 ## 2026-07-03 — InfoTip polish: no Help cursor + crisp, perfectly-centered "i" (owner request)
 Two owner-reported nits on the `App/Controls/InfoTip.cs` "ⓘ" button. **(1)** Hovering it showed the arrow-with-"?"
 Help cursor — it was `Cursor = Cursors.Help`; changed to `Cursors.Arrow` (it's hover-only, no click action). Commit
