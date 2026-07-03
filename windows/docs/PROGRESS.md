@@ -43,6 +43,8 @@ black buttons, and detect the palette on hover too."*
   rendered the card offscreen for **light / dark / wide** sample images and eyeballed the PNGs — black glyphs on
   the white image, white glyphs on the dark + gradient images, full-bleed rounding correct. **Published to `dist/`**
   and relaunched the tray agent. Committed on `windows-port` (not pushed).
+- **Process writeup:** [`QUICKACCESS-CARD-REDESIGN.md`](QUICKACCESS-CARD-REDESIGN.md) — request → exploration →
+  decisions + alternatives → implementation → verification (incl. the offscreen-render harness used to "see" it).
 
 ## 2026-07-03 — Capture black-bar fix + editor FPS + on-screen "walls" (owner-reported)
 Three owner-reported issues on a **dual-monitor, stretched-resolution** rig (primary = a **stretched 1500×1080**
