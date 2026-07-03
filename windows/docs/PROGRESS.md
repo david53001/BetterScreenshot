@@ -446,5 +446,21 @@ and the hovered button's pill stays inside its band. **Assumption:** `FitToImage
 after a Crop (avoids a jarring mid-edit window jump; the pasteboard backdrop covers any post-crop mat); it clamps
 to the primary monitor's `SystemParameters.WorkArea`.
 
+## Deploy of the QA hover-bleed fix (2026-07-03) — owner re-reported the bleed after `e9704df`
+The owner re-reported "the hover overlay enters the image" *after* the fix commit landed. Root cause was **not**
+a code regression: the running tray agent was the **stale `dist/` build** (`dist/BetterScreenshot/BetterScreenshot.App.exe`,
+published 15:12) which predated the fix commit `e9704df` (15:59) by ~47 min. The `dist/` folder is a self-contained
+publish snapshot — it does **not** update when you only `dotnet build`/commit; the single-instance tray agent keeps
+running the old exe until you republish **and relaunch**. Resolution: re-verified the committed source renders clean
+(rendered the card idle + with a button forced into its `Theme.SubtleHoverBrush` hover state straight to PNG via a
+temporary `--ui-preview` harness — the pill stays fully inside the bottom button band, no image overlap), then
+stopped the stale process, ran `pwsh windows/scripts/publish-app.ps1 -NoShortcut` (new exe 16:42), and relaunched.
+**Lesson / gotcha:** after any change the owner will *see* at runtime, you must **republish `dist/` and relaunch**
+the tray agent — a green build + commit alone leaves the owner testing a stale binary. (This is now called out in
+`README-win.md` and in `LOOP-PROMPT.md` §5 Rules.)
+
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
+- **Republish `dist/` after runtime-visible changes.** `dist/` is a manual publish snapshot; a plain build/commit
+  won't update the running tray agent. If the owner reports a UI bug that the source already fixes, check the
+  `dist/` exe timestamp vs. the fix commit before assuming a regression (see the 2026-07-03 deploy note above).

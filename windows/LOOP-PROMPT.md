@@ -54,6 +54,13 @@ packaging/installer, extra polish. Mark these clearly as stretch in the ledger.
   **Never push, never open PRs, never force-push.** Prefer `git add <specific paths>` over `git add -A`.
 - **End green.** Never end a firing with a broken build or red tests. If you can't finish an increment cleanly,
   revert your partial change so the next firing starts clean, and log why.
+- **Republish `dist/` after any runtime-visible change.** `dist/` is a **manual publish snapshot** and the owner
+  runs the app from it (single-instance tray agent); a plain `dotnet build`/commit does **not** update it, so the
+  owner keeps testing a **stale binary** until you republish. Whenever your increment changes something the owner
+  will see or interact with at runtime (UI, hotkeys, capture/recording/editor/overlay behavior), finish by running
+  `pwsh windows/scripts/publish-app.ps1 -NoShortcut` so `dist/` matches HEAD, and note the deploy in PROGRESS.md.
+  (If the running instance holds a file lock, `Stop-Process -Name BetterScreenshot.App` first, then relaunch.)
+  Pure-logic-only or docs-only firings don't need a republish.
 - **TDD for pure logic.** All pure-logic behavior (geometry, model, config, state, timing, history, redaction) is
   test-first, and must keep every ported macOS test suite green. Do not weaken/skip/delete a test to make it pass —
   fix the code.

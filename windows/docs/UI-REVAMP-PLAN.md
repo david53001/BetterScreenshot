@@ -1,5 +1,12 @@
 # Windows UI Revamp Implementation Plan
 
+> **✅ STATUS: SHIPPED (2026-07-03).** All 7 tasks are implemented and committed on `windows-port`
+> (`c488288` key names → `ebde85c` theme → `22cc341` settings → `e57a074` Quick Access → `e0cf9a3` editor →
+> `286324c` remaining surfaces → `6cf645f` `--ui-preview`), followed by two owner-reported polish fixes
+> (`0a65b0d` Capture-Text/selection-overlay, `e9704df` Quick Access hover-bleed + editor image-hug) and a
+> deploy on 2026-07-03 16:42 (`dist/` republished + tray relaunched). Build clean 0/0; 241 tests green.
+> The step checkboxes below are marked done for history — see `PROGRESS.md` for the running ledger.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the Windows port a coherent dark, macOS-like UI (rounded themed controls everywhere, icon
@@ -37,7 +44,7 @@ verification.
 - Consumes: `HotkeyCombo.KeyName(uint vk)` (existing static), `HotkeyCombo.DisplayString`.
 - Produces: `KeyName` handles OEM + navigation + numpad VKs; everything downstream (settings chips, tray menu) just works.
 
-- [ ] **Step 1: Write the failing tests** — append to the existing test class in `HotkeyTests.cs`:
+- [x] **Step 1: Write the failing tests** — append to the existing test class in `HotkeyTests.cs`:
 
 ```csharp
     [Theory]
@@ -75,9 +82,9 @@ verification.
         => Assert.Equal("Alt+.", new HotkeyCombo(0xBE, HotkeyModifiers.Alt).DisplayString);
 ```
 
-- [ ] **Step 2: Run to verify failure** — `dotnet test windows/tests/BetterScreenshot.Tests --filter KeyName` → the new theory FAILS (`(vk 186)` ≠ `;`).
+- [x] **Step 2: Run to verify failure** — `dotnet test windows/tests/BetterScreenshot.Tests --filter KeyName` → the new theory FAILS (`(vk 186)` ≠ `;`).
 
-- [ ] **Step 3: Implement** — in `Hotkeys.cs`, extend the `KeyName` switch. US-layout labels for OEM keys (documented assumption; recorder stores raw VKs). Insert the new arms before the final `_ =>` arm:
+- [x] **Step 3: Implement** — in `Hotkeys.cs`, extend the `KeyName` switch. US-layout labels for OEM keys (documented assumption; recorder stores raw VKs). Insert the new arms before the final `_ =>` arm:
 
 ```csharp
     public static string KeyName(uint vk) => vk switch
@@ -124,9 +131,9 @@ verification.
     };
 ```
 
-- [ ] **Step 4: Run all tests** — `dotnet test windows/tests/BetterScreenshot.Tests` → PASS (baseline + new).
+- [x] **Step 4: Run all tests** — `dotnet test windows/tests/BetterScreenshot.Tests` → PASS (baseline + new).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.Capture/Hotkeys.cs windows/tests/BetterScreenshot.Tests/HotkeyTests.cs
@@ -150,7 +157,7 @@ git commit -m "fix(win): human-readable key names for OEM/navigation/numpad hotk
   implicit styles for Button, ToggleButton, ComboBox, ComboBoxItem, CheckBox, TextBox, TabControl,
   TabItem, ScrollBar, ToolTip; `WindowThemer.ApplyDark(Window)` static method.
 
-- [ ] **Step 1: Create `Theme.xaml`** with exactly this content:
+- [x] **Step 1: Create `Theme.xaml`** with exactly this content:
 
 ```xml
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -614,7 +621,7 @@ git commit -m "fix(win): human-readable key names for OEM/navigation/numpad hotk
 </ResourceDictionary>
 ```
 
-- [ ] **Step 2: Create `WindowThemer.cs`**:
+- [x] **Step 2: Create `WindowThemer.cs`**:
 
 ```csharp
 using System.Runtime.InteropServices;
@@ -653,7 +660,7 @@ public static class WindowThemer
 }
 ```
 
-- [ ] **Step 3: Merge into `App.xaml`** — add Theme.xaml after Icons.xaml:
+- [x] **Step 3: Merge into `App.xaml`** — add Theme.xaml after Icons.xaml:
 
 ```xml
             <ResourceDictionary.MergedDictionaries>
@@ -662,9 +669,9 @@ public static class WindowThemer
             </ResourceDictionary.MergedDictionaries>
 ```
 
-- [ ] **Step 4: Build + tests** — `dotnet build windows/BetterScreenshot.sln` → 0 errors; `dotnet test windows/tests/BetterScreenshot.Tests` → green. (Visual checks come with the preview task.)
+- [x] **Step 4: Build + tests** — `dotnet build windows/BetterScreenshot.sln` → 0 errors; `dotnet test windows/tests/BetterScreenshot.Tests` → green. (Visual checks come with the preview task.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.App/Resources/Theme.xaml windows/src/BetterScreenshot.App/Controls/WindowThemer.cs windows/src/BetterScreenshot.App/App.xaml
@@ -685,7 +692,7 @@ git commit -m "feat(win): app-wide dark theme dictionary + dark title-bar helper
 - Consumes: theme brushes/styles from Task 2; `WindowThemer.ApplyDark`; `HotkeyCombo.DisplayString` (Task 1).
 - Produces: `SettingsWindow.HotkeysChanged` (`public event Action?`); `TrayIcon.UpdateShortcuts(HotkeyBindings bindings)`.
 
-- [ ] **Step 1: Rewrite `SettingsWindow.xaml`** — dark, no footer, every control fires `Changed`:
+- [x] **Step 1: Rewrite `SettingsWindow.xaml`** — dark, no footer, every control fires `Changed`:
 
 ```xml
 <Window x:Class="BetterScreenshot.App.Settings.SettingsWindow"
@@ -825,7 +832,7 @@ git commit -m "feat(win): app-wide dark theme dictionary + dark title-bar helper
 </Window>
 ```
 
-- [ ] **Step 2: Rework `SettingsWindow.xaml.cs`.** Keep `LoadGeneral`/`LoadRecording` and the index↔value
+- [x] **Step 2: Rework `SettingsWindow.xaml.cs`.** Keep `LoadGeneral`/`LoadRecording` and the index↔value
   mappings exactly as they are; restructure the rest:
   - Add fields `private bool _loading = true;` and `public event Action? HotkeysChanged;`; delete
     `_hotkeySnapshot` and `_saved`.
@@ -929,7 +936,7 @@ git commit -m "feat(win): app-wide dark theme dictionary + dark title-bar helper
     check existing aliases.) In `StartRecording`, set the button content to `"Press keys…"` as today; in
     `StopRecording` restore `"Change"` as today.
 
-- [ ] **Step 3: `TrayIcon.UpdateShortcuts`** — register items per action and expose a refresh:
+- [x] **Step 3: `TrayIcon.UpdateShortcuts`** — register items per action and expose a refresh:
 
 ```csharp
     private readonly Dictionary<HotkeyAction, WF.ToolStripMenuItem> _actionItems = new();
@@ -950,7 +957,7 @@ git commit -m "feat(win): app-wide dark theme dictionary + dark title-bar helper
     }
 ```
 
-- [ ] **Step 4: Wire in `App.xaml.cs`** (`ShowSettings`):
+- [x] **Step 4: Wire in `App.xaml.cs`** (`ShowSettings`):
 
 ```csharp
         _settingsWindow = new SettingsWindow(_settings, _hotkeys);
@@ -959,9 +966,9 @@ git commit -m "feat(win): app-wide dark theme dictionary + dark title-bar helper
         _settingsWindow.Show();
 ```
 
-- [ ] **Step 5: Build + tests** — `dotnet build windows/BetterScreenshot.sln` → 0 errors; `dotnet test windows/tests/BetterScreenshot.Tests` → green.
+- [x] **Step 5: Build + tests** — `dotnet build windows/BetterScreenshot.sln` → 0 errors; `dotnet test windows/tests/BetterScreenshot.Tests` → green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.App/Settings/SettingsWindow.xaml windows/src/BetterScreenshot.App/Settings/SettingsWindow.xaml.cs windows/src/BetterScreenshot.App/Tray/TrayIcon.cs windows/src/BetterScreenshot.App/App.xaml.cs
@@ -980,7 +987,7 @@ git commit -m "feat(win): instant-apply dark settings window + live tray shortcu
 - Consumes: `Theme.CardBrush`/`Theme.BorderBrush`, `Theme.SubtleButton` (Task 2); `DismissReason` (existing).
 - Produces: none new (behavioral fix only).
 
-- [ ] **Step 1: XAML** — dark card + hairline; light thumbnail well:
+- [x] **Step 1: XAML** — dark card + hairline; light thumbnail well:
 
 ```xml
     <Border x:Name="Card" CornerRadius="12" Background="{StaticResource Theme.CardBrush}"
@@ -999,7 +1006,7 @@ git commit -m "feat(win): instant-apply dark settings window + live tray shortcu
     </Border>
 ```
 
-- [ ] **Step 2: Code-behind** —
+- [x] **Step 2: Code-behind** —
   - `GlyphBrush` → `new(Color.FromRgb(0xF2, 0xF2, 0xF5));`
   - Delete the `Card.Background = …kind…` assignment in the ctor (both kinds share the dark card; the
     button set already differentiates them).
@@ -1027,9 +1034,9 @@ git commit -m "feat(win): instant-apply dark settings window + live tray shortcu
         if (result != DragDropEffects.None) Dismiss(DismissReason.ActionTaken); // Esc-cancel keeps the card
 ```
 
-- [ ] **Step 3: Build + tests** — both green as in Task 3 Step 5.
+- [x] **Step 3: Build + tests** — both green as in Task 3 Step 5.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.App/Overlays/QuickAccessWindow.xaml windows/src/BetterScreenshot.App/Overlays/QuickAccessWindow.xaml.cs
@@ -1050,7 +1057,7 @@ git commit -m "feat(win): dark Quick Access card, rounded hover buttons, drag-ou
   `Theme.AccentButton` (Task 2); `WindowThemer.ApplyDark`.
 - Produces: none new (UI only; `_tool`, `_style`, `StyleChanged` behavior unchanged).
 
-- [ ] **Step 1: XAML** — theme brushes + accent Copy:
+- [x] **Step 1: XAML** — theme brushes + accent Copy:
 
 ```xml
         Title="BetterScreenshot Editor" Width="960" Height="720"
@@ -1067,7 +1074,7 @@ git commit -m "feat(win): dark Quick Access card, rounded hover buttons, drag-ou
                         Style="{StaticResource Theme.AccentButton}"/>
 ```
 
-- [ ] **Step 2: Code-behind toolbar** — add aliases `using ToggleButton = System.Windows.Controls.Primitives.ToggleButton;`
+- [x] **Step 2: Code-behind toolbar** — add aliases `using ToggleButton = System.Windows.Controls.Primitives.ToggleButton;`
   and `using Brushes = System.Windows.Media.Brushes;`, plus `using BetterScreenshot.App.Controls;`. Replace `BuildToolbar` and add tool selection:
 
 ```csharp
@@ -1117,7 +1124,7 @@ git commit -m "feat(win): dark Quick Access card, rounded hover buttons, drag-ou
     }
 ```
 
-- [ ] **Step 3: Inspector with selection state** — replace `BuildInspector`/`AddInspectorButton` and the
+- [x] **Step 3: Inspector with selection state** — replace `BuildInspector`/`AddInspectorButton` and the
   three setters:
 
 ```csharp
@@ -1198,13 +1205,13 @@ git commit -m "feat(win): dark Quick Access card, rounded hover buttons, drag-ou
   (If `RGBAColor` is not an equatable record, compare component-wise with `< 0.001` tolerance instead of
   `==` — check `windows/src/BetterScreenshot.Editor` for its definition and adjust.)
 
-- [ ] **Step 4: Small fixes** — in the ctor add `Controls.WindowThemer.ApplyDark(this);` after
+- [x] **Step 4: Small fixes** — in the ctor add `Controls.WindowThemer.ApplyDark(this);` after
   `InitializeComponent()`. In `PlaceTextBox`, add `Foreground = Brushes.Black,` to the `TextBox`
   initializer (the implicit dark theme would otherwise put near-white text on its white background).
 
-- [ ] **Step 5: Build + tests** — both green.
+- [x] **Step 5: Build + tests** — both green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.App/Editor/EditorWindow.xaml windows/src/BetterScreenshot.App/Editor/EditorWindow.xaml.cs
@@ -1226,7 +1233,7 @@ git commit -m "feat(win): editor icon toolbar with selected-tool state + styled 
 - Consumes: theme brushes/styles (Task 2), `WindowThemer.ApplyDark`, `Theme.ToolButton`.
 - Produces: `DarkMenuRenderer` (internal, Tray namespace).
 
-- [ ] **Step 1: WelcomeWindow** — dark rewrite. Window attrs:
+- [x] **Step 1: WelcomeWindow** — dark rewrite. Window attrs:
   `Background="{StaticResource Theme.WindowBrush}" Foreground="{StaticResource Theme.TextBrush}"`;
   the description `TextBlock` gets `Foreground="{StaticResource Theme.SecondaryTextBrush}"`; the shortcut
   panel `Border` gets `Background="#14FFFFFF"`; each `Ctrl+Shift+N` TextBlock:
@@ -1236,12 +1243,12 @@ git commit -m "feat(win): editor icon toolbar with selected-tool state + styled 
   Keep the app-icon vignette block untouched. In `WelcomeWindow.xaml.cs` ctor add
   `Controls.WindowThemer.ApplyDark(this);` after `InitializeComponent()`.
 
-- [ ] **Step 2: HistoryWindow** — in XAML set window `Background="{StaticResource Theme.WindowBrush}"`,
+- [x] **Step 2: HistoryWindow** — in XAML set window `Background="{StaticResource Theme.WindowBrush}"`,
   bottom bar `Background="{StaticResource Theme.ChromeBrush}"`, and mark the two destructive buttons:
   `ClearAllButton` and `DeleteButton` get `Style="{StaticResource Theme.DangerButton}"`. In code-behind
   ctor add `Controls.WindowThemer.ApplyDark(this);`.
 
-- [ ] **Step 3: RecordStripWindow** — XAML card:
+- [x] **Step 3: RecordStripWindow** — XAML card:
 
 ```xml
     <Border x:Name="Card" CornerRadius="12" Background="{StaticResource Theme.CardBrush}"
@@ -1318,7 +1325,7 @@ git commit -m "feat(win): editor icon toolbar with selected-tool state + styled 
   Background/BorderThickness; `TextButton` keeps defaults (implicit theme). `GlyphOff` is now also the
   strip's text color — `TextButton` inherits the theme `Foreground` automatically.
 
-- [ ] **Step 4: Dark tray menu** — create `Tray/DarkMenu.cs`:
+- [x] **Step 4: Dark tray menu** — create `Tray/DarkMenu.cs`:
 
 ```csharp
 using System.Drawing;
@@ -1365,9 +1372,9 @@ internal sealed class DarkMenuRenderer : WF.ToolStripProfessionalRenderer
         menu.ShowImageMargin = false;
 ```
 
-- [ ] **Step 5: Build + tests** — both green.
+- [x] **Step 5: Build + tests** — both green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.App/Onboarding/WelcomeWindow.xaml windows/src/BetterScreenshot.App/Onboarding/WelcomeWindow.xaml.cs windows/src/BetterScreenshot.App/History/HistoryWindow.xaml windows/src/BetterScreenshot.App/History/HistoryWindow.xaml.cs windows/src/BetterScreenshot.App/Recording/RecordStripWindow.xaml windows/src/BetterScreenshot.App/Recording/RecordStripWindow.xaml.cs windows/src/BetterScreenshot.App/Tray/DarkMenu.cs windows/src/BetterScreenshot.App/Tray/TrayIcon.cs
@@ -1388,7 +1395,7 @@ git commit -m "feat(win): dark welcome/history/record-strip surfaces + dark tray
   `QuickAccessActions` (property-init class of `Action`s), `QuickAccessKind`, `RecordStripWindow(SettingsStore)`.
 - Produces: `BetterScreenshot.App.exe --ui-preview <settings|editor|quickaccess|welcome|strip>`.
 
-- [ ] **Step 1: Create `UiPreview.cs`**:
+- [x] **Step 1: Create `UiPreview.cs`**:
 
 ```csharp
 using System.Windows;
@@ -1477,7 +1484,7 @@ internal static class UiPreview
 }
 ```
 
-- [ ] **Step 2: Flag check in `App.OnStartup`** — insert immediately after `base.OnStartup(e);`, **before**
+- [x] **Step 2: Flag check in `App.OnStartup`** — insert immediately after `base.OnStartup(e);`, **before**
   the mutex:
 
 ```csharp
@@ -1492,7 +1499,7 @@ internal static class UiPreview
   Note: `OnExit` guards — `_commands`/`_hotkeys`/`_tray` are null in preview mode; the existing
   null-conditional calls (`?.`) already handle that, and `_ownsInstance` stays false.
 
-- [ ] **Step 3: Build, test, then screenshot each surface.** Build + tests green first, then from a
+- [x] **Step 3: Build, test, then screenshot each surface.** Build + tests green first, then from a
   PowerShell session:
 
 ```powershell
@@ -1513,15 +1520,15 @@ foreach ($v in "settings","editor","quickaccess","welcome","strip") {
   Inspect each PNG (Read tool): dark surfaces, rounded segmented tabs, no squared blue hover, icon
   toolbar in the editor, mono shortcut chips (`Ctrl+Shift+4`, not `(vk …)`). Fix and re-shoot until right.
 
-- [ ] **Step 4: Behavioral spot-checks** (manual, from the built exe): rebind a shortcut in a preview
+- [x] **Step 4: Behavioral spot-checks** (manual, from the built exe): rebind a shortcut in a preview
   settings window → close via ✕ → the in-memory store kept it (watch for no revert); full end-to-end
   persistence is exercised by the real app on next launch.
 
-- [ ] **Step 5: Re-publish + docs** — run `pwsh windows/scripts/publish-app.ps1` so the Desktop-shortcut
+- [x] **Step 5: Re-publish + docs** — run `pwsh windows/scripts/publish-app.ps1` so the Desktop-shortcut
   build has the new UI. Append to `windows/docs/PROGRESS.md` (UI revamp section): the instant-apply
   decision, US-layout OEM label assumption, `--ui-preview` usage, and any visual fixes made in Step 3.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add windows/src/BetterScreenshot.App/UiPreview.cs windows/src/BetterScreenshot.App/App.xaml.cs windows/docs/PROGRESS.md

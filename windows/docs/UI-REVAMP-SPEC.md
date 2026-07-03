@@ -1,5 +1,8 @@
 # Windows UI Revamp — Spec (2026-07-03)
 
+> **✅ Status: Shipped (2026-07-03).** Implemented per `UI-REVAMP-PLAN.md` (Tasks 1–7) plus follow-up
+> polish fixes; deployed to `dist/` on 2026-07-03. See `PROGRESS.md` for the running ledger.
+
 ## Context
 
 The Windows port (`windows/`, .NET 9 + WPF, branch `windows-port`) is functionally complete but its

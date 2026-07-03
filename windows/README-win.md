@@ -70,6 +70,13 @@ This publishes `windows/dist/BetterScreenshot/BetterScreenshot.App.exe` (~195 MB
 agent: launching it again just focuses the one already running. (The `dist/` folder is git-ignored; regenerate it
 any time with the script.)
 
+> **Updating the standalone app after code changes.** `dist/` is a **manual publish snapshot** — a plain
+> `dotnet build` (or a commit) does **not** update it, and the running tray agent keeps using the old exe until
+> you republish **and relaunch**. So after any change you want to see at runtime: **quit the running instance**
+> (right-click the tray icon → Quit, or `Stop-Process -Name BetterScreenshot.App`), rerun
+> `pwsh windows/scripts/publish-app.ps1`, then launch it again. If a fix seems "not applied", check the `dist/`
+> exe's timestamp against your latest change before assuming a regression.
+
 ## Default hotkeys
 
 | Shortcut | Action |
