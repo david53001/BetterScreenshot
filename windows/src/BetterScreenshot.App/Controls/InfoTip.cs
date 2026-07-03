@@ -1,12 +1,18 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-// Disambiguate WPF types from the WinForms types the App project also references (for the tray NotifyIcon).
+// Disambiguate WPF types from the WinForms/GDI+ types the App project also references (for the tray NotifyIcon).
 using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
 using Color = System.Windows.Media.Color;
 using Cursors = System.Windows.Input.Cursors;
+using FlowDirection = System.Windows.FlowDirection;
 using FontFamily = System.Windows.Media.FontFamily;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using Path = System.Windows.Shapes.Path;
+using Point = System.Windows.Point;
+using Stretch = System.Windows.Media.Stretch;
 using ToolTip = System.Windows.Controls.ToolTip;
 using ToolTipEventArgs = System.Windows.Controls.ToolTipEventArgs;
 using ToolTipService = System.Windows.Controls.ToolTipService;
@@ -41,16 +47,19 @@ public sealed class InfoTip : Border
     /// <summary>A concrete example, shown prefixed with "e.g." on its own line. Optional.</summary>
     public string Example { get => (string)GetValue(ExampleProperty); set => SetValue(ExampleProperty, value); }
 
+    private const double Diameter = 16;      // outer circle
+    private const double GlyphInkHeight = 9;  // exact ink height of the "i" inside the circle
+
     private static readonly Brush IdleFill = Frozen(Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF));
     private static readonly Brush HoverFill = Frozen(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
     private static readonly Brush RingBrush = Frozen(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
-    private static readonly Brush GlyphBrush = Frozen(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
+    private static readonly Brush GlyphBrush = Frozen(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
 
     public InfoTip()
     {
-        Width = 16;
-        Height = 16;
-        CornerRadius = new CornerRadius(8);
+        Width = Diameter;
+        Height = Diameter;
+        CornerRadius = new CornerRadius(Diameter / 2);
         Background = IdleFill;
         BorderBrush = RingBrush;
         BorderThickness = new Thickness(1);
@@ -60,18 +69,10 @@ public sealed class InfoTip : Border
         SnapsToDevicePixels = true;
         Focusable = false;
 
-        Child = new TextBlock
-        {
-            Text = "i",
-            FontFamily = new FontFamily("Georgia, Cambria, Times New Roman, serif"),
-            FontStyle = FontStyles.Italic,
-            FontWeight = FontWeights.Bold,
-            FontSize = 10.5,
-            Foreground = GlyphBrush,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, -1, 0, 0),
-        };
+        // The "i" is drawn as a filled vector path (not a TextBlock): this avoids ClearType subpixel colour
+        // fringing on the dark circle and lets us centre by the glyph's *exact ink bounds* so every instance
+        // is pixel-identical and perfectly centred.
+        Child = BuildGlyph();
 
         MouseEnter += (_, _) => Background = HoverFill;
         MouseLeave += (_, _) => Background = IdleFill;
@@ -82,6 +83,45 @@ public sealed class InfoTip : Border
         ToolTipService.SetBetweenShowDelay(this, 0);
         ToolTip = new ToolTip { Padding = new Thickness(0) }; // chrome comes from the implicit ToolTip style
         ToolTipOpening += BuildTip;
+    }
+
+    /// <summary>
+    /// Builds the italic serif "i" as a filled <see cref="Path"/>, scaled to <see cref="GlyphInkHeight"/> and
+    /// normalised so its ink bounds start at (0,0). With <c>Stretch.None</c> the Path's desired size therefore
+    /// equals the ink size, so the parent Border's <c>Center</c> alignment centres the visible ink exactly —
+    /// independent of font side-bearings, line-box padding, or the border thickness.
+    /// </summary>
+    private static Path BuildGlyph()
+    {
+        var typeface = new Typeface(new FontFamily("Georgia"), FontStyles.Italic, FontWeights.Bold, FontStretches.Normal);
+        var ft = new FormattedText(
+            "i",
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            typeface,
+            100, // arbitrary large em size — we rescale by ink height below, so this just sets outline resolution
+            Brushes.White,
+            1.0);
+
+        Geometry geo = ft.BuildGeometry(new Point(0, 0));
+        Rect raw = geo.Bounds; // untransformed ink bounds of the glyph outline
+
+        double scale = GlyphInkHeight / raw.Height;
+        var transform = new TransformGroup();
+        transform.Children.Add(new ScaleTransform(scale, scale));
+        transform.Children.Add(new TranslateTransform(-raw.X * scale, -raw.Y * scale)); // move ink top-left to (0,0)
+        geo.Transform = transform;
+        geo.Freeze();
+
+        return new Path
+        {
+            Data = geo,
+            Fill = GlyphBrush,
+            Stretch = Stretch.None,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            SnapsToDevicePixels = true,
+        };
     }
 
     private void BuildTip(object sender, ToolTipEventArgs e)
