@@ -13,10 +13,9 @@ using BetterScreenshot.Platform;
 namespace BetterScreenshot.App.Capture;
 
 /// <summary>
-/// Orchestrates the screenshot flow: capture (via the Platform layer) → route by the after-capture setting →
-/// save/copy. The interactive area-selection overlay, window picker, and Quick Access overlay arrive in Phase 4;
-/// until then area falls back to full-screen and the overlay branch saves+copies. Recording/pin/history/settings
-/// commands are stubbed until their phases.
+/// Orchestrates the screenshot flow: selection/picker overlays → capture (via the Platform layer) → route by the
+/// after-capture setting → save/copy/Quick Access card, plus Capture Text (region OCR), pins, history, and the
+/// recording toggle.
 /// </summary>
 public sealed class CaptureCoordinator : IAppCommands
 {
@@ -73,20 +72,29 @@ public sealed class CaptureCoordinator : IAppCommands
         });
     }
 
-    public void CaptureText() => _ = CaptureTextAsync();
+    /// <summary>Capture Text (OCR + QR): drag a region; the recognized text — or a QR code's payload,
+    /// which wins — lands on the clipboard. HUD confirms.</summary>
+    public void CaptureText()
+    {
+        _selection.Present(rect =>
+        {
+            if (rect is { } r) _ = CaptureTextAsync(r);
+        });
+    }
 
-    private async Task CaptureTextAsync()
+    private async Task CaptureTextAsync(PxRect region)
     {
         try
         {
-            var image = ScreenCapture.CaptureDisplay(Screens.Primary());
+            var image = ScreenCapture.CaptureRegion(region);
             var result = await TextRecognizerService.RecognizeAsync(image);
             if (result.ClipboardString is { } text) ClipboardService.SetText(text);
             HudController.Show(result.HudMessage);
         }
         catch
         {
-            // Best-effort; never crash the app on a failed recognition.
+            // Never crash the app on a failed recognition.
+            HudController.Show("Capture Text failed");
         }
     }
 

@@ -399,5 +399,28 @@ Spec: `docs/UI-REVAMP-SPEC.md` · Plan: `docs/UI-REVAMP-PLAN.md` (all 7 tasks ex
   in-memory defaults, nothing persists. Verified all surfaces by PrintWindow captures (foreground
   screenshots race the user's live desktop — use `PrintWindow(hwnd, hdc, 2)`).
 
+## Selection-overlay fixes (2026-07-03) — owner-reported "capture area does nothing / Capture Text OCRs the whole screen"
+Root causes found by driving the live app with injected hotkeys + synthetic mouse drags (probe scripts;
+the pipeline itself was healthy — overlay → drag → card → history all worked when injected):
+- **Capture Text never presented the selection overlay** — `CaptureCoordinator.CaptureText` OCR'd the full
+  primary display (a Phase-5 stub that was never upgraded). Now mac-parity: it presents the shared
+  `SelectionOverlayController`, captures the chosen region (`ScreenCapture.CaptureRegion`), OCRs that, and
+  shows a "Capture Text failed" HUD on exception instead of silently swallowing.
+- **Overlay only appeared on the monitor under the cursor** (mac shows it on *all* screens). On this
+  two-monitor setup, a cursor parked on the other display made area capture look completely dead. Now one
+  `SelectionOverlayWindow` per monitor; the first to complete/cancel wins and tears the set down; the
+  window under the cursor gets keyboard focus for Esc.
+- **No re-entry guard**: every hotkey press stacked another dim overlay that silently ate the next click
+  (mac cancels the open selection instead). `Present()` now cancels an in-flight selection first
+  (fires its completion with null), matching `SelectionOverlayController.swift`.
+- **Selection wasn't punched out of the dim** (mac clears the dragged rect). The dim is now a Path with an
+  EvenOdd geometry (full monitor minus selection) over a `#01000000` hit-test canvas — the near-zero-alpha
+  background matters: fully transparent pixels on a layered window pass clicks through to the app beneath.
+Verified E2E on the republished dist via injection probes: overlays on both monitors; second press
+re-presents (2 windows, not 4); Esc clears; drag 500×350 → history PNG exactly 500×350 + Quick Access
+card; Alt+, (Capture Text) now shows the overlay first and OCRs only the region. 241 tests green.
+Note: the owner hit this while a fullscreen game (Minecraft) was up — if a truly exclusive-fullscreen app
+ever hides the overlay, that's a separate visibility problem, not this bug.
+
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.

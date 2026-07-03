@@ -6,6 +6,7 @@ using BetterScreenshot.Capture;
 using BetterScreenshot.Core;
 using BetterScreenshot.Platform;
 using Point = System.Windows.Point;
+using Rect = System.Windows.Rect;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -13,8 +14,9 @@ using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 namespace BetterScreenshot.App.Overlays;
 
 /// <summary>
-/// One full-monitor dimmed overlay for drag-to-select area capture. Positioned in physical pixels via MoveWindow
-/// (correct under per-monitor DPI); reports the selection as a top-left physical-pixel rect (or null on cancel).
+/// One full-monitor dimmed overlay for drag-to-select area capture; the dragged selection is punched clear of the
+/// dim, matching the macOS overlay. Positioned in physical pixels via MoveWindow (correct under per-monitor DPI);
+/// reports the selection as a top-left physical-pixel rect (or null on cancel).
 /// </summary>
 public partial class SelectionOverlayWindow : Window
 {
@@ -30,10 +32,30 @@ public partial class SelectionOverlayWindow : Window
         _onResult = onResult;
         InitializeComponent();
         SourceInitialized += OnSourceInitialized;
+        SizeChanged += (_, e) => FullRectGeometry.Rect = new Rect(0, 0, e.NewSize.Width, e.NewSize.Height);
         MouseLeftButtonDown += OnMouseDown;
         MouseMove += OnMouseMove;
         MouseLeftButtonUp += OnMouseUp;
         KeyDown += OnKeyDown;
+    }
+
+    /// <summary>The monitor this overlay covers (the controller focuses the one under the cursor).</summary>
+    public MonitorInfo Monitor => _monitor;
+
+    /// <summary>Grab keyboard focus so Escape cancels; only one of the per-monitor overlays gets this.</summary>
+    public void ActivateForKeyboard()
+    {
+        Activate();
+        Focus();
+    }
+
+    /// <summary>Tears the overlay down without firing the result callback (the controller closes the set).</summary>
+    public void Dismiss()
+    {
+        if (_completed) return;
+        _completed = true;
+        Hide();
+        Close();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -41,8 +63,6 @@ public partial class SelectionOverlayWindow : Window
         var hwnd = new WindowInteropHelper(this).Handle;
         var b = _monitor.Bounds;
         MoveWindow(hwnd, (int)b.X, (int)b.Y, (int)b.Width, (int)b.Height, true);
-        Activate();
-        Focus();
     }
 
     private void OnMouseDown(object sender, MouseButtonEventArgs e)
@@ -58,6 +78,7 @@ public partial class SelectionOverlayWindow : Window
         var current = e.GetPosition(RootCanvas);
         var rect = SelectionMath.Normalize(new PxPoint(start.X, start.Y), new PxPoint(current.X, current.Y));
 
+        SelectionGeometry.Rect = new Rect(rect.X, rect.Y, rect.Width, rect.Height);
         Canvas.SetLeft(SelRect, rect.X);
         Canvas.SetTop(SelRect, rect.Y);
         SelRect.Width = rect.Width;
