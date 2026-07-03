@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 public struct QuickAccessActions {
     public let onCopy: () -> Void
@@ -19,9 +20,8 @@ public struct QuickAccessActions {
     }
 }
 
-/// What the overlay represents — drives the button row, background shade, and
-/// drag semantics (screenshots drag disposable temp PNGs; recordings drag the
-/// real saved file).
+/// What the overlay represents — drives the button row and drag semantics
+/// (screenshots drag disposable temp PNGs; recordings drag the real saved file).
 public enum QuickAccessKind {
     case screenshot
     case recording
@@ -35,17 +35,23 @@ public enum DismissReason: Equatable {
     case closed, evicted, actionTaken
 }
 
-/// A floating post-capture thumbnail. It is PERSISTENT: it never auto-dismisses.
-/// It goes away only when the user clicks ✕, clicks Save (download), drags the
-/// thumbnail out to another app, or opens the editor.
+/// A floating post-capture card. The captured image FILLS the rounded card
+/// edge-to-edge; the action buttons float over the bottom of the image on a
+/// tone-matched gradient scrim, and their glyphs auto-flip black/white for
+/// legibility against whatever the picture is.
 ///
-/// NSObject subclass so it is a first-class Obj-C target for the buttons. The
-/// previous version was a plain Swift class used as an NSTrackingArea owner,
-/// which crashed (`doesNotRecognizeSelector: mouseEntered:`) the moment the
-/// cursor entered the overlay — that whole auto-dismiss/tracking path is gone.
+/// It is PERSISTENT: it never auto-dismisses. It goes away only when the user
+/// clicks ✕, clicks Save (download), drags the thumbnail out to another app, or
+/// opens the editor.
+///
+/// NSObject subclass so it is a first-class Obj-C target for the buttons.
 public final class QuickAccessOverlayController: NSObject {
     private var panel: NSPanel?
     private var actions: QuickAccessActions?
+
+    /// The card's content size (== panel size). Derived from the image aspect
+    /// ratio via `QuickAccessCardSize`. Read by the stacking layer.
+    public private(set) var contentSize: CGSize = .zero
 
     /// Fired exactly once whenever a visible overlay goes away (✕, save,
     /// drag-out, annotate, pin, or eviction) so a stack manager can compact
@@ -60,7 +66,14 @@ public final class QuickAccessOverlayController: NSObject {
         dismiss(reason: .evicted)
         self.actions = actions
 
-        let size = NSSize(width: 220, height: 168)
+        // Size the card to the capture's pixel aspect ratio (full-bleed, no
+        // letterbox). Fall back to the NSImage point size if there's no CGImage.
+        let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        let pxW = cg?.width ?? Int(image.size.width.rounded())
+        let pxH = cg?.height ?? Int(image.size.height.rounded())
+        let size = QuickAccessCardSize.contentSize(imagePixelWidth: pxW, imagePixelHeight: pxH)
+        self.contentSize = size
+
         let panel = NSPanel(contentRect: NSRect(origin: origin, size: size),
                             styleMask: [.nonactivatingPanel, .borderless],
                             backing: .buffered, defer: false)
@@ -72,54 +85,101 @@ public final class QuickAccessOverlayController: NSObject {
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
+        // Rounded card that clips the full-bleed image + overlaid controls.
         let container = NSView(frame: NSRect(origin: .zero, size: size))
         container.wantsLayer = true
-        // Recordings get a blue-tinted card so they read differently from
-        // screenshot overlays at a glance.
-        let background = kind == .recording
-            ? NSColor.systemBlue.blended(withFraction: 0.85, of: .windowBackgroundColor)
-                ?? .windowBackgroundColor
-            : NSColor.windowBackgroundColor
-        container.layer?.backgroundColor = background.cgColor
-        container.layer?.cornerRadius = 12
+        container.layer?.cornerRadius = 14
+        container.layer?.masksToBounds = true
 
-        let thumb = DraggableImageView(frame: NSRect(x: 10, y: 46, width: 200, height: 112))
-        thumb.image = image
-        thumb.imageScaling = .scaleProportionallyUpOrDown
+        // Full-bleed image. The DraggableImageView still owns the drag-to-export
+        // gesture (a >4pt move starts the drag); an aspect-fill sublayer covers
+        // its aspect-fit self-drawing so the picture reaches every card edge.
+        let thumb = DraggableImageView(frame: container.bounds)
+        thumb.image = image                       // drag-preview source
         thumb.wantsLayer = true
-        thumb.layer?.cornerRadius = 6
         thumb.layer?.masksToBounds = true
         thumb.fileURLProvider = actions.fileURLForDrag
         // Screenshots drag a self-deleting temp PNG; recordings drag the real
         // saved file, which must NOT be cleaned up after the drop.
         thumb.deletesFileAfterDrag = kind == .screenshot
-        // Once it has been dropped somewhere, the overlay goes away.
         thumb.onDragEnded = { [weak self] droppedSomewhere in
             if droppedSomewhere { self?.dismiss(reason: .actionTaken) }
         }
+
+        if let cg {
+            let imageLayer = CALayer()
+            imageLayer.frame = thumb.bounds
+            imageLayer.contents = cg
+            imageLayer.contentsGravity = .resizeAspectFill
+            imageLayer.masksToBounds = true
+            imageLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
+            thumb.layer?.addSublayer(imageLayer)
+        }
+
+        // Auto-contrast from the bottom strip where the buttons sit.
+        let luminance = cg.map { sampleBottomLuminance($0) } ?? 0.0
+        let tone = QuickAccessContrast.tone(forLuminance: luminance)
+        let palette = QuickAccessContrast.palette(for: tone)
+
+        // Tone-matched scrim so glyphs stay legible over the picture: sits above
+        // the image and below the buttons; a plain layer so it never intercepts
+        // the drag or the button clicks.
+        let scrimH = min(64, size.height * 0.42)
+        let scrim = CAGradientLayer()
+        scrim.frame = CGRect(x: 0, y: 0, width: size.width, height: scrimH)
+        scrim.startPoint = CGPoint(x: 0.5, y: 1.0)   // top of scrim → transparent
+        scrim.endPoint = CGPoint(x: 0.5, y: 0.0)     // card bottom → most opaque
+        scrim.locations = [0.0, 0.5, 1.0]
+        let sc: CGFloat = palette.scrimIsWhite ? 1.0 : 0.0
+        scrim.colors = [
+            CGColor(srgbRed: sc, green: sc, blue: sc, alpha: 0.0),
+            CGColor(srgbRed: sc, green: sc, blue: sc, alpha: CGFloat(0x2E) / 255.0),
+            CGColor(srgbRed: sc, green: sc, blue: sc, alpha: CGFloat(0x8C) / 255.0),
+        ]
+        thumb.layer?.addSublayer(scrim)
+
+        // Subtle top hairline (~15% white) for a crisp card edge.
+        let hairline = CALayer()
+        hairline.frame = CGRect(x: 0, y: size.height - 1, width: size.width, height: 1)
+        hairline.backgroundColor = CGColor(srgbRed: 1, green: 1, blue: 1,
+                                           alpha: CGFloat(0x26) / 255.0)
+        thumb.layer?.addSublayer(hairline)
+
         container.addSubview(thumb)
+
+        // Overlaid, auto-contrasted action row. Buttons are subviews layered
+        // above the image + scrim, so they receive clicks while the image below
+        // still receives drags.
+        let glyph = Self.nsColor(argb: palette.glyphARGB)
+        let hover = Self.nsColor(argb: palette.hoverARGB)
+        let pressed = Self.nsColor(argb: palette.pressedARGB)
 
         let stack = NSStackView()
         stack.orientation = .horizontal
         stack.distribution = .fill
-        stack.spacing = 6
+        stack.spacing = 4
+
+        func button(_ symbol: String, _ tip: String,
+                    _ onClick: @escaping () -> Void) -> QuickAccessIconButton {
+            QuickAccessIconButton(symbol: symbol, tip: tip, glyph: glyph,
+                                  hover: hover, pressed: pressed, onClick: onClick)
+        }
         switch kind {
         case .screenshot:
-            stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy", #selector(copyAction)))
-            stack.addArrangedSubview(iconButton("pencil.tip.crop.circle", tip: "Edit", #selector(annotateAction)))
-            stack.addArrangedSubview(iconButton("pin", tip: "Pin to screen", #selector(pinAction)))
-            stack.addArrangedSubview(iconButton("square.and.arrow.down", tip: "Save to screenshots", #selector(saveAction)))
+            stack.addArrangedSubview(button("doc.on.doc", "Copy") { [weak self] in self?.copyAction() })
+            stack.addArrangedSubview(button("pencil.tip.crop.circle", "Edit") { [weak self] in self?.annotateAction() })
+            stack.addArrangedSubview(button("pin", "Pin to screen") { [weak self] in self?.pinAction() })
+            stack.addArrangedSubview(button("square.and.arrow.down", "Save to screenshots") { [weak self] in self?.saveAction() })
         case .recording:
-            stack.addArrangedSubview(iconButton("doc.on.doc", tip: "Copy file", #selector(copyAction)))
-            stack.addArrangedSubview(iconButton("play.fill", tip: "Open", #selector(openAction)))
-            stack.addArrangedSubview(iconButton("folder", tip: "Show in Finder", #selector(revealAction)))
+            stack.addArrangedSubview(button("doc.on.doc", "Copy file") { [weak self] in self?.copyAction() })
+            stack.addArrangedSubview(button("play.fill", "Open") { [weak self] in self?.openAction() })
+            stack.addArrangedSubview(button("folder", "Show in Finder") { [weak self] in self?.revealAction() })
         }
-        stack.addArrangedSubview(iconButton("xmark", tip: "Close", #selector(closeAction)))
-        // Size the row to its buttons and centre it under the thumbnail, so the
-        // 4- and 5-button variants are both evenly spaced (the old fixed 200pt
-        // width left the 5-button screenshot row cramped).
+        stack.addArrangedSubview(button("xmark", "Close") { [weak self] in self?.closeAction() })
+
+        // Centre the row horizontally, anchored 9pt up from the bottom edge.
         let rowSize = stack.fittingSize
-        stack.frame = NSRect(x: (size.width - rowSize.width) / 2, y: 8,
+        stack.frame = NSRect(x: (size.width - rowSize.width) / 2, y: 9,
                              width: rowSize.width, height: 30)
         container.addSubview(stack)
 
@@ -140,16 +200,53 @@ public final class QuickAccessOverlayController: NSObject {
         panel?.setFrameOrigin(origin)
     }
 
-    private func iconButton(_ symbol: String, tip: String, _ sel: Selector) -> NSButton {
-        let b = NSButton(title: "", target: self, action: sel)
-        b.bezelStyle = .rounded
-        b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tip)
-            ?? NSImage(size: NSSize(width: 1, height: 1))
-        b.imagePosition = .imageOnly
-        b.toolTip = tip
-        b.setAccessibilityLabel(tip)
-        b.widthAnchor.constraint(equalToConstant: 36).isActive = true
-        return b
+    /// Mean Rec.709 luminance of the bottom 30% of the image, downscaled so the
+    /// longest side ≤ 48px and read into a tight RGBA buffer. Any failure → 0.0
+    /// (treated as dark → light controls).
+    private func sampleBottomLuminance(_ cg: CGImage) -> Double {
+        let w = cg.width, h = cg.height
+        guard w > 0, h > 0 else { return 0 }
+        let stripH = max(1, Int(Double(h) * 0.30))
+        guard let strip = cg.cropping(to: CGRect(x: 0, y: h - stripH, width: w, height: stripH))
+        else { return 0 }
+
+        let sw = strip.width, sh = strip.height
+        let longest = max(sw, sh)
+        let scale = longest > 48 ? 48.0 / Double(longest) : 1.0
+        let tw = max(1, Int(Double(sw) * scale))
+        let th = max(1, Int(Double(sh) * scale))
+
+        guard let cs = CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: nil, width: tw, height: th, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: cs,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let data = ctx.data
+        else { return 0 }
+        ctx.draw(strip, in: CGRect(x: 0, y: 0, width: tw, height: th))
+
+        // Copy row-by-row into a tight buffer so any bytesPerRow stride padding
+        // CoreGraphics chose doesn't corrupt the pixel average.
+        let bpr = ctx.bytesPerRow
+        let src = data.bindMemory(to: UInt8.self, capacity: bpr * th)
+        let pixelCount = tw * th
+        let rowBytes = tw * 4
+        var rgba = [UInt8](repeating: 0, count: pixelCount * 4)
+        rgba.withUnsafeMutableBufferPointer { dst in
+            for row in 0..<th {
+                let s = row * bpr
+                let d = row * rowBytes
+                for i in 0..<rowBytes { dst[d + i] = src[s + i] }
+            }
+        }
+        return QuickAccessContrast.averageLuminance(rgba: rgba, pixelCount: pixelCount)
+    }
+
+    private static func nsColor(argb: UInt32) -> NSColor {
+        let a = CGFloat((argb >> 24) & 0xFF) / 255.0
+        let r = CGFloat((argb >> 16) & 0xFF) / 255.0
+        let g = CGFloat((argb >> 8) & 0xFF) / 255.0
+        let b = CGFloat(argb & 0xFF) / 255.0
+        return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
     }
 
     // Copy keeps the overlay up (so the user can still save/drag/close it).
@@ -181,4 +278,71 @@ public final class QuickAccessOverlayController: NSObject {
         a?.onReveal()
     }
     @objc private func closeAction() { dismiss(reason: .closed) }
+}
+
+/// A chromeless, layer-backed icon button for the overlaid action row: a
+/// template SF Symbol tinted to the auto-contrast glyph colour on a transparent
+/// pill that fills on hover / press. Plain NSView (not NSControl) so it stays
+/// visually silent over the image; clicks fire the `onClick` closure.
+private final class QuickAccessIconButton: NSView {
+    private let hoverColor: CGColor
+    private let pressedColor: CGColor
+    private let onClick: () -> Void
+    private var trackingAreaRef: NSTrackingArea?
+    private var hovered = false
+
+    init(symbol: String, tip: String, glyph: NSColor,
+         hover: NSColor, pressed: NSColor, onClick: @escaping () -> Void) {
+        self.hoverColor = hover.cgColor
+        self.pressedColor = pressed.cgColor
+        self.onClick = onClick
+        super.init(frame: NSRect(x: 0, y: 0, width: 32, height: 30))
+        wantsLayer = true
+        layer?.cornerRadius = 7
+        layer?.masksToBounds = true
+        toolTip = tip
+        setAccessibilityRole(.button)
+        setAccessibilityLabel(tip)
+
+        let img = NSImage(systemSymbolName: symbol, accessibilityDescription: tip)
+            ?? NSImage(size: NSSize(width: 1, height: 1))
+        img.isTemplate = true
+        let glyphView = NSImageView(frame: NSRect(x: (32 - 17) / 2.0, y: (30 - 17) / 2.0,
+                                                  width: 17, height: 17))
+        glyphView.image = img
+        glyphView.contentTintColor = glyph
+        glyphView.imageScaling = .scaleProportionallyUpOrDown
+        addSubview(glyphView)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var intrinsicContentSize: NSSize { NSSize(width: 32, height: 30) }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = trackingAreaRef { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: bounds,
+                               options: [.mouseEnteredAndExited, .activeAlways],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t)
+        trackingAreaRef = t
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        hovered = true
+        layer?.backgroundColor = hoverColor
+    }
+    override func mouseExited(with event: NSEvent) {
+        hovered = false
+        layer?.backgroundColor = nil
+    }
+    override func mouseDown(with event: NSEvent) {
+        layer?.backgroundColor = pressedColor
+    }
+    override func mouseUp(with event: NSEvent) {
+        let inside = bounds.contains(convert(event.locationInWindow, from: nil))
+        layer?.backgroundColor = hovered ? hoverColor : nil
+        if inside { onClick() }
+    }
+    override func accessibilityPerformPress() -> Bool { onClick(); return true }
 }
