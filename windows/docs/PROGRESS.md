@@ -18,6 +18,28 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-03 — JVoice monochrome UI revamp (owner request)
+Re-skinned the **whole Windows app** to the sibling **JVoice-Windows** black-and-white identity (owner: "take a
+look at how JVoice's UI looks and incorporate it throughout, especially settings"). Spec + rationale:
+`windows/docs/UI-JVOICE-REVAMP.md`.
+- **Palette** (`Resources/Theme.xaml`): remapped every token to monochrome — window `#000`, card `#0E0E0E`,
+  hairline `#242424`, and **white is the accent** (was blue `#0A84FF`). Keys unchanged, so all windows re-skin
+  through the existing implicit styles. Fixed the styles that would now be white-on-white (AccentButton = white
+  fill + black text; toggle/tool checked = white@20%; ComboBoxItem highlight = white@16%; CheckBox check = black).
+- **New components**: ported JVoice's `DarkSection` card control (`Controls/DarkSection.cs` + implicit style: glowing
+  white dot + UPPERCASE header + divider), `Theme.MonoSwitch` (macOS toggle), `Theme.SegmentLeft/Mid/Right/Solo`
+  (joined segmented control), `Theme.PillButton`, `Theme.PressableButton`.
+- **Settings** (`Settings/SettingsWindow.xaml[.cs]`): replaced the 3-tab layout with a **two-column masonry of
+  DarkSection cards** (no TabControl). Booleans → MonoSwitch rows; short enums → segmented RadioButton groups;
+  pin-radius → styled ComboBox; shortcuts → full-width card (mono chip + Change pill + Clear). Instant-apply +
+  shortcut-recording behavior unchanged; `SizeToContent=Height` clamped to the work area.
+- **Stray blues removed**: editor marquee, history selection border (+ darker cells), window-picker highlight, tray
+  menu colors. **Left blue (logged):** `ClickHighlighter` (baked into the recorded video, not chrome).
+- **Decisions (owner away):** Windows-only (macOS Swift app untouched — it's the behavioral source of truth and not
+  verifiable here); destructive buttons are monochrome (no red) to match JVoice, guarded by confirm dialogs.
+- **Verified:** solution build **0/0**; `dotnet test` **241 passed / 0 failed**; every window screenshotted via
+  `--ui-preview`; **published to `dist/`** and the tray agent relaunched. Uncommitted on `windows-port`.
+
 ## Current pointer
 - **Branch:** `windows-port`
 - **Phase:** ✅ **DONE** — Phases 1–8 complete, `win-v1.0` tagged, full harden re-scan clean. Loop ended (no wakeup scheduled).

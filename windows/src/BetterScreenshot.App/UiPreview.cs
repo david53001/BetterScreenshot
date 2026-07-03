@@ -57,12 +57,7 @@ internal static class UiPreview
             case "strip":
                 new RecordStripWindow(new SettingsStore()).Show();
                 break;
-            case "shortcuts":
-                var sw = new SettingsWindow(new SettingsStore(), new HotkeyController(new NullCommands()));
-                sw.Tabs.SelectedIndex = 1;
-                sw.Show();
-                break;
-            default:
+            default: // "settings", "shortcuts" (the Shortcuts card is in the same scroll)
                 new SettingsWindow(new SettingsStore(), new HotkeyController(new NullCommands())).Show();
                 break;
         }

@@ -26,7 +26,6 @@ namespace BetterScreenshot.App.Settings;
 public partial class SettingsWindow : Window
 {
     private static readonly int[] PinRadii = { 0, 4, 8, 12, 16, 20 };
-    private static readonly int[] HistoryCaps = { 10, 50, 200 };
 
     private readonly SettingsStore _settings;
     private readonly HotkeyController _hotkeys;
@@ -49,32 +48,35 @@ public partial class SettingsWindow : Window
         BuildShortcutRows();
         _loading = false;
         WindowThemer.ApplyDark(this);
+        // The card layout sizes to content (SizeToContent=Height); clamp so a tall window never runs
+        // past the work area (keeps the title-bar ✕ reachable). The outer ScrollViewer handles overflow.
+        MaxHeight = SystemParameters.WorkArea.Height * 0.94;
     }
 
     private void LoadGeneral()
     {
         var c = _settings.Capture;
-        AfterCaptureCombo.SelectedIndex = c.AfterCapture switch
+        (c.AfterCapture switch
         {
-            AfterCaptureBehavior.CopyOnly => 1,
-            AfterCaptureBehavior.SaveOnly => 2,
-            AfterCaptureBehavior.CopyAndSave => 3,
-            _ => 0,
-        };
-        FormatCombo.SelectedIndex = c.Format == SettingsImageFormat.Jpg ? 1 : 0;
-        CornerCombo.SelectedIndex = c.OverlayCorner switch
+            AfterCaptureBehavior.CopyOnly => AfterCopy,
+            AfterCaptureBehavior.SaveOnly => AfterSave,
+            AfterCaptureBehavior.CopyAndSave => AfterBoth,
+            _ => AfterOverlay,
+        }).IsChecked = true;
+        (c.Format == SettingsImageFormat.Jpg ? FmtJpg : FmtPng).IsChecked = true;
+        (c.OverlayCorner switch
         {
-            SettingsOverlayCorner.TopLeft => 0,
-            SettingsOverlayCorner.TopRight => 1,
-            SettingsOverlayCorner.BottomLeft => 2,
-            _ => 3,
-        };
-        AutoDismissCombo.SelectedIndex = c.OverlayAutoDismissSeconds switch { 3 => 0, 10 => 2, _ => 1 };
+            SettingsOverlayCorner.TopLeft => CornerTL,
+            SettingsOverlayCorner.TopRight => CornerTR,
+            SettingsOverlayCorner.BottomLeft => CornerBL,
+            _ => CornerBR,
+        }).IsChecked = true;
+        (c.OverlayAutoDismissSeconds switch { 3 => Dismiss3, 10 => Dismiss10, _ => Dismiss6 }).IsChecked = true;
         SaveDirBox.Text = _settings.SaveDirectory;
         PinRadiusCombo.SelectedIndex = Math.Max(0, Array.IndexOf(PinRadii, c.PinCornerRadius));
         PinShadowCheck.IsChecked = c.PinShadow;
         HistoryEnabledCheck.IsChecked = c.HistoryEnabled;
-        HistoryCapCombo.SelectedIndex = Math.Max(0, Array.IndexOf(HistoryCaps, c.HistoryCap));
+        (c.HistoryCap switch { 10 => Cap10, 200 => Cap200, _ => Cap50 }).IsChecked = true;
         LaunchAtLoginCheck.IsChecked = _settings.LaunchAtLogin;
         CaptureSoundCheck.IsChecked = _settings.CaptureSoundEnabled;
     }
@@ -82,29 +84,36 @@ public partial class SettingsWindow : Window
     private void LoadRecording()
     {
         var r = _settings.Recording;
-        RecFormatCombo.SelectedIndex = r.Format == RecordingFormat.Gif ? 1 : 0;
-        FpsCombo.SelectedIndex = r.Fps == 60 ? 1 : 0;
+        (r.Format == RecordingFormat.Gif ? RecGif : RecMp4).IsChecked = true;
+        (r.Fps == 60 ? Fps60 : Fps30).IsChecked = true;
         SysAudioCheck.IsChecked = r.SystemAudio;
         MicCheck.IsChecked = r.Microphone;
         CameraCheck.IsChecked = r.Camera;
-        CameraSizeCombo.SelectedIndex = r.CameraSize == CameraSize.Medium ? 1 : 0;
+        (r.CameraSize == CameraSize.Medium ? CamMedium : CamSmall).IsChecked = true;
         ClicksCheck.IsChecked = r.ClickHighlights;
         KeystrokesCheck.IsChecked = r.KeystrokeOverlay;
-        CountdownCombo.SelectedIndex = r.CountdownSeconds switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 };
+        (r.CountdownSeconds switch { 3 => Cd3, 5 => Cd5, 10 => Cd10, _ => Cd0 }).IsChecked = true;
     }
 
     private void BuildShortcutRows()
     {
         foreach (var action in HotkeyActionInfo.All)
         {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 5, 0, 5) };
-            row.Children.Add(new TextBlock
+            var row = new Grid { Margin = new Thickness(0, 4, 0, 4) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var title = new TextBlock
             {
                 Text = action.Title(),
-                Width = 180,
+                FontSize = 12.5,
                 VerticalAlignment = VerticalAlignment.Center,
-                Foreground = (Brush)FindResource("Theme.SecondaryTextBrush"),
-            });
+                Foreground = (Brush)FindResource("Theme.TextW85"),
+            };
+            Grid.SetColumn(title, 0);
+            row.Children.Add(title);
 
             var label = new TextBlock
             {
@@ -113,24 +122,45 @@ public partial class SettingsWindow : Window
                 FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
+                Foreground = (Brush)FindResource("Theme.TextBrush"),
             };
             _shortcutLabels[action] = label;
-            row.Children.Add(new Border
+            var chip = new Border
             {
                 Child = label,
-                Width = 130,
-                Padding = new Thickness(8, 4, 8, 4),
-                CornerRadius = new CornerRadius(5),
-                Background = (Brush)FindResource("Theme.ControlBrush"),
-                Margin = new Thickness(0, 0, 10, 0),
-            });
+                MinWidth = 118,
+                Padding = new Thickness(10, 4, 10, 4),
+                CornerRadius = new CornerRadius(6),
+                Background = (Brush)FindResource("Theme.ChromeBrush"),
+                BorderBrush = (Brush)FindResource("Theme.BorderBrush"),
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Grid.SetColumn(chip, 1);
+            row.Children.Add(chip);
 
-            var change = new Button { Content = "Change", Padding = new Thickness(10, 3, 10, 3), Tag = action };
+            var change = new Button
+            {
+                Content = "Change",
+                Style = (Style)FindResource("Theme.PillButton"),
+                Tag = action,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
             change.Click += StartRecording;
+            Grid.SetColumn(change, 2);
             row.Children.Add(change);
 
-            var clear = new Button { Content = "Clear", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), Tag = action };
+            var clear = new Button
+            {
+                Content = "Clear",
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(6, 0, 0, 0),
+                Tag = action,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
             clear.Click += ClearBinding;
+            Grid.SetColumn(clear, 3);
             row.Children.Add(clear);
 
             ShortcutsPanel.Children.Add(row);
@@ -220,39 +250,33 @@ public partial class SettingsWindow : Window
     {
         _settings.Capture = new CaptureSettings
         {
-            AfterCapture = AfterCaptureCombo.SelectedIndex switch
-            {
-                1 => AfterCaptureBehavior.CopyOnly,
-                2 => AfterCaptureBehavior.SaveOnly,
-                3 => AfterCaptureBehavior.CopyAndSave,
-                _ => AfterCaptureBehavior.ShowOverlay,
-            },
-            Format = FormatCombo.SelectedIndex == 1 ? SettingsImageFormat.Jpg : SettingsImageFormat.Png,
-            OverlayCorner = CornerCombo.SelectedIndex switch
-            {
-                0 => SettingsOverlayCorner.TopLeft,
-                1 => SettingsOverlayCorner.TopRight,
-                2 => SettingsOverlayCorner.BottomLeft,
-                _ => SettingsOverlayCorner.BottomRight,
-            },
-            OverlayAutoDismissSeconds = AutoDismissCombo.SelectedIndex switch { 0 => 3, 2 => 10, _ => 6 },
+            AfterCapture = AfterCopy.IsChecked == true ? AfterCaptureBehavior.CopyOnly
+                : AfterSave.IsChecked == true ? AfterCaptureBehavior.SaveOnly
+                : AfterBoth.IsChecked == true ? AfterCaptureBehavior.CopyAndSave
+                : AfterCaptureBehavior.ShowOverlay,
+            Format = FmtJpg.IsChecked == true ? SettingsImageFormat.Jpg : SettingsImageFormat.Png,
+            OverlayCorner = CornerTL.IsChecked == true ? SettingsOverlayCorner.TopLeft
+                : CornerTR.IsChecked == true ? SettingsOverlayCorner.TopRight
+                : CornerBL.IsChecked == true ? SettingsOverlayCorner.BottomLeft
+                : SettingsOverlayCorner.BottomRight,
+            OverlayAutoDismissSeconds = Dismiss3.IsChecked == true ? 3 : Dismiss10.IsChecked == true ? 10 : 6,
             PinCornerRadius = PinRadii[Math.Max(0, PinRadiusCombo.SelectedIndex)],
             PinShadow = PinShadowCheck.IsChecked == true,
             HistoryEnabled = HistoryEnabledCheck.IsChecked == true,
-            HistoryCap = HistoryCaps[Math.Max(0, HistoryCapCombo.SelectedIndex)],
+            HistoryCap = Cap10.IsChecked == true ? 10 : Cap200.IsChecked == true ? 200 : 50,
         };
 
         _settings.Recording = new RecordingConfig
         {
-            Format = RecFormatCombo.SelectedIndex == 1 ? RecordingFormat.Gif : RecordingFormat.Mp4,
-            Fps = FpsCombo.SelectedIndex == 1 ? 60 : 30,
+            Format = RecGif.IsChecked == true ? RecordingFormat.Gif : RecordingFormat.Mp4,
+            Fps = Fps60.IsChecked == true ? 60 : 30,
             SystemAudio = SysAudioCheck.IsChecked == true,
             Microphone = MicCheck.IsChecked == true,
             Camera = CameraCheck.IsChecked == true,
-            CameraSize = CameraSizeCombo.SelectedIndex == 1 ? CameraSize.Medium : CameraSize.Small,
+            CameraSize = CamMedium.IsChecked == true ? CameraSize.Medium : CameraSize.Small,
             ClickHighlights = ClicksCheck.IsChecked == true,
             KeystrokeOverlay = KeystrokesCheck.IsChecked == true,
-            CountdownSeconds = CountdownCombo.SelectedIndex switch { 1 => 3, 2 => 5, 3 => 10, _ => 0 },
+            CountdownSeconds = Cd3.IsChecked == true ? 3 : Cd5.IsChecked == true ? 5 : Cd10.IsChecked == true ? 10 : 0,
         };
 
         _settings.SaveDirectory = SaveDirBox.Text;

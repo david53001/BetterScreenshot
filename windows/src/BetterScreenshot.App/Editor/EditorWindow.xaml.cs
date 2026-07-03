@@ -392,10 +392,10 @@ public partial class EditorWindow : Window
     {
         _marquee = new Rectangle
         {
-            Stroke = new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF)),
+            Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)), // monochrome marquee (was blue)
             StrokeThickness = 1,
             StrokeDashArray = new DoubleCollection { 4, 3 },
-            Fill = new SolidColorBrush(Color.FromArgb(0x22, 0x0A, 0x84, 0xFF)),
+            Fill = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
         };
         Canvas.SetLeft(_marquee, start.X);
         Canvas.SetTop(_marquee, start.Y);

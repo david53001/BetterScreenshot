@@ -6,9 +6,9 @@ namespace BetterScreenshot.App.Tray;
 /// <summary>Dark palette for the tray ContextMenuStrip, mirroring Theme.xaml (card/hover/hairline/text).</summary>
 internal sealed class DarkMenuColors : WF.ProfessionalColorTable
 {
-    public static readonly Color Surface = Color.FromArgb(0x2C, 0x2C, 0x30);
-    public static readonly Color Hover = Color.FromArgb(0x3A, 0x3A, 0x3F);
-    public static readonly Color Hairline = Color.FromArgb(0x45, 0x45, 0x4A);
+    public static readonly Color Surface = Color.FromArgb(0x14, 0x14, 0x16);
+    public static readonly Color Hover = Color.FromArgb(0x24, 0x24, 0x28);
+    public static readonly Color Hairline = Color.FromArgb(0x2A, 0x2A, 0x2A);
 
     public override Color ToolStripDropDownBackground => Surface;
     public override Color ImageMarginGradientBegin => Surface;
