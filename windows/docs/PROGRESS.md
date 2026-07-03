@@ -18,6 +18,18 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-03 — InfoTip polish: no Help cursor + crisp, perfectly-centered "i" (owner request)
+Two owner-reported nits on the `App/Controls/InfoTip.cs` "ⓘ" button. **(1)** Hovering it showed the arrow-with-"?"
+Help cursor — it was `Cursor = Cursors.Help`; changed to `Cursors.Arrow` (it's hover-only, no click action). Commit
+`3d03014`. **(2)** The "i" looked off-center, small, and color-fringed. Root cause: it was a `TextBlock`, so WPF drew
+it as **ClearType text** (subpixel color fringing on the dark circle) and centered its advance-width box, not its ink.
+Replaced it with a **filled vector `Path`** built from the glyph outline — scaled to a fixed 9px ink height (bigger),
+normalized so ink bounds start at (0,0) so `Stretch.None` + the Border's `Center` alignment centers the visible ink
+exactly. Result is solid white, fringe-free, and pixel-identical every instance. Verified via a throwaway
+`RenderTargetBitmap` harness measuring the real control: L/R margins 6.00/6.00 DIP, T/B 3.50/3.50 DIP, bbox-center
+offset ≈ −0.013 DIP (dead center). Commit `db88ab0`. Republished `dist/` and relaunched the tray agent both times.
+Kept the italic serif style (owner only flagged centering/size); upright is a one-line change if wanted later.
+
 ## 2026-07-03 — Per-setting info buttons + drag temp PNG auto-deletes after 5 min (owner request)
 Owner asked for *"a little information button next to every single setting to explain what the setting is and give an
 example,"* and that *"when you drag a screenshot in, it saves it in temp for 5 minutes and then deletes it
