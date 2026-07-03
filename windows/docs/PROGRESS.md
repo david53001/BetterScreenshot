@@ -603,6 +603,21 @@ stopped the stale process, ran `pwsh windows/scripts/publish-app.ps1 -NoShortcut
 the tray agent — a green build + commit alone leaves the owner testing a stale binary. (This is now called out in
 `README-win.md` and in `LOOP-PROMPT.md` §5 Rules.)
 
+## Editor text: click-off crash + no white background (2026-07-03) — commit `dc8c9a2`
+Owner reported two things. Adding text then clicking back onto the image crashed the whole app. And the text
+editor was a clunky white box. Both fixed. Details in `INVESTIGATION-2026-07-03-editor-text-crash-background.md`.
+
+- **Crash.** `NullReferenceException` in `PlaceTextBox` (from `OnDown`). No global handler, so it killed the process.
+- Root cause: each `TextBox`'s `LostKeyboardFocus` committed the shared `_textBox` field, not the box that lost focus.
+- On click-off `OnDown` committed the old box then placed a new one in the same handler. A late focus event re-entered
+  `CommitText()` and nulled `_textBox` mid-`PlaceTextBox`.
+- Fix: `CommitText(TextBox)` guarded by `ReferenceEquals`; handlers wired to the specific box before `Focus()`;
+  `OnDown` now finishes an open text box and consumes the click instead of committing-then-replacing.
+- **White background.** The inline editor is now WYSIWYG: transparent, no chrome, stroke-colored bold text in the render font.
+- Text has no background by default. A new inspector toggle adds an optional rounded chip (auto-contrast color).
+- Chip is sticky (`AnnotationStyle.TextBackground`), drawn by `DocumentRenderer`; old styles without the field load as `null`.
+- Verified: 260 tests green; crash harness survives all orderings; visually confirmed; `dist/` republished.
+
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
 - **Republish `dist/` after runtime-visible changes.** `dist/` is a manual publish snapshot; a plain build/commit
