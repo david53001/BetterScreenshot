@@ -66,8 +66,49 @@ public partial class EditorWindow : Window
         InteractionLayer.MouseMove += OnMove;
         InteractionLayer.MouseLeftButtonUp += OnUp;
         KeyDown += OnKeyDown;
+        Loaded += (_, _) => FitToImage();
 
         Redraw();
+    }
+
+    private bool _fitted;
+
+    /// <summary>
+    /// Sizes the window (once, after the first layout pass) so its canvas area matches the base image's
+    /// aspect ratio. This makes the image fill the canvas edge-to-edge instead of leaving wide gray
+    /// pillar/letterbox gaps where drags land on nothing. Clamped to the work area and the window minimums.
+    /// </summary>
+    private void FitToImage()
+    {
+        if (_fitted || CanvasArea.ActualWidth <= 0 || CanvasArea.ActualHeight <= 0) return;
+        _fitted = true;
+
+        const double frame = 32;       // Viewbox Margin=16 on each side
+        const double maxUpscale = 2.0; // don't blow a tiny capture up into a blurry wall
+
+        double imgW = _baseImage.PixelWidth;
+        double imgH = _baseImage.PixelHeight;
+        if (imgW <= 0 || imgH <= 0) return;
+
+        // Everything that isn't the canvas (title bar, window borders, tool + bottom bars) is fixed;
+        // measuring it as (window − canvas) lets us resize the canvas exactly without non-client math.
+        double chromeW = ActualWidth - CanvasArea.ActualWidth;
+        double chromeH = ActualHeight - CanvasArea.ActualHeight;
+
+        var work = SystemParameters.WorkArea;
+        double maxDrawW = work.Width * 0.94 - chromeW - frame;
+        double maxDrawH = work.Height * 0.94 - chromeH - frame;
+        if (maxDrawW <= 0 || maxDrawH <= 0) return;
+
+        double scale = Math.Min(Math.Min(maxDrawW / imgW, maxDrawH / imgH), maxUpscale);
+
+        double winW = imgW * scale + frame + chromeW;
+        double winH = imgH * scale + frame + chromeH;
+
+        Width = Math.Max(winW, MinWidth);
+        Height = Math.Max(winH, MinHeight);
+        Left = work.Left + (work.Width - Width) / 2;
+        Top = work.Top + (work.Height - Height) / 2;
     }
 
     private EditorState Snapshot() => new(new EditorDocument(_document.Size, _document.Annotations), _baseImage);

@@ -13,7 +13,7 @@ public sealed class QuickAccessStackController
 {
     private const int MaxCount = 3;
     private const double CardWidth = 220;
-    private const double CardHeight = 168;
+    private const double CardHeight = 184; // must match QuickAccessWindow.xaml Height (thumbnail + gap + button band)
     private const double Margin = 24;
 
     private readonly List<QuickAccessWindow> _cards = new(); // index 0 = newest
