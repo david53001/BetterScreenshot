@@ -48,7 +48,7 @@ black buttons, and detect the palette on hover too."*
 Three owner-reported issues on a **dual-monitor, stretched-resolution** rig (primary = a **stretched 1500×1080**
 on a native-1920 panel; secondary = native **1920×1080**). Root-caused with live GDI diagnostics (PerMonitorV2
 harness mirroring `Screens`/`ScreenCapture`); all four fixes are pure-logic-tested where possible + a new capture
-regression test.
+regression test. **Full debugging process log:** [`INVESTIGATION-2026-07-03-capture-blackbar-editor.md`](INVESTIGATION-2026-07-03-capture-blackbar-editor.md).
 - **Capture "massive black bar on the side" (the main one).** The proof was in the owner's screenshot: the
   captured desktop's **taskbar cut off at the content edge** with black beyond — a Windows taskbar spans the whole
   monitor, so the *framebuffer* was ~1500 wide but the BitBlt requested ~1920. The app only sizes captures from
