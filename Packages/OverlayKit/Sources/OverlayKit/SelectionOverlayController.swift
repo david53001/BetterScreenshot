@@ -1,4 +1,5 @@
 import AppKit
+import CaptureKit
 
 public final class SelectionOverlayController {
     private var windows: [NSWindow] = []
@@ -55,10 +56,12 @@ public final class SelectionOverlayController {
         self.completion = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
-        guard let rect, rect.width >= 1, rect.height >= 1 else { completion(nil); return }
+        guard let rect else { completion(nil); return }
+        let clamped = SelectionClamp.clamp(rect, to: screen.frame)
+        guard clamped.width >= 1, clamped.height >= 1 else { completion(nil); return }
         let displayID = (screen.deviceDescription[
             NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
-        completion(SelectionResult(globalRect: rect, displayID: displayID))
+        completion(SelectionResult(globalRect: clamped, displayID: displayID))
     }
 }
 

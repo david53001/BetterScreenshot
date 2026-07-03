@@ -5,9 +5,9 @@ let package = Package(
     name: "OverlayKit",
     platforms: [.macOS(.v14)],
     products: [.library(name: "OverlayKit", targets: ["OverlayKit"])],
-    dependencies: [.package(path: "../TestKit")],
+    dependencies: [.package(path: "../TestKit"), .package(path: "../CaptureKit")],
     targets: [
-        .target(name: "OverlayKit"),
+        .target(name: "OverlayKit", dependencies: [.product(name: "CaptureKit", package: "CaptureKit")]),
         // Test suite as an executable runner (XCTest is unavailable under CLT).
         // Run with: swift run --package-path Packages/OverlayKit OverlayKitTests
         .executableTarget(
