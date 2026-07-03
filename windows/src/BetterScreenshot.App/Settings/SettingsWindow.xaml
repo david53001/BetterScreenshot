@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctl="clr-namespace:BetterScreenshot.App.Controls"
         Title="BetterScreenshot Settings"
-        Width="720" SizeToContent="Height" ResizeMode="CanMinimize"
+        Width="960" SizeToContent="Height" ResizeMode="CanMinimize"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource Theme.WindowBrush}" FontFamily="Segoe UI"
         Foreground="{StaticResource Theme.TextBrush}">
@@ -46,9 +46,12 @@
                            Foreground="{StaticResource Theme.SubtleTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
 
-            <!-- Two-column card body -->
+            <!-- Three-column card body — matches JVoice's 960-wide settings: wider (three columns)
+                 so the window is shorter than the old tall two-column stack. -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="16"/>
                     <ColumnDefinition Width="*"/>
@@ -125,6 +128,11 @@
                         </StackPanel>
                     </ctl:DarkSection>
 
+                </StackPanel>
+
+                <!-- ===== COLUMN B ===== -->
+                <StackPanel Grid.Column="2">
+
                     <!-- HISTORY -->
                     <ctl:DarkSection HeaderText="History">
                         <StackPanel>
@@ -140,7 +148,7 @@
                             <UniformGrid Rows="1" HorizontalAlignment="Left" Width="180">
                                 <RadioButton x:Name="Cap10" Content="10" GroupName="HistoryCap" Style="{StaticResource Theme.SegmentLeft}" Checked="Changed"/>
                                 <RadioButton x:Name="Cap50" Content="50" GroupName="HistoryCap" Style="{StaticResource Theme.SegmentMid}" Checked="Changed"/>
-                                <RadioButton x:Name="Cap200" Content="200" GroupName="HistoryCap" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
+                                <RadioButton x:Name="Cap100" Content="100" GroupName="HistoryCap" Style="{StaticResource Theme.SegmentRight}" Checked="Changed"/>
                             </UniformGrid>
                         </StackPanel>
                     </ctl:DarkSection>
@@ -157,11 +165,6 @@
                         </Grid>
                     </ctl:DarkSection>
 
-                </StackPanel>
-
-                <!-- ===== COLUMN B ===== -->
-                <StackPanel Grid.Column="2">
-
                     <!-- SAVE LOCATION -->
                     <ctl:DarkSection HeaderText="Save Location">
                         <StackPanel>
@@ -173,6 +176,11 @@
                             </Grid>
                         </StackPanel>
                     </ctl:DarkSection>
+
+                </StackPanel>
+
+                <!-- ===== COLUMN C ===== -->
+                <StackPanel Grid.Column="4">
 
                     <!-- RECORDING -->
                     <ctl:DarkSection HeaderText="Recording">

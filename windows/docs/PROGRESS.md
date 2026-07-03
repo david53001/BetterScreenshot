@@ -18,6 +18,26 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-03 — History cap → 10/50/100 + Settings widened to JVoice 960 / 3 columns (owner request)
+Owner asked to *"implement a new feature called history … last 10 up to last 100, editable in settings,"* and to
+*"make the settings wider (not as long) to match the JVoice width."* **Capture history already existed end-to-end**
+(Phase 6: `BetterScreenshot.History/`, `Platform/HistoryStore.cs`, `App/History/HistoryService.cs` +
+`HistoryWindow`, tray → History…, records on save/overlay). So this was a **refinement**, not a new build:
+- **History cap options `10 / 50 / 200` → `10 / 50 / 100`** (max is now 100 per the request). Renamed the segmented
+  radio `Cap200`→`Cap100` in `Settings/SettingsWindow.xaml` (Content "100") and updated the load/apply switches in
+  `SettingsWindow.xaml.cs` (lines ~79, ~266). **Default kept at 50** (`CaptureSettings.HistoryCap`) — it is the
+  tested default, the middle of the new range, and the owner's already-persisted value; "10" is honored as the
+  minimum option. The model still accepts any int, so the two roundtrip tests that serialize `HistoryCap=200` still
+  pass unchanged.
+- **Settings window `720`→`960` wide + two-column body reflowed to three** (mirrors `JVoice-Windows`
+  `UI/SettingsView.xaml`, which is `Width="960"` / 3-col; its own comment explains the exact rationale the owner
+  echoed — go wider so the window isn't a too-tall stack). Document order already split cleanly, so it was done by
+  inserting column boundaries only (no block moves): **Col A** Capture · Quick Access Overlay · Pin to Screen ·
+  **Col B** History · Startup · Save Location · **Col C** Recording. Keyboard Shortcuts stays full-width below.
+- **Verified:** `dotnet build` clean (0/0), **256 tests green**, and the settings window rendered via
+  `--ui-preview settings` (960×970, 3 balanced columns, History shows 10/50/100, no clipping). Republished to
+  `dist/` and relaunched the tray agent.
+
 ## 2026-07-03 — Quick Access card: full-bleed image + auto-contrast overlay (owner request)
 Redesigned the post-capture Quick Access card (`Overlays/QuickAccessWindow.xaml[.cs]`) per owner: *"the image
 should be the full thing / the full block, rounded; the UI overlays above it and auto-contrasts — white image →

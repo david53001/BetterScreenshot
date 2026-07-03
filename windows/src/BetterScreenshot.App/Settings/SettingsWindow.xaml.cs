@@ -76,7 +76,7 @@ public partial class SettingsWindow : Window
         PinRadiusCombo.SelectedIndex = Math.Max(0, Array.IndexOf(PinRadii, c.PinCornerRadius));
         PinShadowCheck.IsChecked = c.PinShadow;
         HistoryEnabledCheck.IsChecked = c.HistoryEnabled;
-        (c.HistoryCap switch { 10 => Cap10, 200 => Cap200, _ => Cap50 }).IsChecked = true;
+        (c.HistoryCap switch { 10 => Cap10, 100 => Cap100, _ => Cap50 }).IsChecked = true;
         LaunchAtLoginCheck.IsChecked = _settings.LaunchAtLogin;
         CaptureSoundCheck.IsChecked = _settings.CaptureSoundEnabled;
     }
@@ -263,7 +263,7 @@ public partial class SettingsWindow : Window
             PinCornerRadius = PinRadii[Math.Max(0, PinRadiusCombo.SelectedIndex)],
             PinShadow = PinShadowCheck.IsChecked == true,
             HistoryEnabled = HistoryEnabledCheck.IsChecked == true,
-            HistoryCap = Cap10.IsChecked == true ? 10 : Cap200.IsChecked == true ? 200 : 50,
+            HistoryCap = Cap10.IsChecked == true ? 10 : Cap100.IsChecked == true ? 100 : 50,
         };
 
         _settings.Recording = new RecordingConfig
