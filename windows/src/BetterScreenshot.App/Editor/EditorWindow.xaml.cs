@@ -138,6 +138,7 @@ public partial class EditorWindow : Window
     private readonly List<(RGBAColor Color, ToggleButton Button)> _colorButtons = new();
     private readonly Dictionary<double, ToggleButton> _weightButtons = new();
     private readonly Dictionary<double, ToggleButton> _sizeButtons = new();
+    private ToggleButton? _textBgButton;
 
     private void BuildToolbar()
     {
@@ -217,6 +218,21 @@ public partial class EditorWindow : Window
             };
             _sizeButtons[size] = InspectorToggle(a, $"Text size {size:0}", () => SetSize(size));
         }
+        Inspector.Children.Add(new Separator { Width = 12, Visibility = Visibility.Hidden });
+        // Text-background toggle: off = text sits directly on the image (default); on = a rounded "label" chip
+        // behind the text, auto-tinted for contrast against the current text color.
+        var bgGlyph = new System.Windows.Controls.Border
+        {
+            Width = 20, Height = 15, CornerRadius = new CornerRadius(3),
+            Background = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
+            Child = new TextBlock
+            {
+                Text = "A", Foreground = Brushes.Black, FontSize = 10, FontWeight = FontWeights.Bold,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            },
+        };
+        _textBgButton = InspectorToggle(bgGlyph, "Text background", ToggleTextBackground);
         RefreshInspector();
     }
 
@@ -242,9 +258,33 @@ public partial class EditorWindow : Window
         foreach (var (color, button) in _colorButtons) button.IsChecked = color == _style.StrokeColor;
         foreach (var (weight, button) in _weightButtons) button.IsChecked = Math.Abs(weight - _style.LineWidth) < 0.01;
         foreach (var (size, button) in _sizeButtons) button.IsChecked = Math.Abs(size - _style.FontSize) < 0.01;
+        if (_textBgButton != null) _textBgButton.IsChecked = _style.TextBackground is not null;
     }
 
-    private void SetColor(RGBAColor c) { _style = _style with { StrokeColor = c, FillColor = c.WithAlpha(0.25) }; StyleChanged?.Invoke(_style); RefreshInspector(); }
+    // Recompute the text-background chip when the stroke color changes so it stays readable against the new color.
+    private void SetColor(RGBAColor c)
+    {
+        var bg = _style.TextBackground is null ? (RGBAColor?)null : AutoChip(c);
+        _style = _style with { StrokeColor = c, FillColor = c.WithAlpha(0.25), TextBackground = bg };
+        StyleChanged?.Invoke(_style);
+        RefreshInspector();
+    }
+
+    private void ToggleTextBackground()
+    {
+        var bg = _style.TextBackground is null ? AutoChip(_style.StrokeColor) : (RGBAColor?)null;
+        _style = _style with { TextBackground = bg };
+        StyleChanged?.Invoke(_style);
+        RefreshInspector();
+    }
+
+    /// <summary>A readable background chip for text of color <paramref name="text"/>: a near-opaque light chip
+    /// behind dark text, a dark chip behind light text (chosen by perceived luminance).</summary>
+    private static RGBAColor AutoChip(RGBAColor text)
+    {
+        double luminance = 0.299 * text.R + 0.587 * text.G + 0.114 * text.B;
+        return luminance < 0.5 ? new RGBAColor(1, 1, 1, 0.92) : new RGBAColor(0, 0, 0, 0.6);
+    }
     private void SetWeight(double w) { _style = _style with { LineWidth = w }; StyleChanged?.Invoke(_style); RefreshInspector(); }
     private void SetSize(double s) { _style = _style with { FontSize = s }; StyleChanged?.Invoke(_style); RefreshInspector(); }
 
@@ -261,7 +301,12 @@ public partial class EditorWindow : Window
 
     private void OnDown(object sender, MouseButtonEventArgs e)
     {
-        CommitText();
+        // A click while a text box is open just finishes that text and consumes the click — it does NOT also
+        // start a new box at the click point. (Committing then re-placing in the same handler was both clunky
+        // and the source of a re-entrancy crash: a late LostKeyboardFocus from the just-removed box could null
+        // _textBox midway through creating the next one.)
+        if (_textBox is not null) { CommitText(); return; }
+
         var p = Pos(e);
 
         switch (_tool)
@@ -572,28 +617,54 @@ public partial class EditorWindow : Window
         return w >= 1 && h >= 1 ? (x, y, w, h) : null;
     }
 
+    /// <summary>
+    /// Opens the inline text editor at <paramref name="p"/>. The box is WYSIWYG: transparent (or the chosen
+    /// background chip), stroke-colored bold text in the same font the renderer uses — so what you type looks like
+    /// the flattened result, with no stray white box. <paramref name="p"/> is the text's top-left origin; when a
+    /// background chip is on, the box is shifted by the chip padding so the glyphs still land on the origin.
+    /// </summary>
     private void PlaceTextBox(PxPoint p)
     {
-        _textBox = new TextBox
+        bool hasBg = _style.TextBackground is not null;
+        var box = new TextBox
         {
-            MinWidth = 80,
+            MinWidth = 24,
             FontSize = _style.FontSize,
-            Background = Brushes.White,
-            Foreground = Brushes.Black, // the implicit dark-theme TextBox would put light text on this white box
+            FontFamily = DocumentRenderer.TextFont,
+            FontWeight = DocumentRenderer.TextWeight,
+            Foreground = PreviewBrush(_style.StrokeColor),
+            CaretBrush = PreviewBrush(_style.StrokeColor),
+            Background = _style.TextBackground is { } bg ? PreviewBrush(bg) : Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = hasBg
+                ? new Thickness(DocumentRenderer.TextChipPadX, DocumentRenderer.TextChipPadY, DocumentRenderer.TextChipPadX, DocumentRenderer.TextChipPadY)
+                : new Thickness(0),
             Tag = p,
         };
-        Canvas.SetLeft(_textBox, p.X);
-        Canvas.SetTop(_textBox, p.Y);
-        InteractionLayer.Children.Add(_textBox);
-        _textBox.Focus();
-        _textBox.LostKeyboardFocus += (_, _) => CommitText();
-        _textBox.KeyDown += (_, ke) => { if (ke.Key == Key.Enter) CommitText(); };
+        _textBox = box;
+        Canvas.SetLeft(box, p.X - (hasBg ? DocumentRenderer.TextChipPadX : 0));
+        Canvas.SetTop(box, p.Y - (hasBg ? DocumentRenderer.TextChipPadY : 0));
+        InteractionLayer.Children.Add(box);
+        // Wire the commit handlers to THIS box (not the shared field) and attach them before focusing, so a
+        // focus change triggered by Focus() can never re-enter with a half-built box.
+        box.LostKeyboardFocus += (_, _) => CommitText(box);
+        box.KeyDown += (_, ke) => { if (ke.Key == Key.Enter) { ke.Handled = true; CommitText(box); } };
+        box.Focus();
     }
 
     private void CommitText()
     {
-        if (_textBox is null) return;
-        var box = _textBox;
+        if (_textBox is { } box) CommitText(box);
+    }
+
+    /// <summary>
+    /// Flattens <paramref name="box"/> into a text annotation. Guarded by identity: a stale or late-firing
+    /// LostKeyboardFocus from a box that has already been replaced is ignored, so it can never clobber the box the
+    /// user is currently editing (that re-entrancy was the click-off crash).
+    /// </summary>
+    private void CommitText(TextBox box)
+    {
+        if (!ReferenceEquals(box, _textBox)) return;
         _textBox = null;
         var origin = (PxPoint)box.Tag;
         string text = box.Text;

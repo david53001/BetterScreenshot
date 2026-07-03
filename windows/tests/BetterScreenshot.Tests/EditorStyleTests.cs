@@ -37,4 +37,23 @@ public class EditorStyleTests
         };
         Assert.Equal(s, AnnotationStyle.FromJson(s.ToJson()));
     }
+
+    [Fact]
+    public void TextBackgroundDefaultsToNullAndRoundTrips()
+    {
+        Assert.Null(AnnotationStyle.Default.TextBackground);
+
+        var withBg = AnnotationStyle.Default with { TextBackground = new RGBAColor(0, 0, 0, 0.6) };
+        Assert.Equal(withBg, AnnotationStyle.FromJson(withBg.ToJson()));
+    }
+
+    [Fact]
+    public void LegacyJsonWithoutTextBackgroundDeserializesToNull()
+    {
+        // A style persisted before TextBackground existed must still load (field absent -> null), so an existing
+        // UserDefaults/editorStyle value never breaks the editor.
+        const string legacy = "{\"strokeColor\":{\"r\":1,\"g\":0.23,\"b\":0.19,\"a\":1}," +
+                              "\"fillColor\":{\"r\":1,\"g\":0.23,\"b\":0.19,\"a\":0.25},\"lineWidth\":4,\"fontSize\":24}";
+        Assert.Null(AnnotationStyle.FromJson(legacy).TextBackground);
+    }
 }

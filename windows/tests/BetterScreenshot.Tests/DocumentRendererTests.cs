@@ -86,4 +86,28 @@ public class DocumentRendererTests
         Assert.True(Pixel(outImg, 30, 30).R > 150);
         Assert.Empty(doc.Annotations); // preview must not be added to the document
     }
+
+    [Fact]
+    public void TextWithBackgroundPaintsChipBehindGlyphs()
+    {
+        // Opaque black chip behind white text on a white base: the chip's left padding (no glyph there) must be dark.
+        var style = AnnotationStyle.Default with { StrokeColor = new RGBAColor(1, 1, 1, 1), TextBackground = new RGBAColor(0, 0, 0, 1) };
+        var doc = new EditorDocument(new PxSize(200, 80));
+        doc.Add(new TextAnnotation(Guid.NewGuid(), style, "Hi", new PxPoint(40, 30)));
+        var outImg = DocumentRenderer.Render(doc, SolidBase(200, 80, 255, 255, 255));
+        var pad = Pixel(outImg, 36, 36); // inside the chip, left of the first glyph (origin.X = 40, chip starts at 34)
+        Assert.True(pad.R < 60 && pad.G < 60 && pad.B < 60, $"expected dark chip, got {pad.R},{pad.G},{pad.B}");
+    }
+
+    [Fact]
+    public void TextWithoutBackgroundLeavesBaseVisible()
+    {
+        // Same geometry, no chip: the spot where a chip would be must stay the base color (the default = no box).
+        var style = AnnotationStyle.Default with { StrokeColor = new RGBAColor(1, 0, 0, 1), TextBackground = null };
+        var doc = new EditorDocument(new PxSize(200, 80));
+        doc.Add(new TextAnnotation(Guid.NewGuid(), style, "Hi", new PxPoint(40, 30)));
+        var outImg = DocumentRenderer.Render(doc, SolidBase(200, 80, 255, 255, 255));
+        var pad = Pixel(outImg, 36, 36);
+        Assert.True(pad.R > 200 && pad.G > 200 && pad.B > 200, $"expected white base, got {pad.R},{pad.G},{pad.B}");
+    }
 }
