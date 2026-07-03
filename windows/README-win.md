@@ -24,8 +24,12 @@ capture history. **No cloud, no accounts, no uploads, ever.**
   tray timer, and a Quick Access card + history entry on finish.
 - **Capture history** — a persistent, browsable thumbnail grid (copy / annotate / pin / reveal / delete / clear-all);
   "Restore Recently Closed" brings back the last dismissed card. Auto-prunes by age + count.
-- **Settings** — General / Shortcuts / Recording tabs; live global-hotkey rebinding.
+- **Settings** — a single scrolling **wall of titled cards** (Capture, Quick Access Overlay, Pin to Screen,
+  History, Startup, Save Location, Recording, Keyboard Shortcuts) with macOS-style toggle switches and segmented
+  controls. Changes apply **instantly** and global hotkeys rebind live.
 
+The interface is an all-**monochrome black-and-white** dark theme (matching the sibling **JVoice** app's look):
+pure-black surfaces, near-black cards each headed by a glowing dot + label, and **white as the sole accent**.
 All UI glyphs and the app icon are **hand-authored vector art** — never screenshots or cropped images.
 
 ## Prerequisites
@@ -123,4 +127,6 @@ Layered .NET solution (`windows/BetterScreenshot.sln`):
 - `App` (WPF WinExe tray agent) — tray/menu, overlays, editor, history window, and the capture/recording
   coordinators.
 
-Design + plan + per-module fidelity specs live under `windows/docs/` (`SPEC.md`, `PLAN.md`, `port-reference/`).
+Design + plan + per-module fidelity specs live under `windows/docs/` (`SPEC.md`, `PLAN.md`, `port-reference/`); the
+running ledger is `PROGRESS.md`. The UI is documented in **`docs/UI-JVOICE-REVAMP.md`** (the current monochrome
+theme; the earlier `UI-REVAMP-SPEC.md`/`UI-REVAMP-PLAN.md` describe the superseded blue-accent theme).
