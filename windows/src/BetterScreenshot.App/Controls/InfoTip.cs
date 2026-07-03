@@ -54,7 +54,7 @@ public sealed class InfoTip : Border
         Background = IdleFill;
         BorderBrush = RingBrush;
         BorderThickness = new Thickness(1);
-        Cursor = Cursors.Help;
+        Cursor = Cursors.Arrow; // hover-only affordance — keep the normal pointer, not the Help "?" cursor
         VerticalAlignment = VerticalAlignment.Center;
         HorizontalAlignment = HorizontalAlignment.Left;
         SnapsToDevicePixels = true;
