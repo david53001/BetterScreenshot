@@ -201,7 +201,19 @@ public final class QuickAccessOverlayController: NSObject {
         panel.contentView = container
         panel.orderFrontRegardless()
         self.panel = panel
-        startAutoDismiss()
+        // If the cursor already rests where the card just appeared, AppKit
+        // won't fire an initial mouseEntered: on HoverTrackingView, so the
+        // countdown would run (and could dismiss the card) while it's
+        // effectively hovered. Treat that case as already-paused; the
+        // existing mouseExited: → startAutoDismiss() path begins the
+        // countdown once the cursor actually leaves.
+        if autoDismissSeconds > 0 {
+            if panel.frame.contains(NSEvent.mouseLocation) {
+                pauseAutoDismiss()
+            } else {
+                startAutoDismiss()
+            }
+        }
     }
 
     public func dismiss(reason: DismissReason = .actionTaken) {

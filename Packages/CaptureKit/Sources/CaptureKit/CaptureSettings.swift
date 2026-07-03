@@ -64,7 +64,11 @@ public struct CaptureSettings: Equatable {
         self.pinCornerRadius = Int(dictionary["pinCornerRadius"] ?? "") ?? d.pinCornerRadius
         self.pinShadow = dictionary["pinShadow"].map { $0 == "true" } ?? d.pinShadow
         self.historyEnabled = dictionary["historyEnabled"].map { $0 == "true" } ?? d.historyEnabled
-        self.historyCap = Int(dictionary["historyCap"] ?? "") ?? d.historyCap
+        let rawHistoryCap = Int(dictionary["historyCap"] ?? "") ?? d.historyCap
+        // Snap to the allowed option set so a legacy persisted value (e.g. an
+        // older build's default of 200) still resolves to a value the
+        // Settings UI's 10/50/100 control can show as selected.
+        self.historyCap = [10, 50, 100].min(by: { abs($0 - rawHistoryCap) < abs($1 - rawHistoryCap) }) ?? 50
         self.playSound = (dictionary["playSound"] ?? "1") != "0"
     }
 }

@@ -39,9 +39,15 @@ let captureSettingsTests: [TestCase] = [
     TestCase("roundTripsHistoryFields") { t in
         var s = CaptureSettings.default
         s.historyEnabled = false
-        s.historyCap = 200
+        s.historyCap = 100
         let restored = CaptureSettings(dictionary: s.dictionary)
         t.equal(restored, s)
+    },
+    TestCase("historyCapSnapsLegacyValueToAllowedSet") { t in
+        let snapped = CaptureSettings(dictionary: ["historyCap": "200"])
+        t.equal(snapped.historyCap, 100)
+        let unchanged = CaptureSettings(dictionary: ["historyCap": "50"])
+        t.equal(unchanged.historyCap, 50)
     },
     TestCase("playSoundDefaultsOnAndRoundTrips") { t in
         t.isTrue(CaptureSettings.default.playSound)
