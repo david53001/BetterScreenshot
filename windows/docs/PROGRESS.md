@@ -18,6 +18,36 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-03 — Per-setting info buttons + drag temp PNG auto-deletes after 5 min (owner request)
+Owner asked for *"a little information button next to every single setting to explain what the setting is and give an
+example,"* and that *"when you drag a screenshot in, it saves it in temp for 5 minutes and then deletes it
+automatically … but do not delete the screenshot fully since it's going to be in capture history."* Commits `3e6edea`
+(feature) + `a60c320` (tests) on `windows-port`. **NOTE: a second agent was editing this same tree concurrently**
+(its commits `35d3a73` two-col shortcuts, `dc8c9a2` editor text fix interleave with mine) — see the
+`concurrent-agents-shared-tree` memory; git merged the parallel commits linearly.
+- **Info buttons.** New reusable `App/Controls/InfoTip.cs` — a 16px circular monochrome "ⓘ" that shows a theme-styled
+  tooltip (bold Title + wrapped Explanation + italic "e.g." Example), built in code via `ToolTipOpening` with
+  literal-color fallbacks so it renders even without app resources. Placed next to **every** setting in
+  `Settings/SettingsWindow.xaml` (Capture, Quick Access Overlay, Pin, History, Startup, Save Location, Recording) and
+  next to **each Keyboard Shortcut row** (per-action copy via `ShortcutHelp` in the code-behind). WinForms/WPF type
+  ambiguities (`Cursors`/`ToolTip`/`HorizontalAlignment`) resolved with `using` aliases like the other App files.
+- **Drag temp cleanup.** The Quick Access drag-to-export temp PNG (`quickaccess.png`, written in
+  `CaptureCoordinator.ShowOverlayCard`) was **never deleted** (leaked in `%TEMP%`). New shared
+  `Platform/TempFiles.cs` (`PayloadLifetime = 5 min`, `ScheduleDeleteContainingDir`) now removes it 5 minutes after the
+  card is dismissed; `ClipboardService` refactored onto the same helper (dropped its private duplicate). The screenshot
+  is **preserved** — History keeps its own `%APPDATA%\…\History` PNG copy, a separate location, so deleting the `%TEMP%`
+  drag file loses nothing. Recording cards drag the *real* saved file and are intentionally NOT scheduled for deletion.
+- **Auto-dismiss wired (bonus).** `OverlayAutoDismissSeconds` (3/6/10s) was persisted + shown in Settings but **never
+  applied** — a dead setting. Wired it into `QuickAccessWindow` (DispatcherTimer, **hover-to-pause**, restart on
+  mouse-leave; auto-dismiss = `DismissReason.Closed` so it stays restorable). Makes the new info tip truthful and bounds
+  the temp lifetime to ~5 min after the card goes.
+- **Verified:** build **0/0**; `dotnet test` **264 passed / 0 failed** (+4 `TempFilesTests`: 5-min lifetime, deletes
+  only the payload dir, sibling dir untouched, null-safe). Settings rendered via `--ui-preview settings` (PrintWindow) —
+  ⓘ on every setting, clean 3-col layout. Tooltip content proven by rendering the **real** `InfoTip.BuildTip` output
+  offscreen (throwaway net9 WPF harness reflection-loading the built assembly — screen-grab was unreliable, owner's
+  dual monitors were busy with topmost apps). **Republished `dist/` and relaunched the tray agent** (it wasn't running —
+  I'd stopped it during verification). Committed, not pushed.
+
 ## 2026-07-03 — History cap → 10/50/100 + Settings widened to JVoice 960 / 3 columns (owner request)
 Owner asked to *"implement a new feature called history … last 10 up to last 100, editable in settings,"* and to
 *"make the settings wider (not as long) to match the JVoice width."* **Capture history already existed end-to-end**
