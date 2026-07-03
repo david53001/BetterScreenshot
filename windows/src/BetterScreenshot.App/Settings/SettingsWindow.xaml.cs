@@ -183,6 +183,39 @@ public partial class SettingsWindow : Window
         }
     }
 
+    /// <summary>Plain-language (explanation, example) copy for a shortcut row's info button.</summary>
+    private static (string Explanation, string Example) ShortcutHelp(HotkeyAction action) => action switch
+    {
+        HotkeyAction.CaptureArea =>
+            ("Drag a rectangle to capture just that region of the screen.",
+             "Press the shortcut, then drag over the part you want to grab."),
+        HotkeyAction.CaptureWindow =>
+            ("Highlight and click a single window to capture just that window, cleanly.",
+             "Press the shortcut, then click the window you want — the rest is ignored."),
+        HotkeyAction.CaptureFullscreen =>
+            ("Instantly capture your entire screen, no selection needed.",
+             "One press grabs everything currently on the display."),
+        HotkeyAction.CaptureText =>
+            ("Select a region and copy any text (or a QR code's contents) inside it to the clipboard, using on-device text recognition (OCR).",
+             "Drag over a paragraph inside an image, then paste the recognized text anywhere."),
+        HotkeyAction.PinFromClipboard =>
+            ("Pin the image currently on your clipboard as an always-on-top floating window.",
+             "Copy an image, then press this to keep it hovering on screen while you work."),
+        HotkeyAction.Record =>
+            ("Start or stop a screen recording. The first press opens the record strip to pick what to capture.",
+             "Press once to begin recording; press again to stop and save."),
+        HotkeyAction.OpenHistory =>
+            ("Open the capture history browser to find, copy, annotate or pin any of your recent captures.",
+             "Press it to reopen a screenshot you took earlier without re-capturing."),
+        HotkeyAction.RestoreRecentlyClosed =>
+            ("Bring back the most recently dismissed Quick Access card.",
+             "Closed a capture card too soon? This pops it back up."),
+        HotkeyAction.PauseResumeRecording =>
+            ("Pause or resume the current recording without creating a separate file — the paused time is skipped, so the video stays gapless.",
+             "Pause to skip a distraction mid-recording, then resume where you left off."),
+        _ => ("Runs this command.", ""),
+    };
+
     private void StartRecording(object sender, RoutedEventArgs e)
     {
         StopRecording(); // cancel any in-progress recording

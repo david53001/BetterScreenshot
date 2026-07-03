@@ -18,7 +18,7 @@ public sealed class QuickAccessStackController
     private readonly List<QuickAccessWindow> _cards = new(); // index 0 = newest
 
     public void Present(BitmapSource image, QuickAccessKind kind, QuickAccessActions actions, Corner corner,
-        string? dragFile, Action<DismissReason>? onDismiss = null)
+        string? dragFile, int autoDismissSeconds = 0, Action<DismissReason>? onDismiss = null)
     {
         if (_cards.Count >= MaxCount)
         {
@@ -27,7 +27,7 @@ public sealed class QuickAccessStackController
             oldest.ForceDismiss(DismissReason.Evicted);
         }
 
-        var card = new QuickAccessWindow(image, kind, actions, dragFile);
+        var card = new QuickAccessWindow(image, kind, actions, dragFile, autoDismissSeconds);
         card.Dismissed += reason =>
         {
             _cards.Remove(card);

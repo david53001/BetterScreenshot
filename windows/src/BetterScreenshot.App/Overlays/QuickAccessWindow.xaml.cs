@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using BetterScreenshot.App.Controls;
 using Brush = System.Windows.Media.Brush;
 using Button = System.Windows.Controls.Button;
@@ -29,16 +30,20 @@ public partial class QuickAccessWindow : Window
     private const double ShadowMargin = 6;        // must match the shadow-host Border Margin in the XAML
 
     private readonly string? _dragFile;
+    private readonly int _autoDismissSeconds;
+    private DispatcherTimer? _dismissTimer;
     private Point _dragStart;
     private bool _done;
 
     public event Action<DismissReason>? Dismissed;
 
-    public QuickAccessWindow(BitmapSource image, QuickAccessKind kind, QuickAccessActions actions, string? dragFile)
+    public QuickAccessWindow(BitmapSource image, QuickAccessKind kind, QuickAccessActions actions, string? dragFile,
+        int autoDismissSeconds = 0)
     {
         InitializeComponent();
         Thumb.Source = image;
         _dragFile = dragFile;
+        _autoDismissSeconds = autoDismissSeconds;
 
         // Size the card to the image so it fills the whole rounded block with no letterbox. Extreme aspect
         // ratios clamp; UniformToFill then crops the long side to keep the image full-bleed.
@@ -75,6 +80,34 @@ public partial class QuickAccessWindow : Window
 
         DragSurface.MouseLeftButtonDown += (_, e) => _dragStart = e.GetPosition(this);
         DragSurface.MouseMove += DragSurface_MouseMove;
+
+        Loaded += (_, _) => StartAutoDismiss();
+    }
+
+    /// <summary>Auto-dismiss the card after the configured number of seconds (0 = never — the card stays until
+    /// the user acts). Hovering the card pauses the countdown, and moving the pointer away restarts it, so a card
+    /// you are actively using never vanishes out from under you. An auto-dismissed card is treated as
+    /// <see cref="DismissReason.Closed"/> so it remains restorable via "Restore Recently Closed".</summary>
+    private void StartAutoDismiss()
+    {
+        if (_autoDismissSeconds <= 0 || _done) return;
+
+        _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_autoDismissSeconds) };
+        _dismissTimer.Tick += (_, _) =>
+        {
+            _dismissTimer!.Stop();
+            Dismiss(DismissReason.Closed);
+        };
+
+        MouseEnter += (_, _) => _dismissTimer?.Stop();
+        MouseLeave += (_, _) =>
+        {
+            if (_done) return;
+            _dismissTimer?.Stop();
+            _dismissTimer?.Start(); // restart the full countdown once the pointer leaves
+        };
+
+        if (!IsMouseOver) _dismissTimer.Start();
     }
 
     public void MoveTo(double left, double top)
@@ -104,6 +137,7 @@ public partial class QuickAccessWindow : Window
     {
         if (_done) return;
         _done = true;
+        _dismissTimer?.Stop();
         Dismissed?.Invoke(reason);
         Close();
     }
