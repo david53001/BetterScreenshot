@@ -40,14 +40,18 @@ public enum DismissReason: Equatable {
 /// tone-matched gradient scrim, and their glyphs auto-flip black/white for
 /// legibility against whatever the picture is.
 ///
-/// It is PERSISTENT: it never auto-dismisses. It goes away only when the user
-/// clicks ✕, clicks Save (download), drags the thumbnail out to another app, or
-/// opens the editor.
+/// By default it is PERSISTENT: it never auto-dismisses. It goes away only when
+/// the user clicks ✕, clicks Save (download), drags the thumbnail out to another
+/// app, or opens the editor. Callers may opt into an auto-dismiss countdown
+/// (`autoDismissSeconds`) that pauses while the mouse hovers the card and
+/// restarts the full countdown on mouse-exit.
 ///
 /// NSObject subclass so it is a first-class Obj-C target for the buttons.
 public final class QuickAccessOverlayController: NSObject {
     private var panel: NSPanel?
     private var actions: QuickAccessActions?
+    private var autoDismissSeconds: Int = 0
+    private var autoDismissTimer: Timer?
 
     /// The card's content size (== panel size). Derived from the image aspect
     /// ratio via `QuickAccessCardSize`. Read by the stacking layer.
@@ -62,9 +66,11 @@ public final class QuickAccessOverlayController: NSObject {
 
     /// Presents the overlay at the given screen origin (Cocoa bottom-left coords).
     public func present(image: NSImage, at origin: CGPoint,
-                        kind: QuickAccessKind = .screenshot, actions: QuickAccessActions) {
+                        kind: QuickAccessKind = .screenshot, actions: QuickAccessActions,
+                        autoDismissSeconds: Int = 0) {
         dismiss(reason: .evicted)
         self.actions = actions
+        self.autoDismissSeconds = autoDismissSeconds
 
         // Size the card to the capture's pixel aspect ratio (full-bleed, no
         // letterbox). Fall back to the NSImage point size if there's no CGImage.
@@ -183,16 +189,44 @@ public final class QuickAccessOverlayController: NSObject {
                              width: rowSize.width, height: 30)
         container.addSubview(stack)
 
+        // Full-size, click-through hover layer on top of everything so mouse
+        // enter/exit pause/restart the auto-dismiss countdown for the whole
+        // card, without stealing clicks from the buttons or the drag gesture
+        // (see HoverTrackingView.hitTest).
+        let hoverView = HoverTrackingView(frame: container.bounds)
+        hoverView.onEnter = { [weak self] in self?.pauseAutoDismiss() }
+        hoverView.onExit = { [weak self] in self?.startAutoDismiss() }
+        container.addSubview(hoverView)
+
         panel.contentView = container
         panel.orderFrontRegardless()
         self.panel = panel
-        // No auto-dismiss timer and no tracking area: the overlay is persistent.
+        startAutoDismiss()
     }
 
     public func dismiss(reason: DismissReason = .actionTaken) {
+        autoDismissTimer?.invalidate()
+        autoDismissTimer = nil
         guard panel != nil else { return }
         panel?.orderOut(nil); panel = nil; actions = nil
         onDismissed?(reason)
+    }
+
+    /// Starts (or restarts) the auto-dismiss countdown. No-op when
+    /// `autoDismissSeconds <= 0` (persistent overlay).
+    private func startAutoDismiss() {
+        guard autoDismissSeconds > 0 else { return }
+        autoDismissTimer?.invalidate()
+        autoDismissTimer = Timer.scheduledTimer(withTimeInterval: Double(autoDismissSeconds),
+                                                repeats: false) { [weak self] _ in
+            self?.dismiss(reason: .closed)
+        }
+    }
+
+    /// Pauses the auto-dismiss countdown (e.g. while the mouse hovers the card).
+    private func pauseAutoDismiss() {
+        autoDismissTimer?.invalidate()
+        autoDismissTimer = nil
     }
 
     /// Slides the overlay to a new stack slot.
@@ -345,4 +379,30 @@ private final class QuickAccessIconButton: NSView {
         if inside { onClick() }
     }
     override func accessibilityPerformPress() -> Bool { onClick(); return true }
+}
+
+/// A transparent, click-through view that exists solely to own a tracking area
+/// spanning the whole card, so hover can pause/restart the auto-dismiss
+/// countdown. It must NOT be used as an `NSTrackingArea` owner directly by the
+/// controller (that previously crashed with an unrecognized-selector on
+/// `mouseEntered:`) — this dedicated NSView owns the tracking area and
+/// implements the callbacks itself, forwarding via closures.
+///
+/// `hitTest(_:)` always returns nil so it never intercepts clicks or the
+/// drag gesture; the tracking area still tracks mouse-enter/exit over its
+/// `.inVisibleRect` because tracking areas work independently of hit-testing.
+private final class HoverTrackingView: NSView {
+    var onEnter: (() -> Void)?
+    var onExit: (() -> Void)?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil))
+    }
+    override func mouseEntered(with event: NSEvent) { onEnter?() }
+    override func mouseExited(with event: NSEvent) { onExit?() }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
