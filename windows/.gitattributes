@@ -1,0 +1,10 @@
+# Normalize line endings for the Windows port sources so git stops warning on every commit.
+* text=auto eol=lf
+*.cs   text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.xaml text eol=lf
+*.manifest text eol=lf
+*.md   text eol=lf
+*.ico  binary
+*.png  binary

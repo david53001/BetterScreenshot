@@ -1,0 +1,9 @@
+# .NET build output — never commit these.
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Published/self-contained app output (produced by scripts/publish-app.ps1). Large; regenerate on demand.
+dist/

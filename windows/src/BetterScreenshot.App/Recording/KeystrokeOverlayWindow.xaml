@@ -1,0 +1,11 @@
+<Window x:Class="BetterScreenshot.App.Recording.KeystrokeOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False"
+        Width="280" Height="44" WindowStartupLocation="Manual">
+    <Border x:Name="Pill" CornerRadius="10" Background="#BF000000" Opacity="0">
+        <TextBlock x:Name="Glyph" Foreground="White" FontFamily="Consolas" FontSize="20"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+</Window>

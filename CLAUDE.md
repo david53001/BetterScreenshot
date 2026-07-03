@@ -2,6 +2,13 @@
 
 A **free, local macOS clone of CleanShot X** (screenshot + screen-recording tool). Native Swift app.
 
+> **Windows port:** a native **.NET 9 + WPF (C#)** port lives under [`windows/`](windows/) on the
+> **`windows-port`** branch. This file and everything below it describe the **macOS** app (the behavioral
+> source of truth). For the port, the guide + ledger are [`windows/README-win.md`](windows/README-win.md),
+> [`windows/docs/PROGRESS.md`](windows/docs/PROGRESS.md), and [`windows/LOOP-PROMPT.md`](windows/LOOP-PROMPT.md).
+> It's built/deployed with `pwsh windows/scripts/publish-app.ps1` (republish + relaunch after runtime-visible
+> changes — a plain build doesn't update the `dist/` tray agent the owner runs).
+
 ## Hard constraints
 - **No cloud.** No uploads, share links, accounts, or cloud sync — ever. Local features only.
 - **macOS-native, non-sandboxed, menu-bar agent** (`LSUIElement`). Personal/local use; ad-hoc signed (no Apple Developer account required).

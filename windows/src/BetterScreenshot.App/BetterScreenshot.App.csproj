@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BetterScreenshot.Core\BetterScreenshot.Core.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Capture\BetterScreenshot.Capture.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Editor\BetterScreenshot.Editor.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.History\BetterScreenshot.History.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Recording\BetterScreenshot.Recording.csproj" />
+    <ProjectReference Include="..\BetterScreenshot.Platform\BetterScreenshot.Platform.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
+    <!-- WPF honours PerMonitorV2 from app.manifest; suppress the WinForms-only DPI advisory. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+</Project>
