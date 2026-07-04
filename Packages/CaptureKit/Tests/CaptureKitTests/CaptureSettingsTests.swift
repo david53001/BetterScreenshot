@@ -8,7 +8,7 @@ let captureSettingsTests: [TestCase] = [
         t.equal(s.afterCapture, .showOverlay)
         t.equal(s.format, .png)
         t.equal(s.overlayCorner, .bottomRight)
-        t.equal(s.overlayAutoDismissSeconds, 6)
+        t.equal(s.overlayAutoDismissSeconds, 0)   // default: Never (card persists until dismissed)
     },
     TestCase("roundTripsAllFields") { t in
         var s = CaptureSettings.default

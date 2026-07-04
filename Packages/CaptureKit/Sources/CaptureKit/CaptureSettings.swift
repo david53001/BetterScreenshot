@@ -25,7 +25,7 @@ public struct CaptureSettings: Equatable {
 
     public static let `default` = CaptureSettings(
         afterCapture: .showOverlay, format: .png,
-        overlayCorner: .bottomRight, overlayAutoDismissSeconds: 6)
+        overlayCorner: .bottomRight, overlayAutoDismissSeconds: 0)
 
     public var dictionary: [String: String] {
         ["afterCapture": afterCapture.rawValue,
