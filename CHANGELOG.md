@@ -2,6 +2,47 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## Unreleased — Windows-Parity Backport
+
+Brings the macOS app up to visual + behavioral parity with the Windows port in three
+areas (settings UI, the post-capture card, and a batch of editor/capture fixes). Design
+in `docs/WINDOWS-TO-MAC-PARITY.md`; implementation plans in
+`docs/superpowers/plans/2026-07-04-parity-part{1,2,3}-*.md`.
+
+### Changed
+- **Settings redesigned (monochrome "JVoice" theme).** The Settings window is rebuilt as
+  a pure-black, 960-pt-wide, single-scroll **three-column masonry of titled cards**
+  (Capture · Quick Access Overlay · Pin to Screen · History · Startup · Save Location ·
+  Recording, plus a full-width Keyboard Shortcuts card), replacing the previous three-tab
+  layout. New custom controls: macOS-style toggle switches (white track / black knob when
+  on), joined segmented controls, and a per-setting **ⓘ info button** whose hover tooltip
+  gives a plain-language explanation and an example. The window is always dark (independent
+  of the system light/dark appearance). Every change still applies instantly.
+- **Quick Access card redesigned (full-bleed).** After a capture, the floating card is now
+  the screenshot itself — edge-to-edge and rounded — with the action buttons floating over
+  the bottom of the image on a subtle tone-matched gradient. The button glyphs automatically
+  flip black/white to stay legible against whatever is behind them. Cards now follow each
+  capture's aspect ratio, and the stack packs them by their actual heights.
+- **History cap options are now 10 / 50 / 100** (was 10 / 50 / 200); a stored value of 200
+  is migrated to 100.
+
+### Added
+- **Auto-dismiss for the Quick Access card.** A new "Auto-dismiss after" slider
+  (Settings → Quick Access Overlay) closes the post-capture card after a chosen delay —
+  2 s … 30 s, or **Never** — and pauses the countdown while the pointer is over the card.
+  Default is **Never** (the card stays until you dismiss it).
+- **Play a sound on capture.** New Settings → Capture toggle (on by default) that plays a
+  short system sound when you take a screenshot.
+- **Optional text-background chip in the editor.** A new inspector toggle draws a rounded,
+  auto-contrasting background behind a text annotation (dark chip behind light text, light
+  behind dark). Off by default; remembered with your other sticky editor defaults.
+
+### Fixed
+- **Annotations can no longer be dragged off the image** in the editor — a moved
+  shape / text / counter is kept inside the image bounds so it isn't clipped on export.
+- **Area selection is clamped to the screen**, so a fast drag past the edge can't select or
+  capture beyond the display.
+
 ## v2.4.0 — 2026-06-25 · Recording Controls + Editor Defaults
 
 ### Added
