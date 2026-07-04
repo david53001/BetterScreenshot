@@ -2,7 +2,7 @@ import SwiftUI
 import CaptureKit
 import RecordingKit
 
-/// Closures the Shortcuts tab needs from the app layer (AppDelegate owns the
+/// Closures the Shortcuts card needs from the app layer (AppDelegate owns the
 /// rebind transaction because it touches HotKeyManager + menu + persistence).
 struct ShortcutActions {
     /// Bind combo (nil = clear) to action. Returns an error message, or nil on success.
@@ -12,100 +12,414 @@ struct ShortcutActions {
     var recordingChanged: (Bool) -> Void
 }
 
+/// The whole Settings screen: a pure-black, 960pt-wide, single-scroll three-column
+/// masonry of titled cards built from the JVoice monochrome controls. Every control
+/// writes straight through to `store` (instant-apply) via the `bind`/`bindRec` helpers.
 struct SettingsView: View {
     @ObservedObject var store: SettingsStore
     let shortcuts: ShortcutActions
     let clearHistory: () -> Void
 
-    var body: some View {
-        TabView {
-            GeneralTab(store: store, clearHistory: clearHistory)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            ShortcutsTab(store: store, actions: shortcuts)
-                .tabItem { Label("Shortcuts", systemImage: "keyboard") }
-            RecordingTab(store: store)
-                .tabItem { Label("Recording", systemImage: "record.circle") }
-        }
-        .frame(width: 480)
-        .padding(20)
-    }
-}
-
-private struct GeneralTab: View {
-    @ObservedObject var store: SettingsStore
-    let clearHistory: () -> Void
+    // Launch-at-login has no store keypath — SMAppService is its source of truth,
+    // mirrored into a guarded @State (writes back only on an actual user flip).
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var confirmingClear = false
+    // Shortcuts: at most one row records at a time; switching rows re-renders the
+    // previous well with isRecording=false, stopping its monitor.
+    @State private var recordingAction: HotkeyAction?
+    @State private var shortcutStatus = ""
 
     var body: some View {
-        Form {
-            Toggle("Launch at login", isOn: $launchAtLogin)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                HStack(alignment: .top, spacing: SettingsTheme.Metrics.gutter) {
+                    columnA
+                    columnB
+                    columnC
+                }
+                shortcutsCard
+                footer
+            }
+            .padding(SettingsTheme.Metrics.outerMargin)
+            .frame(width: SettingsTheme.Metrics.windowWidth, alignment: .leading)
+            .background(SettingsTheme.windowBG)
+        }
+        .background(SettingsTheme.windowBG)
+    }
+
+    // MARK: - Header / footer
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("BetterScreenshot")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
+            Text("Capture & recording preferences — hover the ⓘ next to any setting for a plain-language explanation and example.")
+                .font(.system(size: 11.5))
+                .foregroundColor(SettingsTheme.subLabel)
+        }
+    }
+
+    private var footer: some View {
+        Text("Changes apply immediately.")
+            .font(.system(size: 11))
+            .foregroundColor(SettingsTheme.subLabel)
+    }
+
+    // MARK: - Columns
+
+    private var columnA: some View {
+        VStack(spacing: SettingsTheme.Metrics.cardGap) {
+            captureCard
+            overlayCard
+            pinCard
+        }
+        .frame(width: SettingsTheme.Metrics.columnWidth)
+    }
+
+    private var columnB: some View {
+        VStack(spacing: SettingsTheme.Metrics.cardGap) {
+            historyCard
+            startupCard
+            saveLocationCard
+        }
+        .frame(width: SettingsTheme.Metrics.columnWidth)
+    }
+
+    private var columnC: some View {
+        VStack(spacing: SettingsTheme.Metrics.cardGap) {
+            recordingCard
+        }
+        .frame(width: SettingsTheme.Metrics.columnWidth)
+    }
+
+    // MARK: - Column A cards
+
+    private var captureCard: some View {
+        DarkSection("CAPTURE") {
+            VStack(alignment: .leading, spacing: 14) {
+                segmentedField("After a capture", SettingsHelp.afterCapture,
+                               selection: bind(\.afterCapture),
+                               segments: [(value: .showOverlay, label: "Overlay"),
+                                          (value: .copyOnly, label: "Copy"),
+                                          (value: .saveOnly, label: "Save"),
+                                          (value: .copyAndSave, label: "Both")])
+                segmentedField("Image format", SettingsHelp.imageFormat,
+                               selection: bind(\.format),
+                               segments: [(value: .png, label: "PNG"),
+                                          (value: .jpg, label: "JPG")])
+                switchRow("Play a sound on capture", SettingsHelp.playSound,
+                          isOn: bind(\.playSound))
+            }
+        }
+    }
+
+    private var overlayCard: some View {
+        DarkSection("QUICK ACCESS OVERLAY") {
+            VStack(alignment: .leading, spacing: 14) {
+                segmentedField("Screen corner", SettingsHelp.screenCorner,
+                               selection: bind(\.overlayCorner),
+                               segments: [(value: .topLeft, label: "↖"),
+                                          (value: .topRight, label: "↗"),
+                                          (value: .bottomLeft, label: "↙"),
+                                          (value: .bottomRight, label: "↘")])
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Auto-dismiss after", SettingsHelp.autoDismiss)
+                    MonoSlider(
+                        position: Binding(
+                            get: { OverlayDismissScale.secondsToPosition(store.settings.overlayAutoDismissSeconds) },
+                            set: { store.settings.overlayAutoDismissSeconds = OverlayDismissScale.positionToSeconds($0)
+                                   store.persist() }),
+                        range: OverlayDismissScale.minSeconds...OverlayDismissScale.neverPosition,
+                        valueLabel: { OverlayDismissScale.label(OverlayDismissScale.positionToSeconds($0)) })
+                }
+            }
+        }
+    }
+
+    private var pinCard: some View {
+        DarkSection("PIN TO SCREEN") {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Corner radius", SettingsHelp.pinCornerRadius)
+                    MonoComboField(selection: bind(\.pinCornerRadius),
+                                   options: [(value: 0, label: "0 pt"),
+                                             (value: 4, label: "4 pt"),
+                                             (value: 8, label: "8 pt"),
+                                             (value: 12, label: "12 pt"),
+                                             (value: 16, label: "16 pt"),
+                                             (value: 20, label: "20 pt")])
+                }
+                switchRow("Drop shadow", SettingsHelp.dropShadow, isOn: bind(\.pinShadow))
+            }
+        }
+    }
+
+    // MARK: - Column B cards
+
+    private var historyCard: some View {
+        DarkSection("HISTORY") {
+            VStack(alignment: .leading, spacing: 14) {
+                switchRow("Remember capture history", SettingsHelp.rememberHistory,
+                          sub: "Keep a local index of recent captures",
+                          isOn: bind(\.historyEnabled))
+                segmentedField("Keep at most", SettingsHelp.keepAtMost,
+                               selection: bind(\.historyCap),
+                               segments: [(value: 10, label: "10"),
+                                          (value: 50, label: "50"),
+                                          (value: 100, label: "100")],
+                               disabled: !store.settings.historyEnabled)
+                HStack(alignment: .center, spacing: 8) {
+                    Text("Stores full-resolution copies — several MB each.")
+                        .font(SettingsTheme.Font.rowSubLabel)
+                        .foregroundColor(SettingsTheme.subLabel)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    Button("Clear History…") { confirmingClear = true }
+                        .buttonStyle(.pill)
+                }
+                .confirmationDialog("Clear all capture history?",
+                                    isPresented: $confirmingClear, titleVisibility: .visible) {
+                    Button("Clear History", role: .destructive) { clearHistory() }
+                } message: {
+                    Text("Removes every remembered capture and its stored copies. Saved recording files on disk are not deleted.")
+                }
+            }
+        }
+    }
+
+    private var startupCard: some View {
+        DarkSection("STARTUP") {
+            switchRow("Launch at login", SettingsHelp.launchAtLogin,
+                      sub: "Start BetterScreenshot when you sign in",
+                      isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { _, newValue in
                     guard newValue != LaunchAtLogin.isEnabled else { return }
                     LaunchAtLogin.setEnabled(newValue)
-                    launchAtLogin = LaunchAtLogin.isEnabled  // revert if it failed
+                    launchAtLogin = LaunchAtLogin.isEnabled   // revert if it failed
                 }
-            Picker("After capture", selection: bind(\.afterCapture)) {
-                Text("Show overlay").tag(AfterCaptureBehavior.showOverlay)
-                Text("Copy to clipboard").tag(AfterCaptureBehavior.copyOnly)
-                Text("Save to folder").tag(AfterCaptureBehavior.saveOnly)
-                Text("Copy and save").tag(AfterCaptureBehavior.copyAndSave)
-            }
-            Picker("Format", selection: bind(\.format)) {
-                Text("PNG").tag(SettingsImageFormat.png)
-                Text("JPG").tag(SettingsImageFormat.jpg)
-            }
-            Picker("Overlay corner", selection: bind(\.overlayCorner)) {
-                Text("Bottom-right").tag(OverlayCorner.bottomRight)
-                Text("Bottom-left").tag(OverlayCorner.bottomLeft)
-                Text("Top-right").tag(OverlayCorner.topRight)
-                Text("Top-left").tag(OverlayCorner.topLeft)
-            }
-            Toggle("Pin shadow", isOn: bind(\.pinShadow))
-            HStack {
-                Text("Pin corner radius")
-                Slider(value: Binding(
-                    get: { Double(store.settings.pinCornerRadius) },
-                    set: { store.settings.pinCornerRadius = Int($0); store.persist() }),
-                    in: 0...20, step: 1)
-                Text("\(store.settings.pinCornerRadius) pt")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .frame(width: 40, alignment: .trailing)
-            }
-            HStack {
-                Text("Save to: \(store.saveDirectory.path)")
-                    .truncationMode(.middle).lineLimit(1)
-                Spacer()
-                Button("Change…") { chooseFolder() }
-            }
-            Divider()
-            Toggle("Keep capture history", isOn: bind(\.historyEnabled))
-            Picker("Keep last", selection: bind(\.historyCap)) {
-                Text("10 items").tag(10)
-                Text("50 items").tag(50)
-                Text("200 items").tag(200)
-            }
-            .disabled(!store.settings.historyEnabled)
-            HStack {
-                Text("History keeps full-resolution screenshot copies — they can be several MB each.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button("Clear History…") { confirmingClear = true }
-            }
-            .confirmationDialog("Clear all capture history?",
-                                isPresented: $confirmingClear, titleVisibility: .visible) {
-                Button("Clear History", role: .destructive) { clearHistory() }
-            } message: {
-                Text("Removes every remembered capture and its stored copies. Saved recording files on disk are not deleted.")
+                .onAppear { launchAtLogin = LaunchAtLogin.isEnabled }
+        }
+    }
+
+    private var saveLocationCard: some View {
+        DarkSection("SAVE LOCATION") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Where saved captures & recordings are written")
+                    .font(SettingsTheme.Font.rowSubLabel)
+                    .foregroundColor(SettingsTheme.subLabel)
+                MonoPathField(path: store.saveDirectory.path)
+                Button("Browse…") { chooseFolder() }
+                    .buttonStyle(.pill)
             }
         }
-        .onAppear { launchAtLogin = LaunchAtLogin.isEnabled }
     }
+
+    // MARK: - Column C card
+
+    private var recordingCard: some View {
+        DarkSection("RECORDING") {
+            VStack(alignment: .leading, spacing: 14) {
+                segmentedField("Format", SettingsHelp.recordingFormat,
+                               selection: bindRec(\.format),
+                               segments: [(value: .mp4, label: "MP4"),
+                                          (value: .gif, label: "GIF")])
+                segmentedField("Frame rate", SettingsHelp.frameRate,
+                               selection: bindRec(\.fps),
+                               segments: [(value: 30, label: "30"),
+                                          (value: 60, label: "60")])
+                Rectangle().fill(SettingsTheme.border).frame(height: 1)
+                switchRow("Record system audio", SettingsHelp.recordSystemAudio,
+                          isOn: bindRec(\.systemAudio))
+                switchRow("Record microphone", SettingsHelp.recordMicrophone,
+                          isOn: bindRec(\.microphone))
+                switchRow("Show camera bubble", SettingsHelp.showCameraBubble,
+                          isOn: bindRec(\.camera))
+                segmentedField("Camera size", SettingsHelp.cameraSize,
+                               selection: bindRec(\.cameraSize),
+                               segments: [(value: .small, label: "Small"),
+                                          (value: .medium, label: "Medium")],
+                               disabled: !store.recording.camera)
+                switchRow("Highlight mouse clicks", SettingsHelp.highlightClicks,
+                          isOn: bindRec(\.clickHighlights))
+                keystrokeRow
+                segmentedField("Countdown before recording", SettingsHelp.countdown,
+                               selection: bindRec(\.countdownSeconds),
+                               segments: [(value: 0, label: "Off"),
+                                          (value: 3, label: "3s"),
+                                          (value: 5, label: "5s"),
+                                          (value: 10, label: "10s")])
+            }
+        }
+    }
+
+    /// "Show keystrokes" keeps the Accessibility-permission gate: turning it on
+    /// prompts for trust and only sticks once macOS actually grants it.
+    private var keystrokeRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            switchRow("Show keystrokes", SettingsHelp.showKeystrokes, isOn: Binding(
+                get: { store.recording.keystrokeOverlay },
+                set: { newValue in
+                    if newValue && !KeystrokeOverlayController.hasPermission {
+                        KeystrokeOverlayController.requestPermission()
+                        store.recording.keystrokeOverlay = KeystrokeOverlayController.hasPermission
+                    } else {
+                        store.recording.keystrokeOverlay = newValue
+                    }
+                    store.persist()
+                }))
+            Text("Showing keystrokes needs the Accessibility permission.")
+                .font(SettingsTheme.Font.rowSubLabel)
+                .foregroundColor(SettingsTheme.subLabel)
+        }
+    }
+
+    // MARK: - Keyboard shortcuts (full-width)
+
+    private var shortcutsCard: some View {
+        DarkSection("KEYBOARD SHORTCUTS") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Click Change, then press the new key combination (Esc cancels). Hover the ⓘ on any row to see what that shortcut does.")
+                    .font(SettingsTheme.Font.rowSubLabel)
+                    .foregroundColor(SettingsTheme.subLabel)
+                ForEach(HotkeyAction.allCases, id: \.self) { action in
+                    shortcutRow(action)
+                }
+                Rectangle().fill(SettingsTheme.border).frame(height: 1).padding(.vertical, 2)
+                HStack {
+                    Button("Restore Defaults") {
+                        shortcuts.restoreDefaults()
+                        shortcutStatus = ""
+                    }
+                    .buttonStyle(.pill)
+                    Spacer()
+                    if !shortcutStatus.isEmpty {
+                        Text(shortcutStatus)
+                            .font(SettingsTheme.Font.rowSubLabel)
+                            .foregroundColor(SettingsTheme.label)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .onDisappear { setRecording(nil) }
+    }
+
+    private func shortcutRow(_ action: HotkeyAction) -> some View {
+        HStack(spacing: 10) {
+            Text(action.title)
+                .font(.system(size: 12.5))
+                .foregroundColor(SettingsTheme.textPrimary)
+            InfoTip(help: help(for: action))
+            if store.failedActions.contains(action) {
+                Text("couldn't register")
+                    .font(SettingsTheme.Font.rowSubLabel)
+                    .foregroundColor(SettingsTheme.subLabel)
+            }
+            Spacer(minLength: 8)
+            // The recorder well doubles as the combo chip + the "Change" affordance
+            // (click to record); it reuses the working live-rebind machinery as-is.
+            ShortcutRecorderField(
+                combo: store.bindings.combo(for: action),
+                isRecording: Binding(
+                    get: { recordingAction == action },
+                    set: { setRecording($0 ? action : nil) }),
+                onCombo: { combo in
+                    shortcutStatus = shortcuts.update(combo, action) ?? ""
+                })
+                .frame(width: 130, height: 22)
+            Button("Clear") {
+                shortcutStatus = shortcuts.update(nil, action) ?? ""
+            }
+            .buttonStyle(.pill)
+            .disabled(store.bindings.combo(for: action) == nil)
+        }
+    }
+
+    /// Tracks which row is recording; suspends/resumes hotkeys on transitions.
+    private func setRecording(_ action: HotkeyAction?) {
+        let wasRecording = recordingAction != nil
+        recordingAction = action
+        let isRecording = action != nil
+        if wasRecording != isRecording { shortcuts.recordingChanged(isRecording) }
+    }
+
+    private func help(for action: HotkeyAction) -> HelpText {
+        switch action {
+        case .captureArea:           return SettingsHelp.captureArea
+        case .captureWindow:         return SettingsHelp.captureWindow
+        case .captureFullscreen:     return SettingsHelp.captureFullscreen
+        case .captureText:           return SettingsHelp.captureText
+        case .pinFromClipboard:      return SettingsHelp.pinFromClipboard
+        case .record:                return SettingsHelp.record
+        case .openHistory:           return SettingsHelp.openHistory
+        case .restoreRecentlyClosed: return SettingsHelp.restoreRecentlyClosed
+        case .pauseResumeRecording:  return SettingsHelp.pauseResumeRecording
+        }
+    }
+
+    // MARK: - Row idioms
+
+    /// Field label ("11.5 semibold") + its ⓘ tip, for the "label above a control" idiom.
+    private func fieldLabel(_ text: String, _ help: HelpText) -> some View {
+        HStack(spacing: 6) {
+            Text(text)
+                .font(SettingsTheme.Font.fieldLabel)
+                .foregroundColor(SettingsTheme.label)
+            InfoTip(help: help)
+        }
+    }
+
+    /// A field label above a full-width segmented control.
+    @ViewBuilder
+    private func segmentedField<T: Hashable>(
+        _ text: String, _ help: HelpText,
+        selection: Binding<T>, segments: [(value: T, label: String)],
+        disabled: Bool = false
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            fieldLabel(text, help)
+            SegmentedControl(selection: selection, segments: segments)
+                .disabled(disabled)
+                .opacity(disabled ? 0.4 : 1)
+        }
+    }
+
+    /// A row title (+ optional sub-label) with ⓘ on the left and a trailing mono switch.
+    private func switchRow(_ title: String, _ help: HelpText,
+                           sub: String? = nil, isOn: Binding<Bool>) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(SettingsTheme.Font.rowTitle)
+                        .foregroundColor(SettingsTheme.textPrimary)
+                    InfoTip(help: help)
+                }
+                if let sub {
+                    Text(sub)
+                        .font(SettingsTheme.Font.rowSubLabel)
+                        .foregroundColor(SettingsTheme.subLabel)
+                }
+            }
+            Spacer(minLength: 8)
+            Toggle("", isOn: isOn)
+                .toggleStyle(.mono)
+                .labelsHidden()
+        }
+    }
+
+    // MARK: - Instant-apply bindings (write-through + persist; no appear-time write-back)
 
     private func bind<V>(_ keyPath: WritableKeyPath<CaptureSettings, V>) -> Binding<V> {
         Binding(get: { store.settings[keyPath: keyPath] },
                 set: { store.settings[keyPath: keyPath] = $0; store.persist() })
+    }
+
+    private func bindRec<V>(_ keyPath: WritableKeyPath<RecordingConfig, V>) -> Binding<V> {
+        Binding(get: { store.recording[keyPath: keyPath] },
+                set: { store.recording[keyPath: keyPath] = $0; store.persist() })
     }
 
     private func chooseFolder() {
@@ -116,113 +430,5 @@ private struct GeneralTab: View {
         if panel.runModal() == .OK, let url = panel.url {
             store.saveDirectory = url; store.persist()
         }
-    }
-}
-
-private struct ShortcutsTab: View {
-    @ObservedObject var store: SettingsStore
-    let actions: ShortcutActions
-    @State private var status = ""
-    /// Single source of truth: at most one row records at a time; switching rows
-    /// re-renders the previous well with isRecording=false, stopping its monitor.
-    @State private var recordingAction: HotkeyAction?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(HotkeyAction.allCases, id: \.self) { action in
-                HStack {
-                    Text(action.title)
-                    if store.failedActions.contains(action) {
-                        Text("couldn't register")
-                            .font(.caption).foregroundStyle(.orange)
-                    }
-                    Spacer()
-                    ShortcutRecorderField(
-                        combo: store.bindings.combo(for: action),
-                        isRecording: Binding(
-                            get: { recordingAction == action },
-                            set: { setRecording($0 ? action : nil) }),
-                        onCombo: { combo in
-                            status = actions.update(combo, action) ?? ""
-                        })
-                        .frame(width: 130, height: 22)
-                    Button {
-                        status = actions.update(nil, action) ?? ""
-                    } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.borderless)
-                        .disabled(store.bindings.combo(for: action) == nil)
-                        .help("Remove shortcut")
-                }
-            }
-            Divider().padding(.vertical, 4)
-            HStack {
-                Button("Restore Defaults") {
-                    actions.restoreDefaults()
-                    status = ""
-                }
-                Spacer()
-                Text(status).font(.caption).foregroundStyle(.red)
-            }
-        }
-        .onDisappear { setRecording(nil) }
-    }
-
-    /// Tracks which row is recording; suspends/resumes hotkeys on transitions.
-    private func setRecording(_ action: HotkeyAction?) {
-        let wasRecording = recordingAction != nil
-        recordingAction = action
-        let isRecording = action != nil
-        if wasRecording != isRecording { actions.recordingChanged(isRecording) }
-    }
-}
-
-private struct RecordingTab: View {
-    @ObservedObject var store: SettingsStore
-
-    var body: some View {
-        Form {
-            Picker("Format", selection: bind(\.format)) {
-                Text("MP4 video").tag(RecordingFormat.mp4)
-                Text("GIF").tag(RecordingFormat.gif)
-            }
-            Picker("Frame rate", selection: bind(\.fps)) {
-                Text("30 fps").tag(30)
-                Text("60 fps").tag(60)
-            }
-            Toggle("Record system audio", isOn: bind(\.systemAudio))
-            Toggle("Record microphone", isOn: bind(\.microphone))
-            Toggle("Show camera bubble", isOn: bind(\.camera))
-            Picker("Camera size", selection: bind(\.cameraSize)) {
-                Text("Small").tag(CameraSize.small)
-                Text("Medium").tag(CameraSize.medium)
-            }
-            .disabled(!store.recording.camera)
-            Toggle("Highlight mouse clicks", isOn: bind(\.clickHighlights))
-            Toggle("Show keystrokes", isOn: Binding(
-                get: { store.recording.keystrokeOverlay },
-                set: { newValue in
-                    if newValue && !KeystrokeOverlayController.hasPermission {
-                        KeystrokeOverlayController.requestPermission()
-                        // Stays off until Accessibility is actually granted.
-                        store.recording.keystrokeOverlay = KeystrokeOverlayController.hasPermission
-                    } else {
-                        store.recording.keystrokeOverlay = newValue
-                    }
-                    store.persist()
-                }))
-            Text("Showing keystrokes needs the Accessibility permission.")
-                .font(.caption).foregroundStyle(.secondary)
-              Picker("Countdown before recording", selection: bind(\.countdownSeconds)) {
-                  Text("Off").tag(0)
-                  Text("3 seconds").tag(3)
-                  Text("5 seconds").tag(5)
-                  Text("10 seconds").tag(10)
-              }
-        }
-    }
-
-    private func bind<V>(_ keyPath: WritableKeyPath<RecordingConfig, V>) -> Binding<V> {
-        Binding(get: { store.recording[keyPath: keyPath] },
-                set: { store.recording[keyPath: keyPath] = $0; store.persist() })
     }
 }

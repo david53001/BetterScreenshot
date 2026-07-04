@@ -1,23 +1,30 @@
 import AppKit
+import CaptureKit
 
 /// Manages up to `maxCount` post-capture overlays stacked at a screen corner.
 /// Index 0 is the newest capture and sits at the corner slot; older overlays
 /// step away from the screen edge. A capture beyond the limit evicts the
-/// oldest; dismissing any overlay compacts the stack. Slot positions are
-/// injected via `originForIndex` so OverlayKit needs no positioning logic.
+/// oldest; dismissing any overlay compacts the stack. Each card's actual size
+/// (which varies with its capture's aspect ratio) drives the stacking via
+/// `OverlayPositioner.stackedOrigins`, so OverlayKit stays the source of the
+/// per-card size while CaptureKit remains the source of positioning logic.
 @MainActor
 public final class QuickAccessStackController {
     public let maxCount = 3
     private var entries: [QuickAccessOverlayController] = []   // index 0 = newest
-    private var originForIndex: ((Int) -> CGPoint)?
+    private var corner: OverlayCorner = .bottomRight
+    private var screenFrame: CGRect = .zero
+    private var margin: CGFloat = 24
 
     public init() {}
 
     public func present(image: NSImage, kind: QuickAccessKind = .screenshot,
-                        actions: QuickAccessActions,
-                        onDismissed: ((DismissReason) -> Void)? = nil,
-                        originForIndex: @escaping (Int) -> CGPoint) {
-        self.originForIndex = originForIndex
+                        actions: QuickAccessActions, autoDismissSeconds: Int,
+                        corner: OverlayCorner, screenFrame: CGRect, margin: CGFloat = 24,
+                        onDismissed: ((DismissReason) -> Void)? = nil) {
+        self.corner = corner
+        self.screenFrame = screenFrame
+        self.margin = margin
         if entries.count == maxCount, let oldest = entries.last {
             entries.removeLast()
             oldest.dismiss(reason: .evicted)   // stack bookkeeping no-ops: already removed
@@ -30,15 +37,18 @@ public final class QuickAccessStackController {
             self.restack()
         }
         entries.insert(controller, at: 0)
-        controller.present(image: image, at: originForIndex(0), kind: kind, actions: actions)
+        // Provisional origin: present() computes the card's real contentSize
+        // from the image's aspect ratio, then restack() repositions precisely.
+        controller.present(image: image, at: CGPoint(x: screenFrame.maxX, y: screenFrame.minY),
+                           kind: kind, actions: actions, autoDismissSeconds: autoDismissSeconds)
         restack()
     }
 
     private func restack() {
-        // Uses the closure captured by the most recent present(): if the
-        // corner setting changed since, existing overlays adopt the new
-        // corner on the next compaction. Accepted in the spec.
-        guard let originForIndex else { return }
-        for (i, c) in entries.enumerated() { c.move(to: originForIndex(i)) }
+        let sizes = entries.map { $0.contentSize }
+        let origins = OverlayPositioner.stackedOrigins(corner: corner, sizes: sizes,
+                                                        screenFrame: screenFrame, margin: margin,
+                                                        spacing: 12)
+        for (i, entry) in entries.enumerated() { entry.move(to: origins[i]) }
     }
 }

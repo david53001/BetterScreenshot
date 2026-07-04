@@ -8,7 +8,7 @@ let captureSettingsTests: [TestCase] = [
         t.equal(s.afterCapture, .showOverlay)
         t.equal(s.format, .png)
         t.equal(s.overlayCorner, .bottomRight)
-        t.equal(s.overlayAutoDismissSeconds, 6)
+        t.equal(s.overlayAutoDismissSeconds, 0)   // default: Never (card persists until dismissed)
     },
     TestCase("roundTripsAllFields") { t in
         var s = CaptureSettings.default
@@ -39,8 +39,21 @@ let captureSettingsTests: [TestCase] = [
     TestCase("roundTripsHistoryFields") { t in
         var s = CaptureSettings.default
         s.historyEnabled = false
-        s.historyCap = 200
+        s.historyCap = 100
         let restored = CaptureSettings(dictionary: s.dictionary)
         t.equal(restored, s)
+    },
+    TestCase("historyCapSnapsLegacyValueToAllowedSet") { t in
+        let snapped = CaptureSettings(dictionary: ["historyCap": "200"])
+        t.equal(snapped.historyCap, 100)
+        let unchanged = CaptureSettings(dictionary: ["historyCap": "50"])
+        t.equal(unchanged.historyCap, 50)
+    },
+    TestCase("playSoundDefaultsOnAndRoundTrips") { t in
+        t.isTrue(CaptureSettings.default.playSound)
+        var s = CaptureSettings.default
+        s.playSound = false
+        let back = CaptureSettings(dictionary: s.dictionary)
+        t.isFalse(back.playSound)
     },
 ]

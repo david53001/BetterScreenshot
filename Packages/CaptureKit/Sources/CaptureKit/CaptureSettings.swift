@@ -21,10 +21,11 @@ public struct CaptureSettings: Equatable {
     public var pinShadow: Bool
     public var historyEnabled: Bool
     public var historyCap: Int
+    public var playSound: Bool
 
     public static let `default` = CaptureSettings(
         afterCapture: .showOverlay, format: .png,
-        overlayCorner: .bottomRight, overlayAutoDismissSeconds: 6)
+        overlayCorner: .bottomRight, overlayAutoDismissSeconds: 0)
 
     public var dictionary: [String: String] {
         ["afterCapture": afterCapture.rawValue,
@@ -34,13 +35,15 @@ public struct CaptureSettings: Equatable {
          "pinCornerRadius": String(pinCornerRadius),
          "pinShadow": pinShadow ? "true" : "false",
          "historyEnabled": historyEnabled ? "true" : "false",
-         "historyCap": String(historyCap)]
+         "historyCap": String(historyCap),
+         "playSound": playSound ? "1" : "0"]
     }
 
     public init(afterCapture: AfterCaptureBehavior, format: SettingsImageFormat,
                 overlayCorner: OverlayCorner, overlayAutoDismissSeconds: Int,
                 pinCornerRadius: Int = 8, pinShadow: Bool = true,
-                historyEnabled: Bool = true, historyCap: Int = 50) {
+                historyEnabled: Bool = true, historyCap: Int = 50,
+                playSound: Bool = true) {
         self.afterCapture = afterCapture
         self.format = format
         self.overlayCorner = overlayCorner
@@ -49,6 +52,7 @@ public struct CaptureSettings: Equatable {
         self.pinShadow = pinShadow
         self.historyEnabled = historyEnabled
         self.historyCap = historyCap
+        self.playSound = playSound
     }
 
     public init(dictionary: [String: String]) {
@@ -60,6 +64,11 @@ public struct CaptureSettings: Equatable {
         self.pinCornerRadius = Int(dictionary["pinCornerRadius"] ?? "") ?? d.pinCornerRadius
         self.pinShadow = dictionary["pinShadow"].map { $0 == "true" } ?? d.pinShadow
         self.historyEnabled = dictionary["historyEnabled"].map { $0 == "true" } ?? d.historyEnabled
-        self.historyCap = Int(dictionary["historyCap"] ?? "") ?? d.historyCap
+        let rawHistoryCap = Int(dictionary["historyCap"] ?? "") ?? d.historyCap
+        // Snap to the allowed option set so a legacy persisted value (e.g. an
+        // older build's default of 200) still resolves to a value the
+        // Settings UI's 10/50/100 control can show as selected.
+        self.historyCap = [10, 50, 100].min(by: { abs($0 - rawHistoryCap) < abs($1 - rawHistoryCap) }) ?? 50
+        self.playSound = (dictionary["playSound"] ?? "1") != "0"
     }
 }

@@ -16,5 +16,7 @@ runTests("CaptureKitTests",
     tempImageWriterTests +
     recognitionResolverTests +
     textRecognizerTests +
-    windowPickingTests
+    windowPickingTests +
+    overlayDismissScaleTests +
+    selectionClampTests
 )

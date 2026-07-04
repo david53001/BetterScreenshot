@@ -357,6 +357,8 @@ public final class EditorWindowController: NSWindowController {
             inspectorStack.addArrangedSubview(makeColorRow())
             inspectorStack.addArrangedSubview(makeDivider())
             inspectorStack.addArrangedSubview(makeSizeSegment())
+            inspectorStack.addArrangedSubview(makeDivider())
+            inspectorStack.addArrangedSubview(makeTextBackgroundToggle())
         case .counter:
             inspectorStack.addArrangedSubview(makeLabel("Counter"))
             inspectorStack.addArrangedSubview(makeColorRow())
@@ -436,6 +438,15 @@ public final class EditorWindowController: NSWindowController {
         return seg
     }
 
+    private func makeTextBackgroundToggle() -> NSButton {
+        let b = NSButton(checkboxWithTitle: "Background", target: self, action: #selector(textBackgroundChanged(_:)))
+        b.state = style.textBackground ? .on : .off
+        b.attributedTitle = NSAttributedString(string: "Background",
+            attributes: [.foregroundColor: NSColor(white: 1, alpha: 0.85),
+                         .font: NSFont.systemFont(ofSize: 12)])
+        return b
+    }
+
     private func makeRedactSegment(current: EditorTool) -> NSSegmentedControl {
         let seg = NSSegmentedControl(labels: ["Blur", "Pixelate"], trackingMode: .selectOne,
                                      target: self, action: #selector(redactChanged(_:)))
@@ -506,6 +517,12 @@ public final class EditorWindowController: NSWindowController {
     @objc private func sizeChanged(_ sender: NSSegmentedControl) {
         let sizes: [CGFloat] = [18, 24, 36]
         style.fontSize = sizes[max(0, sender.selectedSegment)]
+        canvas.style = style
+        onStyleChanged?(style)
+    }
+
+    @objc private func textBackgroundChanged(_ sender: NSButton) {
+        style.textBackground = (sender.state == .on)
         canvas.style = style
         onStyleChanged?(style)
     }

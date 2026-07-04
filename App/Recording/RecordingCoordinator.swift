@@ -389,15 +389,13 @@ final class RecordingCoordinator {
         // the Dock instead of being tucked into the very bottom corner behind it.
         let frame = screen.visibleFrame
         quickAccess.present(image: image, kind: .recording, actions: actions,
+                            autoDismissSeconds: settings.settings.overlayAutoDismissSeconds,
+                            corner: corner, screenFrame: frame, margin: 24,
                             onDismissed: { [weak self] reason in
             if reason == .closed || reason == .evicted {
                 self?.history?.noteOverlayClosed(historyID: historyID)
             }
-        }) { index in
-            OverlayPositioner.stackedOrigin(corner: corner,
-                                            overlaySize: CGSize(width: 220, height: 168),
-                                            screenFrame: frame, margin: 24, index: index)
-        }
+        })
     }
 
     /// First frame of the saved recording (GIFs decode directly; MP4s via

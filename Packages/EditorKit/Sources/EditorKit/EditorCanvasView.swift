@@ -131,6 +131,17 @@ public final class EditorCanvasView: NSView {
                       width: bb.width / scale, height: bb.height / scale)
     }
 
+    /// Combined (union) bounding box of all currently selected annotations, in image coords.
+    private func selectionBoundingBox() -> CGRect? {
+        var result: CGRect?
+        for id in selectedIDs {
+            guard let i = document.index(of: id) else { continue }
+            let bb = document.annotations[i].boundingBox()
+            result = result?.union(bb) ?? bb
+        }
+        return result
+    }
+
     /// Replace the frame on a rect-based annotation by building a copy with the new frame.
     private func replaceFrame(_ newImageFrame: CGRect) {
         guard let id = soleSelectedID, let i = document.index(of: id) else { return }
@@ -255,7 +266,7 @@ public final class EditorCanvasView: NSView {
 
     public override func mouseDragged(with event: NSEvent) {
         guard let start = dragStartImagePoint else { return }
-        let p = imagePoint(convert(event.locationInWindow, from: nil))
+        let p = EditorBoundsClamp.point(imagePoint(convert(event.locationInWindow, from: nil)), into: document.size)
         switch tool {
         case .select:
             if let hi = activeHandleIndex {
@@ -266,9 +277,16 @@ public final class EditorCanvasView: NSView {
             } else if marqueeRect != nil {
                 marqueeRect = rect(start, p)
             } else if !selectedIDs.isEmpty {
-                // Move the whole selection together.
+                // Move the whole selection together, clamped so the group's
+                // combined bounding box stays on-canvas (relative positions
+                // within the selection are preserved).
                 let delta = CGVector(dx: p.x - start.x, dy: p.y - start.y)
-                for id in selectedIDs { document.move(id: id, by: delta) }
+                if let box = selectionBoundingBox() {
+                    let proposed = box.offsetBy(dx: delta.dx, dy: delta.dy)
+                    let clamped = EditorBoundsClamp.box(proposed, into: document.size)
+                    let effectiveDelta = CGVector(dx: clamped.minX - box.minX, dy: clamped.minY - box.minY)
+                    for id in selectedIDs { document.move(id: id, by: effectiveDelta) }
+                }
                 dragStartImagePoint = p; didDragMutate = true
             }
         case .arrow:

@@ -20,10 +20,21 @@ final class SettingsWindowController {
     func show() {
         if window == nil {
             let view = SettingsView(store: store, shortcuts: shortcuts, clearHistory: clearHistory)
-            let w = NSWindow(contentViewController: NSHostingController(rootView: view))
+            let hosting = NSHostingController(rootView: view)
+            hosting.view.appearance = NSAppearance(named: .darkAqua)
+            let w = NSWindow(contentViewController: hosting)
             w.styleMask = [.titled, .closable, .miniaturizable]
             w.title = "Settings"
+            w.appearance = NSAppearance(named: .darkAqua)
+            w.titlebarAppearsTransparent = true
+            w.backgroundColor = .black
             w.isReleasedWhenClosed = false
+
+            let maxH = (NSScreen.main?.visibleFrame.height ?? 900) * 0.98
+            let fittingHeight = hosting.view.fittingSize.height
+            let height = fittingHeight > 0 ? min(fittingHeight, maxH) : maxH
+            w.setContentSize(NSSize(width: 960, height: height))
+
             w.center()
             window = w
         }
