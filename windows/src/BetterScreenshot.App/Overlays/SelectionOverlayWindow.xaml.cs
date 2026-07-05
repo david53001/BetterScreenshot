@@ -77,6 +77,8 @@ public partial class SelectionOverlayWindow : Window
         if (!_dragging || _start is not { } start) return;
         var current = e.GetPosition(RootCanvas);
         var rect = SelectionMath.Normalize(new PxPoint(start.X, start.Y), new PxPoint(current.X, current.Y));
+        // Physical wall: mouse capture keeps delivering points past the monitor edge — keep the selection on-screen.
+        rect = SelectionMath.ClampToBounds(rect, RootCanvas.ActualWidth, RootCanvas.ActualHeight);
 
         SelectionGeometry.Rect = new Rect(rect.X, rect.Y, rect.Width, rect.Height);
         Canvas.SetLeft(SelRect, rect.X);
@@ -102,6 +104,7 @@ public partial class SelectionOverlayWindow : Window
 
         var current = e.GetPosition(RootCanvas);
         var dip = SelectionMath.Normalize(new PxPoint(start.X, start.Y), new PxPoint(current.X, current.Y));
+        dip = SelectionMath.ClampToBounds(dip, RootCanvas.ActualWidth, RootCanvas.ActualHeight);
         var physical = SelectionMath.DipToPhysical(dip, _monitor.Bounds, _monitor.DpiScale);
         Complete(physical.Width >= 1 && physical.Height >= 1 ? physical : null);
     }

@@ -23,6 +23,13 @@ public sealed record AnnotationStyle
     public double LineWidth { get; init; }
     public double FontSize { get; init; }
 
+    /// <summary>
+    /// Optional solid background drawn behind text annotations (a rounded "label" chip). <c>null</c> = no
+    /// background: text renders directly on the image (the default). Persisted with the rest of the style, so the
+    /// last-used choice is sticky. Only text honors this; shapes ignore it.
+    /// </summary>
+    public RGBAColor? TextBackground { get; init; }
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

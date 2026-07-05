@@ -10,6 +10,20 @@ public static class SelectionMath
         PxRect.FromLtrb(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.X, b.X), Math.Max(a.Y, b.Y));
 
     /// <summary>
+    /// Clamps a rect to the box [0,width] × [0,height] — the "physical wall" for a drag that runs past the edge
+    /// (mouse capture keeps delivering points outside the window). Keeps the selection inside the screen/image so
+    /// a capture can never spill off it. Returns a zero-size rect if the input is entirely outside the box.
+    /// </summary>
+    public static PxRect ClampToBounds(PxRect rect, double width, double height)
+    {
+        double left = Math.Clamp(rect.X, 0, width);
+        double top = Math.Clamp(rect.Y, 0, height);
+        double right = Math.Clamp(rect.Right, 0, width);
+        double bottom = Math.Clamp(rect.Bottom, 0, height);
+        return PxRect.FromLtrb(left, top, right, bottom);
+    }
+
+    /// <summary>
     /// Convert a selection rect in window DIP coordinates to physical screen pixels, given the window's monitor
     /// physical bounds (top-left origin) and DPI scale (physical = logical × scale).
     /// </summary>

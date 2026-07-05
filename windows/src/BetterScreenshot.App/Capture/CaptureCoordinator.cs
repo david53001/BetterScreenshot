@@ -119,7 +119,15 @@ public sealed class CaptureCoordinator : IAppCommands
             OnEdit = () => Annotate(image),
         };
         _stack.Present(image, QuickAccessKind.Screenshot, actions, MapCorner(_settings.Capture.OverlayCorner),
-            dragFile, reason => OnCardDismissed(historyId, reason));
+            dragFile, _settings.Capture.OverlayAutoDismissSeconds, reason =>
+            {
+                OnCardDismissed(historyId, reason);
+                // The temp PNG only backs drag-to-export. Keep it alive for PayloadLifetime (5 min) after the card
+                // goes away so an in-flight drop into another app can still read the file, then auto-delete it. The
+                // screenshot itself is preserved separately in History (its own %APPDATA% copy), so this never loses
+                // the capture — it only cleans up the throwaway drag file.
+                TempFiles.ScheduleDeleteContainingDir(dragFile, TempFiles.PayloadLifetime);
+            });
     }
 
     /// <summary>Only ✕-closed / evicted cards are restorable; deliberate actions (save/edit/pin) are not.</summary>
@@ -228,8 +236,9 @@ public sealed class CaptureCoordinator : IAppCommands
             OnOpen = () => OpenFile(path),
             OnReveal = () => RevealFile(path),
         };
+        // Recording cards drag the real saved file (never a temp copy) — so it is NOT scheduled for deletion.
         _stack.Present(thumbnail, QuickAccessKind.Recording, actions, MapCorner(_settings.Capture.OverlayCorner),
-            path, reason => OnCardDismissed(historyId, reason));
+            path, _settings.Capture.OverlayAutoDismissSeconds, reason => OnCardDismissed(historyId, reason));
     }
 
     private static void OpenFile(string path)

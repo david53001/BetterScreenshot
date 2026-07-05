@@ -12,6 +12,11 @@
     <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- StartupRegistration's registry seam is internal; the test suite drives it against a scratch HKCU key. -->
+    <InternalsVisibleTo Include="BetterScreenshot.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>

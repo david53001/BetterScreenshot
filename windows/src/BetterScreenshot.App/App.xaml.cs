@@ -46,6 +46,9 @@ public partial class App : System.Windows.Application
         }
 
         _settings = SettingsStore.Load();
+        // Keep the Windows "run at sign-in" registration honest: refresh the Run key to this exe's current path
+        // (repairs a stale entry after the app is moved/republished) or clear it if the flag was turned off.
+        StartupRegistration.Reconcile(_settings.LaunchAtLogin);
         _commands = new CaptureCoordinator(_settings, Shutdown);
         _tray = new TrayIcon(_commands, _settings.Hotkeys);
         _hotkeys = new HotkeyController(_commands);

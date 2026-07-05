@@ -29,9 +29,9 @@ public sealed record HistoryWindowActions(Action<BitmapSource> Annotate, Action<
 /// </summary>
 public partial class HistoryWindow : Window
 {
-    private static readonly Brush CellBg = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x38));
-    private static readonly Brush ThumbBg = new SolidColorBrush(Color.FromRgb(0x22, 0x22, 0x26));
-    private static readonly Brush SelectedBorder = new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF));
+    private static readonly Brush CellBg = new SolidColorBrush(Color.FromRgb(0x16, 0x16, 0x18));
+    private static readonly Brush ThumbBg = new SolidColorBrush(Color.FromRgb(0x0E, 0x0E, 0x0E));
+    private static readonly Brush SelectedBorder = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF)); // monochrome selection (was blue)
     private static readonly Brush BadgeBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB5));
     private static readonly Brush WarnBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x9F, 0x0A));
 

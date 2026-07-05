@@ -1,5 +1,12 @@
 # Windows UI Revamp — Spec (2026-07-03)
 
+> **⤴️ SUPERSEDED (2026-07-03) by the monochrome revamp — see [`UI-JVOICE-REVAMP.md`](UI-JVOICE-REVAMP.md).**
+> This doc describes the first revamp: a dark macOS-HIG theme with a **blue `#0A84FF`** accent. That blue accent
+> and the tabbed Settings were later replaced by JVoice's **black-and-white monochrome** language (white accent,
+> card-based Settings). The token *keys*, implicit-style structure, `--ui-preview` verification, dark title bars,
+> and instant-apply behavior described below still hold; only the palette values and the Settings layout changed.
+> Kept for history.
+
 > **✅ Status: Shipped (2026-07-03).** Implemented per `UI-REVAMP-PLAN.md` (Tasks 1–7) plus follow-up
 > polish fixes; deployed to `dist/` on 2026-07-03. See `PROGRESS.md` for the running ledger.
 
