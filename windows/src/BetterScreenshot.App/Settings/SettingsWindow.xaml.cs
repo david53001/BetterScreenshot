@@ -350,6 +350,9 @@ public partial class SettingsWindow : Window
         _settings.SaveDirectory = SaveDirBox.Text;
         _settings.LaunchAtLogin = LaunchAtLoginCheck.IsChecked == true;
         _settings.CaptureSoundEnabled = CaptureSoundCheck.IsChecked == true;
+        // Push the launch-at-login choice to the OS Run key. Reconcile (not SetEnabled) is idempotent, so the
+        // per-control instant-apply firing this on every settings change stays a cheap no-op unless it changed.
+        StartupRegistration.Reconcile(_settings.LaunchAtLogin);
         _settings.Save();
     }
 

@@ -18,6 +18,35 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-05 — "Launch at login" now actually registers with Windows (owner request — it was a dead flag)
+Owner asked for a setting to "pick if this app starts on startup." **The Settings UI already had it** — a "Startup" `DarkSection`
+card with a `LaunchAtLoginCheck` `Theme.MonoSwitch`, an InfoTip, and the `SettingsStore.LaunchAtLogin` bool round-tripping to
+`settings.json` — **but nothing consumed the flag.** Toggling it just wrote a bool; the app never told Windows to auto-start. So
+this was a *wiring* fix, not new UI (the toggle already matches the monochrome JVoice theme).
+- **New `Platform/StartupRegistration.cs`** — registers/removes the app in the per-user HKCU
+  `Software\Microsoft\Windows\CurrentVersion\Run` key (value name `BetterScreenshot` = the quoted current-exe path). Chose the
+  HKCU Run key over a Startup-folder `.lnk` or Task Scheduler because it's per-user (no admin/UAC), fully reversible (delete the
+  value), and shows up in **Task Manager → Startup** so the owner can also disable it there. Mirrors the mac app's SMAppService
+  login item. `SetEnabled(bool)` writes/deletes; `Reconcile(bool)` reads-then-writes-only-if-different (idempotent), refreshing the
+  stored path so a **moved/republished build stays valid** and never leaves a stale entry. All ops are best-effort/try-caught —
+  under a locked-down group policy the persisted flag still records intent. Uses `Environment.ProcessPath` (the real apphost path),
+  and quotes it against spaces in the install path. `Microsoft.Win32.Registry` needs **no package** — it ships in the
+  `Microsoft.WindowsDesktop.App` framework this project already references via `UseWPF`.
+- **Wired in two places:** `SettingsWindow.Apply()` calls `StartupRegistration.Reconcile(_settings.LaunchAtLogin)` (instant-apply;
+  `Reconcile` keeps the per-control firing a cheap no-op unless it actually changed). `App.OnStartup` calls the same right after
+  `SettingsStore.Load()`, so a republished/moved exe self-heals its Run-key path and a toggled-off flag can't leave a leftover.
+- **Tests:** new `StartupRegistrationTests.cs` (7 cases) drives the **internal registry seam** (`InternalsVisibleTo` added to the
+  Platform csproj) against a throwaway HKCU scratch subkey (`Software\BetterScreenshot.Tests\…`, deleted in `finally`) — proves
+  enable writes the quoted command, disable removes it, unresolvable-exe writes nothing, disable-on-missing doesn't throw, and
+  `Reconcile` refreshes a stale path / clears when off / is a no-op (doesn't even create the key) when already off.
+- **Verified:** build **0/0**; `dotnet test` **296 passed / 0 failed** (+7). Plus an **end-to-end real-key check** (throwaway
+  console referencing the built Platform DLL, calling the *public* API): confirmed `SetEnabled(true)` writes the real
+  `…\CurrentVersion\Run\BetterScreenshot` value = the quoted exe path, `Reconcile(true)` is idempotent (no rewrite),
+  `SetEnabled(false)` removes it, and the machine was restored to its original (no-entry) state — so it registers exactly where
+  Windows reads at sign-in and is fully reversible.
+- **Assumption logged:** used the **HKCU Run key** (not the Startup folder or Task Scheduler) — the simplest reversible per-user
+  approach and the standard for tray apps; no admin prompt. If the owner prefers a Startup-folder shortcut instead, it's a small swap.
+
 ## 2026-07-03 — Quick Access auto-dismiss: drag-a-bar slider (2s … Never) replaces 3/6/10s (owner request)
 Owner asked to change the Quick Access overlay so *"it stays there for as long as the user wants … drag a little bar
 to change how long it stays there."* Clarified with the owner up front → a **draggable slider in Settings** whose far
