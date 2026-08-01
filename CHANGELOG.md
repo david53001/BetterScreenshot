@@ -2,6 +2,29 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.6.0 — 2026-08-01 · Cache Retention
+
+### Added
+- **Choose how long a screenshot stays cached.** A new "Keep in cache for" slider
+  (Settings → History) controls how long a capture is kept in the app's local cache at
+  `~/Library/Application Support/BetterScreenshot/History/` before its cached copy and
+  thumbnail are deleted. The stops are **10s · 30s · 5m · 10m · 30m · 1h · Never**, where
+  Never means the capture is kept until the "Keep at most" count limit pushes it out.
+  Default is **30m**.
+
+  Only the app's own cached copy is deleted — a file you saved with the Save button, or an
+  image you already copied to the clipboard, is never touched, and a recording's saved video
+  file is never deleted (recordings are stored by reference).
+
+  Because the shortest setting is 10 seconds, the app now sweeps the cache every 5 seconds
+  rather than only pruning at launch, so a capture disappears on time even if you take no
+  further screenshots.
+
+### Changed
+- **The fixed 30-day history prune is gone**, replaced by the setting above. Any capture
+  older than your chosen window is removed the first time the new version runs — with the
+  default of 30 minutes, an existing cache is largely cleared on first launch.
+
 ## v2.5.0 — 2026-08-01 · Hold Duration + Windows-Parity Backport
 
 Adds a much longer hold duration for the post-capture card, and brings the macOS app up
