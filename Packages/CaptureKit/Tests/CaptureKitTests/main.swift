@@ -18,5 +18,6 @@ runTests("CaptureKitTests",
     textRecognizerTests +
     windowPickingTests +
     overlayDismissScaleTests +
+    historyRetentionScaleTests +
     selectionClampTests
 )

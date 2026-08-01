@@ -49,6 +49,15 @@ enum SettingsHelp {
             + "until you dismiss it yourself."
     )
 
+    static let historyRetention = HelpText(
+        "Keep in cache for",
+        "How long a screenshot stays in the app's local cache before its cached copy "
+            + "is deleted. Only the app's own copy goes — anything you saved or copied "
+            + "elsewhere is untouched, and recordings are never deleted.",
+        example: "Set to 30m and a capture leaves the History window half an hour later; "
+            + "Never keeps it until the \"Keep at most\" limit pushes it out."
+    )
+
     static let pinCornerRadius = HelpText(
         "Pin corner radius",
         "How rounded the corners are on images pinned to your screen.",

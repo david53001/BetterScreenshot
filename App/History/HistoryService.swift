@@ -16,14 +16,47 @@ final class HistoryService: ObservableObject {
     private var restoreStack = RestoreStack()
     private let settings: SettingsStore
     private let hud = HUDController()
+    private var sweepTimer: Timer?
+
+    /// Cache-retention window from settings; nil == "Never" (keep until the cap evicts).
+    private var retentionMaxAge: TimeInterval? {
+        HistoryRetentionScale.maxAge(forSeconds: settings.settings.historyRetentionSeconds)
+    }
 
     init(settings: SettingsStore) {
         self.settings = settings
         let base = FileManager.default.urls(for: .applicationSupportDirectory,
                                             in: .userDomainMask).first!
             .appendingPathComponent("BetterScreenshot/History", isDirectory: true)
-        self.store = HistoryStore(directory: base, cap: settings.settings.historyCap)
+        self.store = HistoryStore(
+            directory: base, cap: settings.settings.historyCap,
+            maxAge: HistoryRetentionScale.maxAge(
+                forSeconds: settings.settings.historyRetentionSeconds))
         self.entries = store.index.entries
+        startSweep()
+    }
+
+    // MARK: - Retention sweep
+
+    /// The shortest retention stop is 10s, so a load-time/on-add prune alone would
+    /// leave expired captures cached until the next capture. A light repeating sweep
+    /// re-reads the current setting each tick and only republishes on a real eviction.
+    private func startSweep() {
+        sweepTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.sweepInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.sweepExpired() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        sweepTimer = timer
+    }
+
+    private static let sweepInterval: TimeInterval = 5
+
+    private func sweepExpired() {
+        guard settings.settings.historyEnabled else { return }
+        let changed = store.pruneExpired(cap: settings.settings.historyCap,
+                                         maxAge: retentionMaxAge)
+        if changed { entries = store.index.entries }
     }
 
     // MARK: - Recording captures (silent bookkeeping; never blocks the flow)
@@ -35,7 +68,8 @@ final class HistoryService: ObservableObject {
     func recordScreenshot(_ image: CGImage) -> UUID? {
         guard settings.settings.historyEnabled else { return nil }
         guard let png = ImageEncoder.encode(image, as: .png) else { return nil }
-        let entry = store.addScreenshot(pngData: png, cap: settings.settings.historyCap)
+        let entry = store.addScreenshot(pngData: png, cap: settings.settings.historyCap,
+                                        maxAge: retentionMaxAge)
         entries = store.index.entries
         return entry?.id
     }
@@ -46,7 +80,8 @@ final class HistoryService: ObservableObject {
         guard settings.settings.historyEnabled else { return nil }
         guard let tiff = thumbnailSource.tiffRepresentation else { return nil }
         let entry = store.addRecording(filePath: fileURL.path, thumbnailSource: tiff,
-                                       cap: settings.settings.historyCap)
+                                       cap: settings.settings.historyCap,
+                                       maxAge: retentionMaxAge)
         entries = store.index.entries
         return entry?.id
     }

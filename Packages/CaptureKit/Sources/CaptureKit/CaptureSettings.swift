@@ -21,6 +21,9 @@ public struct CaptureSettings: Equatable {
     public var pinShadow: Bool
     public var historyEnabled: Bool
     public var historyCap: Int
+    /// How long a captured screenshot stays in the local cache before its
+    /// cached copy + thumbnail are deleted. 0 == Never (keep until the cap evicts it).
+    public var historyRetentionSeconds: Int
     public var playSound: Bool
 
     public static let `default` = CaptureSettings(
@@ -36,6 +39,7 @@ public struct CaptureSettings: Equatable {
          "pinShadow": pinShadow ? "true" : "false",
          "historyEnabled": historyEnabled ? "true" : "false",
          "historyCap": String(historyCap),
+         "historyRetentionSeconds": String(historyRetentionSeconds),
          "playSound": playSound ? "1" : "0"]
     }
 
@@ -43,6 +47,7 @@ public struct CaptureSettings: Equatable {
                 overlayCorner: OverlayCorner, overlayAutoDismissSeconds: Int,
                 pinCornerRadius: Int = 8, pinShadow: Bool = true,
                 historyEnabled: Bool = true, historyCap: Int = 50,
+                historyRetentionSeconds: Int = 1800,
                 playSound: Bool = true) {
         self.afterCapture = afterCapture
         self.format = format
@@ -52,6 +57,7 @@ public struct CaptureSettings: Equatable {
         self.pinShadow = pinShadow
         self.historyEnabled = historyEnabled
         self.historyCap = historyCap
+        self.historyRetentionSeconds = historyRetentionSeconds
         self.playSound = playSound
     }
 
@@ -72,6 +78,9 @@ public struct CaptureSettings: Equatable {
         // older build's default of 200) still resolves to a value the
         // Settings UI's 10/50/100 control can show as selected.
         self.historyCap = [10, 50, 100].min(by: { abs($0 - rawHistoryCap) < abs($1 - rawHistoryCap) }) ?? 50
+        let rawRetention = Int(dictionary["historyRetentionSeconds"] ?? "") ?? d.historyRetentionSeconds
+        // Snap to the slider's stop table, same as overlayAutoDismissSeconds above.
+        self.historyRetentionSeconds = HistoryRetentionScale.snap(rawRetention)
         self.playSound = (dictionary["playSound"] ?? "1") != "0"
     }
 }

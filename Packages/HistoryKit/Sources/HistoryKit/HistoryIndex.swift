@@ -6,27 +6,29 @@ import Foundation
 public struct HistoryIndex: Codable, Equatable {
     /// Entries newest-first.
     public private(set) var entries: [HistoryEntry]
-    /// CleanShot keeps history "about a month" — older entries are pruned.
-    public static let maxAge: TimeInterval = 30 * 24 * 60 * 60
 
     public init(entries: [HistoryEntry] = []) { self.entries = entries }
 
-    /// Insert newest-first, then apply the count cap and the 30-day age prune.
-    public func adding(_ entry: HistoryEntry, cap: Int, now: Date = Date())
+    /// Insert newest-first, then apply the count cap and the age prune.
+    /// `maxAge` is the cache-retention window; nil keeps entries forever.
+    public func adding(_ entry: HistoryEntry, cap: Int, maxAge: TimeInterval?,
+                       now: Date = Date())
         -> (index: HistoryIndex, evicted: [HistoryEntry]) {
         var all = entries
         all.insert(entry, at: 0)
-        return HistoryIndex(entries: all).pruned(cap: cap, now: now)
+        return HistoryIndex(entries: all).pruned(cap: cap, maxAge: maxAge, now: now)
     }
 
-    /// Count cap + 30-day prune without adding (run at load).
-    public func pruned(cap: Int, now: Date = Date())
+    /// Count cap + age prune without adding (run at load and on the sweep timer).
+    /// `maxAge` is the cache-retention window; nil keeps entries forever.
+    public func pruned(cap: Int, maxAge: TimeInterval?, now: Date = Date())
         -> (index: HistoryIndex, evicted: [HistoryEntry]) {
-        let cutoff = now.addingTimeInterval(-Self.maxAge)
+        let cutoff = maxAge.map { now.addingTimeInterval(-$0) }
         var kept: [HistoryEntry] = []
         var evicted: [HistoryEntry] = []
         for e in entries {
-            if e.date >= cutoff && kept.count < max(cap, 0) { kept.append(e) }
+            let fresh = cutoff.map { e.date >= $0 } ?? true
+            if fresh && kept.count < max(cap, 0) { kept.append(e) }
             else { evicted.append(e) }
         }
         return (HistoryIndex(entries: kept), evicted)
