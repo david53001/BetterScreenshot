@@ -9,7 +9,10 @@ text recognition. Imported by the `App/` target (mainly `App/Capture`).
 - `CaptureGeometry.swift`, `ImageCropper.swift` — geometry + crop math (pure).
 - `ImageEncoder.swift` — PNG/JPEG encode; `FileNamer.swift` — output filename rules.
 - `OverlayPositioner.swift` — where post-capture overlays sit (pure).
-- `TextRecognizer.swift` + `RecognitionResult.swift` — Vision OCR / QR ("Capture Text"); `TempImageWriter.swift`.
+- `TextRecognizer.swift` + `RecognitionResult.swift` — Vision OCR / QR ("Capture Text").
+- `TempImageWriter.swift` — writes the drag-out / clipboard temp PNG into `$TMPDIR/BetterScreenshot-<UUID>/`
+  **and sweeps expired ones** (`cleanExpired`, scoped to that prefix); `TempFileRetentionScale.swift` is its
+  10s…1h/∞ setting scale, driven from `App/Capture/TempFileService`.
 - `HotkeyAction.swift`, `HotkeyBindings.swift`, `HotkeyCombo.swift` — the hotkey **model** (binding
   data; registration itself lives in `App/SystemIntegration/HotKeyManager`).
 

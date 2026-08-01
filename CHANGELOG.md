@@ -2,6 +2,34 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.7.0 — 2026-08-01 · Temp-file retention (replaces v2.6.0's history retention)
+
+v2.6.0 put the retention timer on the wrong thing. It expired entries in the capture
+**History**, when what needed a timer was the **temporary files** the app leaves in the
+system temp folder. This release moves the timer where it belongs and puts History back
+the way it was.
+
+### Added
+- **"Keep cached files for" (Settings → Capture).** When you drag a capture out of the
+  Quick Access card, or copy one so that a file path lands on the clipboard, the app writes
+  a temporary PNG into a `BetterScreenshot-<UUID>` folder inside the system temp directory
+  (`$TMPDIR`, e.g. `/var/folders/8h/…/T/BetterScreenshot-4C7446B4-…/Screenshot 2026-08-01
+  at 18.25.57.png`). This setting controls how long that file survives. The stops are
+  **10s · 30s · 5m · 10m · 30m · 1h · ∞**, with ∞ meaning the files are left for macOS to
+  clear on its own. Default is **5m**, which matches what earlier versions did.
+
+### Fixed
+- **Temp folders no longer leak on quit.** Cleanup used to be a per-file timer scheduled
+  inside the running app, so quitting before it fired orphaned that folder permanently —
+  they accumulated indefinitely. Cleanup is now a sweep that also runs at launch, so folders
+  left behind by earlier runs (including by older versions) are cleared.
+
+### Removed
+- **The "Keep in cache for" History setting added in v2.6.0 is gone.** Capture History no
+  longer expires by time at all: it holds the newest captures up to the "Keep at most" limit
+  (10 / 50 / 100) and nothing is removed for being old. This also drops the fixed 30-day
+  history prune that predated v2.6.0.
+
 ## v2.6.1 — 2026-08-01 · ∞ instead of "Never"
 
 ### Changed

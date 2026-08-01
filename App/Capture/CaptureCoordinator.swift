@@ -212,15 +212,12 @@ final class CaptureCoordinator {
         NSPasteboard.general.clearContents()
         // Image data first (so image-targets paste the picture), plus a real PNG
         // file so file-targets — a terminal/Claude Code you paste into — get a
-        // usable path. The temp file lives 5 min, long enough to paste-then-submit.
+        // usable path. TempFileService sweeps the file once it passes the
+        // "Keep cached files for" window.
         var objects: [NSPasteboardWriting] = [nsImage]
         if let url = TempImageWriter.writePNG(image,
                                               fileName: FileNamer.fileName(for: Date(), ext: "png")) {
             objects.append(url as NSURL)
-            let dir = url.deletingLastPathComponent()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 300) {
-                try? FileManager.default.removeItem(at: dir)
-            }
         }
         NSPasteboard.general.writeObjects(objects)
     }

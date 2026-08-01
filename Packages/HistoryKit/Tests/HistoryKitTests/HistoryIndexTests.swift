@@ -16,36 +16,37 @@ let historyIndexTests: [TestCase] = [
     TestCase("addingInsertsNewestFirst") { t in
         let a = entry(daysAgo: 1), b = entry()
         var idx = HistoryIndex()
-        idx = idx.adding(a, cap: 50, maxAge: 30 * 24 * 60 * 60, now: now).index
-        let (idx2, evicted) = idx.adding(b, cap: 50, maxAge: 30 * 24 * 60 * 60, now: now)
+        idx = idx.adding(a, cap: 50).index
+        let (idx2, evicted) = idx.adding(b, cap: 50)
         t.equal(idx2.entries.map(\.id), [b.id, a.id])
         t.isTrue(evicted.isEmpty)
     },
     TestCase("countCapEvictsOldest") { t in
         let a = entry(daysAgo: 2), b = entry(daysAgo: 1), c = entry()
         var idx = HistoryIndex()
-        idx = idx.adding(a, cap: 2, maxAge: 30 * 24 * 60 * 60, now: now).index
-        idx = idx.adding(b, cap: 2, maxAge: 30 * 24 * 60 * 60, now: now).index
-        let (idx2, evicted) = idx.adding(c, cap: 2, maxAge: 30 * 24 * 60 * 60, now: now)
+        idx = idx.adding(a, cap: 2).index
+        idx = idx.adding(b, cap: 2).index
+        let (idx2, evicted) = idx.adding(c, cap: 2)
         t.equal(idx2.entries.map(\.id), [c.id, b.id])
         t.equal(evicted.map(\.id), [a.id])
     },
-    TestCase("entriesOlderThan30DaysArePruned") { t in
-        let old = entry(daysAgo: 31), fresh = entry()
-        let idx = HistoryIndex(entries: [fresh, old])
-        let (pruned, evicted) = idx.adding(entry(daysAgo: 0.5), cap: 50, maxAge: 30 * 24 * 60 * 60, now: now)
-        t.equal(pruned.entries.count, 2)
-        t.equal(evicted.map(\.id), [old.id])
-    },
-    TestCase("exactly30DayOldEntrySurvives") { t in
-        let edge = entry(daysAgo: 30)
-        let (idx, evicted) = HistoryIndex(entries: [edge]).pruned(cap: 50, maxAge: 30 * 24 * 60 * 60, now: now)
-        t.equal(idx.entries.map(\.id), [edge.id])
+    // History has no expiry: however old an entry is, only the count cap evicts it.
+    TestCase("ancientEntriesAreKeptWhenUnderTheCap") { t in
+        let ancient = entry(daysAgo: 3650), fresh = entry()
+        let idx = HistoryIndex(entries: [fresh, ancient])
+        let (pruned, evicted) = idx.adding(entry(daysAgo: 0.5), cap: 50)
+        t.equal(pruned.entries.count, 3)
         t.isTrue(evicted.isEmpty)
     },
-    TestCase("prunedAppliesCapAndAgeAtLoad") { t in
+    TestCase("ancientEntrySurvivesLoad") { t in
+        let ancient = entry(daysAgo: 3650)
+        let (idx, evicted) = HistoryIndex(entries: [ancient]).pruned(cap: 50)
+        t.equal(idx.entries.map(\.id), [ancient.id])
+        t.isTrue(evicted.isEmpty)
+    },
+    TestCase("prunedAppliesCapAtLoad") { t in
         let a = entry(), b = entry(daysAgo: 1), old = entry(daysAgo: 40)
-        let (idx, evicted) = HistoryIndex(entries: [a, b, old]).pruned(cap: 1, maxAge: 30 * 24 * 60 * 60, now: now)
+        let (idx, evicted) = HistoryIndex(entries: [a, b, old]).pruned(cap: 1)
         t.equal(idx.entries.map(\.id), [a.id])
         t.equal(Set(evicted.map(\.id)), Set([b.id, old.id]))
     },

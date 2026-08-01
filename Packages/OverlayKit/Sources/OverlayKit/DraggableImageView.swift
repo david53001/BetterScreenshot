@@ -9,12 +9,8 @@ public final class DraggableImageView: NSImageView, NSDraggingSource {
     public var fileURLProvider: (() -> URL?)?
     /// Called when a drag finishes. `true` if it was actually dropped somewhere.
     public var onDragEnded: ((Bool) -> Void)?
-    /// Temp-PNG drags clean up after themselves; set false when the dragged
-    /// URL is a real saved file (e.g. a recording) that must survive.
-    public var deletesFileAfterDrag = true
 
     private var mouseDownPoint: NSPoint?
-    private var draggedTempDir: URL?
 
     public func draggingSession(_ session: NSDraggingSession,
                                 sourceOperationMaskFor context: NSDraggingContext)
@@ -33,7 +29,6 @@ public final class DraggableImageView: NSImageView, NSDraggingSource {
         mouseDownPoint = nil
 
         guard let url = fileURLProvider?() else { return }
-        draggedTempDir = url.deletingLastPathComponent()
         let item = NSDraggingItem(pasteboardWriter: url as NSURL)
         if let img = image { item.setDraggingFrame(bounds, contents: img) }
         beginDraggingSession(with: [item], event: event, source: self)
@@ -42,15 +37,9 @@ public final class DraggableImageView: NSImageView, NSDraggingSource {
     public func draggingSession(_ session: NSDraggingSession,
                                 endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         let droppedSomewhere = operation != []
-        // Clean up the temp file 5 minutes later — long enough for a drop target
-        // that reads it lazily (a terminal you paste a path into and submit a
-        // while later) to have read it, short enough not to litter temp.
-        if deletesFileAfterDrag, let dir = draggedTempDir {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 300) {
-                try? FileManager.default.removeItem(at: dir)
-            }
-        }
-        draggedTempDir = nil
+        // The dragged file is left on disk for a drop target that reads it lazily (a
+        // terminal you paste a path into and submit a while later). The app's temp
+        // sweep deletes it once it passes the user's retention window.
         onDragEnded?(droppedSomewhere)
     }
 }

@@ -107,7 +107,6 @@ public final class QuickAccessOverlayController: NSObject {
         thumb.fileURLProvider = actions.fileURLForDrag
         // Screenshots drag a self-deleting temp PNG; recordings drag the real
         // saved file, which must NOT be cleaned up after the drop.
-        thumb.deletesFileAfterDrag = kind == .screenshot
         thumb.onDragEnded = { [weak self] droppedSomewhere in
             if droppedSomewhere { self?.dismiss(reason: .actionTaken) }
         }

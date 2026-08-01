@@ -49,13 +49,14 @@ enum SettingsHelp {
             + "until you dismiss it yourself."
     )
 
-    static let historyRetention = HelpText(
-        "Keep in cache for",
-        "How long a screenshot stays in the app's local cache before its cached copy "
-            + "is deleted. Only the app's own copy goes — anything you saved or copied "
-            + "elsewhere is untouched, and recordings are never deleted.",
-        example: "Set to 30m and a capture leaves the History window half an hour later; "
-            + "∞ keeps it until the \"Keep at most\" limit pushes it out."
+    static let tempRetention = HelpText(
+        "Keep cached files for",
+        "When you drag a capture out, or copy one so a file path lands on the clipboard, "
+            + "the app writes a temporary PNG into your system temp folder. This is how "
+            + "long that file survives before it is deleted. Your History, your saved "
+            + "files, and your recordings are not affected.",
+        example: "Set to 30s for a quick paste-and-forget; ∞ keeps every temp file until "
+            + "macOS clears the folder itself."
     )
 
     static let pinCornerRadius = HelpText(

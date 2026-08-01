@@ -1,19 +1,20 @@
 import Foundation
 
-/// Maps the Settings "Keep in cache for" slider position to the persisted seconds value
-/// behind `CaptureSettings.historyRetentionSeconds` — how long a captured screenshot stays
-/// in the app's local cache (`~/Library/Application Support/BetterScreenshot/History/`)
-/// before its cached copy + thumbnail are deleted.
+/// Maps the Settings "Keep cached files for" slider position to the persisted seconds value
+/// behind `CaptureSettings.tempRetentionSeconds` — how long the temporary PNG the app writes
+/// for a drag-out or for the clipboard's file path lives in the system temp directory before
+/// it is deleted. Those files sit in `BetterScreenshot-<UUID>/` folders under `$TMPDIR`, e.g.
+/// `/var/folders/…/T/BetterScreenshot-4C7446B4-…/Screenshot 2026-08-01 at 18.25.57.png`.
 ///
 /// The slider runs over an ordered table of stops — 10s, 30s, 5m, 10m, 30m, 1h — followed by
-/// a trailing "Never" stop that persists as 0 and means "never remove from the cache".
+/// a trailing stop that persists as 0 and means "keep those files forever".
 /// A slider position is a stop *index*, not a second count.
-public enum HistoryRetentionScale {
+public enum TempFileRetentionScale {
     /// The finite stops, shortest first, in seconds. Slider position == index.
     public static let finiteStops = [10, 30, 300, 600, 1800, 3600]
     public static let neverSeconds = 0
 
-    /// Slider position of the trailing "Never" stop (one past the last finite stop).
+    /// Slider position of the trailing "keep forever" stop (one past the last finite stop).
     public static var neverPosition: Int { finiteStops.count }
     public static let minPosition = 0
 
@@ -34,13 +35,13 @@ public enum HistoryRetentionScale {
         return finiteStops.min(by: { abs($0 - seconds) < abs($1 - seconds) }) ?? finiteStops[0]
     }
 
-    /// The age cutoff to hand `HistoryIndex.pruned(cap:maxAge:now:)`.
-    /// `nil` means "Never" — keep cached captures until the count cap evicts them.
+    /// The age cutoff to hand `TempImageWriter.cleanExpired(in:olderThan:now:)`.
+    /// `nil` means the ∞ stop — never delete the temp files.
     public static func maxAge(forSeconds seconds: Int) -> TimeInterval? {
         seconds > 0 ? TimeInterval(seconds) : nil
     }
 
-    /// The "Never" stop shows as ∞ — matches the Quick Access auto-dismiss slider.
+    /// The "keep forever" stop shows as ∞ — matches the Quick Access auto-dismiss slider.
     public static let neverLabel = "∞"
 
     public static func label(_ seconds: Int) -> String {

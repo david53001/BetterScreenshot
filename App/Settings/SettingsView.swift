@@ -111,6 +111,16 @@ struct SettingsView: View {
                                           (value: .jpg, label: "JPG")])
                 switchRow("Play a sound on capture", SettingsHelp.playSound,
                           isOn: bind(\.playSound))
+                VStack(alignment: .leading, spacing: 6) {
+                    fieldLabel("Keep cached files for", SettingsHelp.tempRetention)
+                    MonoSlider(
+                        position: Binding(
+                            get: { TempFileRetentionScale.secondsToPosition(store.settings.tempRetentionSeconds) },
+                            set: { store.settings.tempRetentionSeconds = TempFileRetentionScale.positionToSeconds($0)
+                                   store.persist() }),
+                        range: TempFileRetentionScale.minPosition...TempFileRetentionScale.neverPosition,
+                        valueLabel: { TempFileRetentionScale.label(TempFileRetentionScale.positionToSeconds($0)) })
+                }
             }
         }
     }
@@ -170,18 +180,6 @@ struct SettingsView: View {
                                           (value: 50, label: "50"),
                                           (value: 100, label: "100")],
                                disabled: !store.settings.historyEnabled)
-                VStack(alignment: .leading, spacing: 6) {
-                    fieldLabel("Keep in cache for", SettingsHelp.historyRetention)
-                    MonoSlider(
-                        position: Binding(
-                            get: { HistoryRetentionScale.secondsToPosition(store.settings.historyRetentionSeconds) },
-                            set: { store.settings.historyRetentionSeconds = HistoryRetentionScale.positionToSeconds($0)
-                                   store.persist() }),
-                        range: HistoryRetentionScale.minPosition...HistoryRetentionScale.neverPosition,
-                        valueLabel: { HistoryRetentionScale.label(HistoryRetentionScale.positionToSeconds($0)) })
-                }
-                .opacity(store.settings.historyEnabled ? 1 : 0.4)
-                .disabled(!store.settings.historyEnabled)
                 HStack(alignment: .center, spacing: 8) {
                     Text("Stores full-resolution copies — several MB each.")
                         .font(SettingsTheme.Font.rowSubLabel)

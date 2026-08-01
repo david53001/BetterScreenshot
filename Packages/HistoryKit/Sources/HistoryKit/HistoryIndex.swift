@@ -9,27 +9,21 @@ public struct HistoryIndex: Codable, Equatable {
 
     public init(entries: [HistoryEntry] = []) { self.entries = entries }
 
-    /// Insert newest-first, then apply the count cap and the age prune.
-    /// `maxAge` is the cache-retention window; nil keeps entries forever.
-    public func adding(_ entry: HistoryEntry, cap: Int, maxAge: TimeInterval?,
-                       now: Date = Date())
+    /// Insert newest-first, then apply the count cap.
+    public func adding(_ entry: HistoryEntry, cap: Int)
         -> (index: HistoryIndex, evicted: [HistoryEntry]) {
         var all = entries
         all.insert(entry, at: 0)
-        return HistoryIndex(entries: all).pruned(cap: cap, maxAge: maxAge, now: now)
+        return HistoryIndex(entries: all).pruned(cap: cap)
     }
 
-    /// Count cap + age prune without adding (run at load and on the sweep timer).
-    /// `maxAge` is the cache-retention window; nil keeps entries forever.
-    public func pruned(cap: Int, maxAge: TimeInterval?, now: Date = Date())
-        -> (index: HistoryIndex, evicted: [HistoryEntry]) {
-        let cutoff = maxAge.map { now.addingTimeInterval(-$0) }
+    /// Count cap only — history has no expiry, it just holds the newest `cap` entries.
+    /// (Temp-file cleanup is a separate concern; see `TempImageWriter.cleanExpired`.)
+    public func pruned(cap: Int) -> (index: HistoryIndex, evicted: [HistoryEntry]) {
         var kept: [HistoryEntry] = []
         var evicted: [HistoryEntry] = []
         for e in entries {
-            let fresh = cutoff.map { e.date >= $0 } ?? true
-            if fresh && kept.count < max(cap, 0) { kept.append(e) }
-            else { evicted.append(e) }
+            if kept.count < max(cap, 0) { kept.append(e) } else { evicted.append(e) }
         }
         return (HistoryIndex(entries: kept), evicted)
     }

@@ -12,9 +12,10 @@ Imported by the `App/` target (`App/History`).
 
 ## Invariants (covered by tests)
 - Saved **recordings are stored by reference and never copied or deleted** by the store; **screenshots
-  are copied + thumbnailed** and their owned files ARE evicted on cap/age pruning.
-- A corrupt index loads as empty; missing recording files are pruned at load; age/cap pruning applies
-  at load.
+  are copied + thumbnailed** and their owned files ARE evicted when the count cap pushes them out.
+- **History has no time expiry** — `pruned(cap:)` applies the count cap only. Deliberate (see the root
+  `CLAUDE.md`); don't add an age prune back.
+- A corrupt index loads as empty; missing recording files are pruned at load; cap pruning applies at load.
 
 ## Verify
 `swift run --package-path Packages/HistoryKit HistoryKitTests`.

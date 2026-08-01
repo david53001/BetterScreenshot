@@ -10,11 +10,11 @@ public final class HistoryStore {
 
     private var indexURL: URL { directory.appendingPathComponent("history.json") }
 
-    /// Loads (or starts) the index, then applies retention: count cap, the
-    /// cache-retention age prune (`maxAge`; nil keeps entries forever), and the
+    /// Loads (or starts) the index, then applies the count cap and the
     /// missing-backing-file prune. Evicted entries' history-owned files are
-    /// deleted. Corrupt index → start empty (logged).
-    public init(directory: URL, cap: Int, maxAge: TimeInterval?, now: Date = Date()) {
+    /// deleted. Corrupt index → start empty (logged). History does not expire by
+    /// age — the cap is the only limit.
+    public init(directory: URL, cap: Int) {
         self.directory = directory
         try? FileManager.default.createDirectory(at: directory,
                                                  withIntermediateDirectories: true)
@@ -23,8 +23,8 @@ public final class HistoryStore {
             do { loaded = try HistoryIndex(jsonData: data) }
             catch { NSLog("History: corrupt index, starting empty: \(error)") }
         }
-        let (aged, evicted) = loaded.pruned(cap: cap, maxAge: maxAge, now: now)
-        let (alive, missing) = aged.prunedOfMissingFiles { entry in
+        let (capped, evicted) = loaded.pruned(cap: cap)
+        let (alive, missing) = capped.prunedOfMissingFiles { entry in
             switch entry.kind {
             case .screenshot:
                 guard let f = entry.imageFile else { return false }
@@ -45,8 +45,7 @@ public final class HistoryStore {
     /// Stores a history-owned full-res PNG copy + thumbnail. Returns nil (and
     /// logs) when any write fails — the capture flow is never blocked.
     @discardableResult
-    public func addScreenshot(pngData: Data, cap: Int, maxAge: TimeInterval?,
-                              date: Date = Date()) -> HistoryEntry? {
+    public func addScreenshot(pngData: Data, cap: Int, date: Date = Date()) -> HistoryEntry? {
         guard let thumb = ThumbnailRenderer.jpegThumbnail(from: pngData) else {
             NSLog("History: thumbnail failed, skipping entry"); return nil
         }
@@ -65,7 +64,7 @@ public final class HistoryStore {
         }
         let entry = HistoryEntry(id: id, kind: .screenshot, date: date,
                                  imageFile: imageName, thumbFile: thumbName)
-        insert(entry, cap: cap, maxAge: maxAge, now: date)
+        insert(entry, cap: cap)
         return entry
     }
 
@@ -73,7 +72,7 @@ public final class HistoryStore {
     /// the video itself is never duplicated.
     @discardableResult
     public func addRecording(filePath: String, thumbnailSource: Data, cap: Int,
-                             maxAge: TimeInterval?, date: Date = Date()) -> HistoryEntry? {
+                             date: Date = Date()) -> HistoryEntry? {
         guard let thumb = ThumbnailRenderer.jpegThumbnail(from: thumbnailSource) else {
             NSLog("History: thumbnail failed, skipping entry"); return nil
         }
@@ -87,30 +86,15 @@ public final class HistoryStore {
         }
         let entry = HistoryEntry(id: id, kind: .recording, date: date,
                                  filePath: filePath, thumbFile: thumbName)
-        insert(entry, cap: cap, maxAge: maxAge, now: date)
+        insert(entry, cap: cap)
         return entry
     }
 
-    private func insert(_ entry: HistoryEntry, cap: Int, maxAge: TimeInterval?, now: Date) {
-        let (next, evicted) = index.adding(entry, cap: cap, maxAge: maxAge, now: now)
+    private func insert(_ entry: HistoryEntry, cap: Int) {
+        let (next, evicted) = index.adding(entry, cap: cap)
         index = next
         deleteOwnedFiles(of: evicted)
         saveIndex()
-    }
-
-    // MARK: - Retention sweep
-
-    /// Drops entries past the cache-retention window (and anything over the cap),
-    /// deleting their history-owned files. Returns true when the index changed, so
-    /// a caller driving this from a timer only republishes on a real eviction.
-    @discardableResult
-    public func pruneExpired(cap: Int, maxAge: TimeInterval?, now: Date = Date()) -> Bool {
-        let (next, evicted) = index.pruned(cap: cap, maxAge: maxAge, now: now)
-        guard !evicted.isEmpty else { return false }
-        index = next
-        deleteOwnedFiles(of: evicted)
-        saveIndex()
-        return true
     }
 
     // MARK: - Lookup
