@@ -131,7 +131,7 @@ struct SettingsView: View {
                             get: { OverlayDismissScale.secondsToPosition(store.settings.overlayAutoDismissSeconds) },
                             set: { store.settings.overlayAutoDismissSeconds = OverlayDismissScale.positionToSeconds($0)
                                    store.persist() }),
-                        range: OverlayDismissScale.minSeconds...OverlayDismissScale.neverPosition,
+                        range: OverlayDismissScale.minPosition...OverlayDismissScale.neverPosition,
                         valueLabel: { OverlayDismissScale.label(OverlayDismissScale.positionToSeconds($0)) })
                 }
             }

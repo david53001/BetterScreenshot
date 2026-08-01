@@ -43,8 +43,10 @@ enum SettingsHelp {
 
     static let autoDismiss = HelpText(
         "Auto-dismiss after",
-        "How long the Quick Access thumbnail stays on screen before it closes itself.",
-        example: "Set to 10s, or Never to keep it up until you dismiss it yourself."
+        "How long the Quick Access thumbnail is held on screen before it closes itself — "
+            + "from 30 seconds up to 30 minutes.",
+        example: "Set to 5m to keep a capture handy while you work, or Never to hold it "
+            + "until you dismiss it yourself."
     )
 
     static let pinCornerRadius = HelpText(

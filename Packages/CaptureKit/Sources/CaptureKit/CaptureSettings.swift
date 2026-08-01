@@ -60,7 +60,10 @@ public struct CaptureSettings: Equatable {
         self.afterCapture = AfterCaptureBehavior(rawValue: dictionary["afterCapture"] ?? "") ?? d.afterCapture
         self.format = SettingsImageFormat(rawValue: dictionary["format"] ?? "") ?? d.format
         self.overlayCorner = OverlayCorner(rawValue: dictionary["overlayCorner"] ?? "") ?? d.overlayCorner
-        self.overlayAutoDismissSeconds = Int(dictionary["overlayAutoDismissSeconds"] ?? "") ?? d.overlayAutoDismissSeconds
+        let rawAutoDismiss = Int(dictionary["overlayAutoDismissSeconds"] ?? "") ?? d.overlayAutoDismissSeconds
+        // Snap to the slider's stop table so a legacy persisted value (e.g. an older
+        // build's 6s default) resolves to a stop the Settings slider can show.
+        self.overlayAutoDismissSeconds = OverlayDismissScale.snap(rawAutoDismiss)
         self.pinCornerRadius = Int(dictionary["pinCornerRadius"] ?? "") ?? d.pinCornerRadius
         self.pinShadow = dictionary["pinShadow"].map { $0 == "true" } ?? d.pinShadow
         self.historyEnabled = dictionary["historyEnabled"].map { $0 == "true" } ?? d.historyEnabled
