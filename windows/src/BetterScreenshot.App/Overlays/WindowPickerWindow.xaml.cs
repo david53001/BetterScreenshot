@@ -32,7 +32,7 @@ public partial class WindowPickerWindow : Window
         _onPicked = onPicked;
         InitializeComponent();
 
-        var accent = Color.FromRgb(0x0A, 0x84, 0xFF);
+        var accent = Color.FromRgb(0xFF, 0xFF, 0xFF); // monochrome white highlight (was blue #0A84FF)
         Highlight.Fill = new SolidColorBrush(accent) { Opacity = 0.18 };
         Highlight.Stroke = new SolidColorBrush(accent);
         Highlight.StrokeThickness = 3;

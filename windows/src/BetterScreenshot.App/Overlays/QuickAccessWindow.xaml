@@ -3,20 +3,59 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
-        Width="220" Height="184" WindowStartupLocation="Manual">
-    <Border x:Name="Card" CornerRadius="12" Background="{StaticResource Theme.CardBrush}"
-            BorderBrush="{StaticResource Theme.BorderBrush}" BorderThickness="1" Margin="6" Padding="10">
+        ResizeMode="NoResize" SizeToContent="Manual" WindowStartupLocation="Manual">
+    <Window.Resources>
+        <!-- Overlaid icon button: chromeless; the hover / pressed pills use the per-card auto-contrast tone
+             (QA.HoverBrush / QA.PressedBrush are swapped in code-behind to contrast the image behind the bar). -->
+        <SolidColorBrush x:Key="QA.HoverBrush" Color="#2BFFFFFF"/>
+        <SolidColorBrush x:Key="QA.PressedBrush" Color="#45FFFFFF"/>
+        <Style x:Key="QA.IconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource QA.HoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource QA.PressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Shadow host: the drop shadow is generated from the rounded, clipped content below, so it hugs the
+         card's rounded silhouette. Margin leaves room for the shadow to bleed. -->
+    <Border Margin="6">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.45"/>
+            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.5"/>
         </Border.Effect>
-        <!-- DockPanel keeps the button row and the thumbnail in separate bands so the buttons'
-             hover pills can never overlap (bleed into) the image; the 8px top margin is the gap. -->
-        <DockPanel LastChildFill="True">
-            <StackPanel x:Name="ButtonRow" DockPanel.Dock="Bottom" Orientation="Horizontal"
-                        HorizontalAlignment="Center" Margin="0,8,0,0"/>
-            <Border CornerRadius="6" ClipToBounds="True" Background="#14FFFFFF">
-                <Image x:Name="Thumb" Stretch="Uniform"/>
-            </Border>
-        </DockPanel>
+        <Grid>
+            <!-- Root = the full-bleed image + overlays. Clipped to a rounded rect in code-behind so the image,
+                 scrim and buttons all sit inside rounded corners (a Border's CornerRadius won't clip children). -->
+            <Grid x:Name="Root">
+                <Image x:Name="Thumb" Stretch="UniformToFill"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <!-- Transparent drag surface behind the toolbar: drag it to export the file. -->
+                <Border x:Name="DragSurface" Background="Transparent"/>
+                <!-- Adaptive scrim (height + tone set in code) guarantees toolbar legibility over busy images. -->
+                <Rectangle x:Name="Scrim" VerticalAlignment="Bottom" IsHitTestVisible="False"/>
+                <StackPanel x:Name="ButtonRow" Orientation="Horizontal"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,9"/>
+            </Grid>
+            <!-- Crisp hairline on top of everything (subtle; matches the JVoice monochrome border). -->
+            <Border x:Name="Hairline" CornerRadius="14" BorderThickness="1"
+                    BorderBrush="#26FFFFFF" IsHitTestVisible="False"/>
+        </Grid>
     </Border>
 </Window>

@@ -1,5 +1,9 @@
 # Windows UI Revamp Implementation Plan
 
+> **⤴️ SUPERSEDED (2026-07-03) by the monochrome revamp — see [`UI-JVOICE-REVAMP.md`](UI-JVOICE-REVAMP.md).**
+> The blue `#0A84FF` accent and tabbed Settings built here were later replaced by JVoice's black-and-white
+> monochrome theme (white accent, card-based Settings). Kept for history.
+
 > **✅ STATUS: SHIPPED (2026-07-03).** All 7 tasks are implemented and committed on `windows-port`
 > (`c488288` key names → `ebde85c` theme → `22cc341` settings → `e57a074` Quick Access → `e0cf9a3` editor →
 > `286324c` remaining surfaces → `6cf645f` `--ui-preview`), followed by two owner-reported polish fixes

@@ -22,6 +22,15 @@ public static class DocumentRenderer
 {
     private static readonly FontFamily Font = new("Segoe UI");
 
+    /// <summary>Font family + weight used for text annotations, exposed so the live editing box can match exactly.</summary>
+    public static FontFamily TextFont => Font;
+    public static FontWeight TextWeight => FontWeights.Bold;
+
+    /// <summary>Padding between text and the edge of its optional background chip. Shared with the editing box so
+    /// the live preview and the flattened result line up.</summary>
+    public const double TextChipPadX = 6;
+    public const double TextChipPadY = 2;
+
     public static BitmapSource Render(EditorDocument doc, BitmapSource baseImage, IAnnotation? preview = null)
     {
         int w = (int)Math.Round(doc.Size.Width);
@@ -77,8 +86,17 @@ public static class DocumentRenderer
                 break;
             }
             case TextAnnotation t:
-                dc.DrawText(FormatText(t.Text, t.Style.FontSize, Solid(t.Style.StrokeColor), FontWeights.Bold), Pt(t.Origin));
+            {
+                var ft = FormatText(t.Text, t.Style.FontSize, Solid(t.Style.StrokeColor), FontWeights.Bold);
+                if (t.Style.TextBackground is { } bg)
+                {
+                    var chip = new Rect(t.Origin.X - TextChipPadX, t.Origin.Y - TextChipPadY,
+                        ft.Width + 2 * TextChipPadX, ft.Height + 2 * TextChipPadY);
+                    dc.DrawRoundedRectangle(Solid(bg), null, chip, 4, 4);
+                }
+                dc.DrawText(ft, Pt(t.Origin));
                 break;
+            }
             case CounterAnnotation c:
             {
                 double d = c.Diameter;

@@ -18,6 +18,223 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-07-05 — "Launch at login" now actually registers with Windows (owner request — it was a dead flag)
+Owner asked for a setting to "pick if this app starts on startup." **The Settings UI already had it** — a "Startup" `DarkSection`
+card with a `LaunchAtLoginCheck` `Theme.MonoSwitch`, an InfoTip, and the `SettingsStore.LaunchAtLogin` bool round-tripping to
+`settings.json` — **but nothing consumed the flag.** Toggling it just wrote a bool; the app never told Windows to auto-start. So
+this was a *wiring* fix, not new UI (the toggle already matches the monochrome JVoice theme).
+- **New `Platform/StartupRegistration.cs`** — registers/removes the app in the per-user HKCU
+  `Software\Microsoft\Windows\CurrentVersion\Run` key (value name `BetterScreenshot` = the quoted current-exe path). Chose the
+  HKCU Run key over a Startup-folder `.lnk` or Task Scheduler because it's per-user (no admin/UAC), fully reversible (delete the
+  value), and shows up in **Task Manager → Startup** so the owner can also disable it there. Mirrors the mac app's SMAppService
+  login item. `SetEnabled(bool)` writes/deletes; `Reconcile(bool)` reads-then-writes-only-if-different (idempotent), refreshing the
+  stored path so a **moved/republished build stays valid** and never leaves a stale entry. All ops are best-effort/try-caught —
+  under a locked-down group policy the persisted flag still records intent. Uses `Environment.ProcessPath` (the real apphost path),
+  and quotes it against spaces in the install path. `Microsoft.Win32.Registry` needs **no package** — it ships in the
+  `Microsoft.WindowsDesktop.App` framework this project already references via `UseWPF`.
+- **Wired in two places:** `SettingsWindow.Apply()` calls `StartupRegistration.Reconcile(_settings.LaunchAtLogin)` (instant-apply;
+  `Reconcile` keeps the per-control firing a cheap no-op unless it actually changed). `App.OnStartup` calls the same right after
+  `SettingsStore.Load()`, so a republished/moved exe self-heals its Run-key path and a toggled-off flag can't leave a leftover.
+- **Tests:** new `StartupRegistrationTests.cs` (7 cases) drives the **internal registry seam** (`InternalsVisibleTo` added to the
+  Platform csproj) against a throwaway HKCU scratch subkey (`Software\BetterScreenshot.Tests\…`, deleted in `finally`) — proves
+  enable writes the quoted command, disable removes it, unresolvable-exe writes nothing, disable-on-missing doesn't throw, and
+  `Reconcile` refreshes a stale path / clears when off / is a no-op (doesn't even create the key) when already off.
+- **Verified:** build **0/0**; `dotnet test` **296 passed / 0 failed** (+7). Plus an **end-to-end real-key check** (throwaway
+  console referencing the built Platform DLL, calling the *public* API): confirmed `SetEnabled(true)` writes the real
+  `…\CurrentVersion\Run\BetterScreenshot` value = the quoted exe path, `Reconcile(true)` is idempotent (no rewrite),
+  `SetEnabled(false)` removes it, and the machine was restored to its original (no-entry) state — so it registers exactly where
+  Windows reads at sign-in and is fully reversible.
+- **Assumption logged:** used the **HKCU Run key** (not the Startup folder or Task Scheduler) — the simplest reversible per-user
+  approach and the standard for tray apps; no admin prompt. If the owner prefers a Startup-folder shortcut instead, it's a small swap.
+
+## 2026-07-03 — Quick Access auto-dismiss: drag-a-bar slider (2s … Never) replaces 3/6/10s (owner request)
+Owner asked to change the Quick Access overlay so *"it stays there for as long as the user wants … drag a little bar
+to change how long it stays there."* Clarified with the owner up front → a **draggable slider in Settings** whose far
+end is **Never (stays until you dismiss it)**. Key simplifier: `QuickAccessWindow.StartAutoDismiss` already treats
+`OverlayAutoDismissSeconds <= 0` as "never dismiss", so **Never persists as 0** and the overlay timer needed **no
+change** — this was purely a Settings-UI + persistence-mapping change.
+- **New pure `Capture/OverlayDismissScale.cs`** maps slider position (2..31) ⟷ persisted seconds (0 = Never) ⟷ label
+  ("6s" / "Never"): `SecondsToPosition`, `PositionToSeconds` (rounds + clamps to 2..30, ≥31 ⇒ 0), `Label`. One pure,
+  tested place so the slider and the persisted int can't drift. 25 xUnit cases in `OverlayDismissScaleTests.cs`.
+- **New monochrome `Theme.Slider`** (+ `SliderTrackFill` / `SliderTrackEmpty` / `SliderThumb`) in `Resources/Theme.xaml`
+  — the app had **no Slider style at all**. Faint full-width base track, white fill left-of-thumb (painted via the
+  `Track.DecreaseRepeatButton`), round white thumb (accent hover/pressed on hover/drag). Standard WPF `PART_Track`
+  template, so a malformed one would fail the XAML compile.
+- **`Settings/SettingsWindow.xaml`**: replaced the 3/6/10s segmented `RadioButton` group under "Auto-dismiss after"
+  with a `Slider` (`DismissSlider`, Min 2 / Max 31, snap-to-integer, `IsMoveToPointEnabled`) + a live "6s"/"Never"
+  readout (`DismissValueLabel`). InfoTip copy updated to mention dragging + the Never end.
+- **`SettingsWindow.xaml.cs`**: load = `DismissSlider.Value = OverlayDismissScale.SecondsToPosition(...)` +
+  `UpdateDismissLabel()`; save = `OverlayAutoDismissSeconds = OverlayDismissScale.PositionToSeconds(DismissSlider.Value)`;
+  new `DismissSlider_ValueChanged` (live label + instant-apply, `_loading`-guarded) and null-guarded `UpdateDismissLabel`
+  (the slider can raise `ValueChanged` during XAML parse before the label field is assigned). Dropped `Dismiss3/6/10`.
+- **No temp-file edge case for Never:** the drag PNG's 5-min delete is scheduled *on card dismissal*
+  (`CaptureCoordinator.ShowOverlayCard`, line ~129), **not** at creation — so a Never card keeps its drag file for its
+  whole (possibly indefinite) life, then cleans up 5 min after the owner finally closes it. Nothing to change there.
+- **Verified:** build **0/0**; `dotnet test` **289 passed / 0 failed** (+25 `OverlayDismissScaleTests`). Settings
+  rendered via `--ui-preview settings` (PrintWindow, since the owner's monitors were busy with a topmost app) shows the
+  slider at the default **6s** with the white fill + thumb, matching the JVoice theme. **Republished `dist/` and
+  relaunched the tray agent.** Committed, not pushed.
+- **NOTE: a concurrent agent's dist instance (started 8:26 PM) was running in this shared tree** — see
+  `concurrent-agents-shared-tree` memory (that agent's InfoTip commits `3d03014`/`db88ab0`/`a6e7467` are in history and
+  are compiled into my republished binary). I stopped its running dist instance to release the locked exe, published, and
+  relaunched my build (single instance confirmed). Last-writer-wins if it republishes again.
+
+## 2026-07-03 — InfoTip polish: no Help cursor + crisp, perfectly-centered "i" (owner request)
+Two owner-reported nits on the `App/Controls/InfoTip.cs` "ⓘ" button. **(1)** Hovering it showed the arrow-with-"?"
+Help cursor — it was `Cursor = Cursors.Help`; changed to `Cursors.Arrow` (it's hover-only, no click action). Commit
+`3d03014`. **(2)** The "i" looked off-center, small, and color-fringed. Root cause: it was a `TextBlock`, so WPF drew
+it as **ClearType text** (subpixel color fringing on the dark circle) and centered its advance-width box, not its ink.
+Replaced it with a **filled vector `Path`** built from the glyph outline — scaled to a fixed 9px ink height (bigger),
+normalized so ink bounds start at (0,0) so `Stretch.None` + the Border's `Center` alignment centers the visible ink
+exactly. Result is solid white, fringe-free, and pixel-identical every instance. Verified via a throwaway
+`RenderTargetBitmap` harness measuring the real control: L/R margins 6.00/6.00 DIP, T/B 3.50/3.50 DIP, bbox-center
+offset ≈ −0.013 DIP (dead center). Commit `db88ab0`. Republished `dist/` and relaunched the tray agent both times.
+Kept the italic serif style (owner only flagged centering/size); upright is a one-line change if wanted later.
+
+## 2026-07-03 — Per-setting info buttons + drag temp PNG auto-deletes after 5 min (owner request)
+Owner asked for *"a little information button next to every single setting to explain what the setting is and give an
+example,"* and that *"when you drag a screenshot in, it saves it in temp for 5 minutes and then deletes it
+automatically … but do not delete the screenshot fully since it's going to be in capture history."* Commits `3e6edea`
+(feature) + `a60c320` (tests) on `windows-port`. **NOTE: a second agent was editing this same tree concurrently**
+(its commits `35d3a73` two-col shortcuts, `dc8c9a2` editor text fix interleave with mine) — see the
+`concurrent-agents-shared-tree` memory; git merged the parallel commits linearly.
+- **Info buttons.** New reusable `App/Controls/InfoTip.cs` — a 16px circular monochrome "ⓘ" that shows a theme-styled
+  tooltip (bold Title + wrapped Explanation + italic "e.g." Example), built in code via `ToolTipOpening` with
+  literal-color fallbacks so it renders even without app resources. Placed next to **every** setting in
+  `Settings/SettingsWindow.xaml` (Capture, Quick Access Overlay, Pin, History, Startup, Save Location, Recording) and
+  next to **each Keyboard Shortcut row** (per-action copy via `ShortcutHelp` in the code-behind). WinForms/WPF type
+  ambiguities (`Cursors`/`ToolTip`/`HorizontalAlignment`) resolved with `using` aliases like the other App files.
+- **Drag temp cleanup.** The Quick Access drag-to-export temp PNG (`quickaccess.png`, written in
+  `CaptureCoordinator.ShowOverlayCard`) was **never deleted** (leaked in `%TEMP%`). New shared
+  `Platform/TempFiles.cs` (`PayloadLifetime = 5 min`, `ScheduleDeleteContainingDir`) now removes it 5 minutes after the
+  card is dismissed; `ClipboardService` refactored onto the same helper (dropped its private duplicate). The screenshot
+  is **preserved** — History keeps its own `%APPDATA%\…\History` PNG copy, a separate location, so deleting the `%TEMP%`
+  drag file loses nothing. Recording cards drag the *real* saved file and are intentionally NOT scheduled for deletion.
+- **Auto-dismiss wired (bonus).** `OverlayAutoDismissSeconds` (3/6/10s) was persisted + shown in Settings but **never
+  applied** — a dead setting. Wired it into `QuickAccessWindow` (DispatcherTimer, **hover-to-pause**, restart on
+  mouse-leave; auto-dismiss = `DismissReason.Closed` so it stays restorable). Makes the new info tip truthful and bounds
+  the temp lifetime to ~5 min after the card goes.
+- **Verified:** build **0/0**; `dotnet test` **264 passed / 0 failed** (+4 `TempFilesTests`: 5-min lifetime, deletes
+  only the payload dir, sibling dir untouched, null-safe). Settings rendered via `--ui-preview settings` (PrintWindow) —
+  ⓘ on every setting, clean 3-col layout. Tooltip content proven by rendering the **real** `InfoTip.BuildTip` output
+  offscreen (throwaway net9 WPF harness reflection-loading the built assembly — screen-grab was unreliable, owner's
+  dual monitors were busy with topmost apps). **Republished `dist/` and relaunched the tray agent** (it wasn't running —
+  I'd stopped it during verification). Committed, not pushed.
+
+## 2026-07-03 — History cap → 10/50/100 + Settings widened to JVoice 960 / 3 columns (owner request)
+Owner asked to *"implement a new feature called history … last 10 up to last 100, editable in settings,"* and to
+*"make the settings wider (not as long) to match the JVoice width."* **Capture history already existed end-to-end**
+(Phase 6: `BetterScreenshot.History/`, `Platform/HistoryStore.cs`, `App/History/HistoryService.cs` +
+`HistoryWindow`, tray → History…, records on save/overlay). So this was a **refinement**, not a new build:
+- **History cap options `10 / 50 / 200` → `10 / 50 / 100`** (max is now 100 per the request). Renamed the segmented
+  radio `Cap200`→`Cap100` in `Settings/SettingsWindow.xaml` (Content "100") and updated the load/apply switches in
+  `SettingsWindow.xaml.cs` (lines ~79, ~266). **Default kept at 50** (`CaptureSettings.HistoryCap`) — it is the
+  tested default, the middle of the new range, and the owner's already-persisted value; "10" is honored as the
+  minimum option. The model still accepts any int, so the two roundtrip tests that serialize `HistoryCap=200` still
+  pass unchanged.
+- **Settings window `720`→`960` wide + two-column body reflowed to three** (mirrors `JVoice-Windows`
+  `UI/SettingsView.xaml`, which is `Width="960"` / 3-col; its own comment explains the exact rationale the owner
+  echoed — go wider so the window isn't a too-tall stack). Document order already split cleanly, so it was done by
+  inserting column boundaries only (no block moves): **Col A** Capture · Quick Access Overlay · Pin to Screen ·
+  **Col B** History · Startup · Save Location · **Col C** Recording. Keyboard Shortcuts stays full-width below.
+- **Verified:** `dotnet build` clean (0/0), **256 tests green**, and the settings window rendered via
+  `--ui-preview settings` (960×970, 3 balanced columns, History shows 10/50/100, no clipping). Republished to
+  `dist/` and relaunched the tray agent.
+
+## 2026-07-03 — Quick Access card: full-bleed image + auto-contrast overlay (owner request)
+Redesigned the post-capture Quick Access card (`Overlays/QuickAccessWindow.xaml[.cs]`) per owner: *"the image
+should be the full thing / the full block, rounded; the UI overlays above it and auto-contrasts — white image →
+black buttons, and detect the palette on hover too."*
+- **Full-bleed rounded image:** dropped the separate dark thumbnail-band + button-strip DockPanel. The captured
+  image now fills the entire rounded card edge-to-edge (`Image` `UniformToFill`, `Root.Clip` = rounded rect since
+  a `Border` CornerRadius won't clip children). The card is **sized to the image's aspect ratio** (width 236,
+  height derived, clamped 132–280) so the whole capture shows with no letterbox; extreme ratios crop via
+  UniformToFill. Rounded drop-shadow + subtle hairline retained.
+- **Overlaid, auto-contrasting toolbar:** the action buttons float over the bottom of the image. New
+  `Overlays/QuickAccessContrast.cs` samples the average luminance of the image's bottom ~30% strip
+  (crop→downscale→BGRA→Rec.709 mean) and picks a coherent palette: bright strip → near-black glyphs + faint white
+  scrim + translucent-black hover/pressed pills; dark strip → near-white glyphs + faint black scrim +
+  translucent-white pills. Hover/pressed pills come from the same decision, so hover contrast is automatic. A
+  gentle bottom scrim (shares the image tone) guarantees legibility over busy/mixed content.
+- **Variable-height stack:** cards now differ in height, so `QuickAccessStackController.Restack` stacks them
+  cumulatively from the corner using each card's actual `Width`/`Height` (was the fixed-step `OverlayPositioner.
+  StackedOrigin`; that pure fn + its tests are untouched and still used for single-window origins).
+- **Decisions (owner away):** kept the bottom scrim (subtle, tone-matched) as a legibility guarantee for the
+  auto-contrast — the alternative (glyph-only) fails over photos; documented here as the one judgment call. One
+  toolbar tone (not per-button) so the row reads as one intentional unit.
+- **Verified:** App build **0/0**; `dotnet test` **250 passed / 0 failed** (8 new pure luminance/threshold tests);
+  rendered the card offscreen for **light / dark / wide** sample images and eyeballed the PNGs — black glyphs on
+  the white image, white glyphs on the dark + gradient images, full-bleed rounding correct. **Published to `dist/`**
+  and relaunched the tray agent. Committed on `windows-port` (not pushed).
+- **Process writeup:** [`QUICKACCESS-CARD-REDESIGN.md`](QUICKACCESS-CARD-REDESIGN.md) — request → exploration →
+  decisions + alternatives → implementation → verification (incl. the offscreen-render harness used to "see" it).
+
+## 2026-07-03 — Capture black-bar fix + editor FPS + on-screen "walls" (owner-reported)
+Three owner-reported issues on a **dual-monitor, stretched-resolution** rig (primary = a **stretched 1500×1080**
+on a native-1920 panel; secondary = native **1920×1080**). Root-caused with live GDI diagnostics (PerMonitorV2
+harness mirroring `Screens`/`ScreenCapture`); all four fixes are pure-logic-tested where possible + a new capture
+regression test. **Full debugging process log:** [`INVESTIGATION-2026-07-03-capture-blackbar-editor.md`](INVESTIGATION-2026-07-03-capture-blackbar-editor.md).
+- **Capture "massive black bar on the side" (the main one).** The proof was in the owner's screenshot: the
+  captured desktop's **taskbar cut off at the content edge** with black beyond — a Windows taskbar spans the whole
+  monitor, so the *framebuffer* was ~1500 wide but the BitBlt requested ~1920. The app only sizes captures from
+  `GetMonitorInfo` (`MonitorInfo.Bounds`), which reports the logical/native size; a full-screen game or a custom
+  **stretched** scanout leaves the real framebuffer narrower, so BitBlt over-reads past the desktop → black
+  padding. Fix: **`Screens.RealFramebufferSize(deviceName)`** queries the display DC's real framebuffer
+  (`CreateDC("DISPLAY",…)` + `GetDeviceCaps(DESKTOPHORZRES/VERTRES)`), and **`ScreenCapture.CaptureDisplay`** clamps
+  the monitor bounds to it (`RealBounds`); `CaptureRegion` also clamps to the live virtual screen
+  (`SM_*VIRTUALSCREEN`) as a backstop. Confirmed the DC caps report the true framebuffer (1500 vs 1920) on this rig;
+  a white-window probe proved GDI offset-reads onto the secondary work (so it was never a multimon offset bug).
+  In the normal case (reported == real) the clamp is a harmless no-op. New hardware test
+  `CaptureDisplayIsClampedToRealFramebuffer`.
+- **Area selection could run off-screen.** Mouse capture keeps delivering points past the monitor edge, so a drag
+  could select (and capture) beyond the screen. Added pure **`SelectionMath.ClampToBounds`** (+3 tests) and clamp
+  the DIP selection rect to the monitor's DIP extent (`RootCanvas` size) in `SelectionOverlayWindow`
+  move + up — a physical wall.
+- **Editor annotations could be dragged out of the image.** `EditorWindow.Pos` now clamps the pointer to
+  `[0,imgW]×[0,imgH]` (covers drawn shapes, marquee, counter, text placement), and a Select-tool **move** clamps the
+  moved annotation's bounding box inside the image (`MovedWithinBounds`).
+- **Editor "staggering FPS" while annotating.** Root cause: the draw-preview re-rasterized a **full-resolution
+  `RenderTargetBitmap` of the whole document every mouse-move** (≈8 MB/frame at 1080p → GC thrash → stutter). Fix:
+  shape tools (arrow/line/rect/filled-rect/ellipse) now draw a **lightweight WPF vector preview** on the
+  interaction canvas during the drag (`ShowVectorPreview`/`BuildPreviewElements`) — zero per-frame raster — and
+  flatten to the document only on mouse-up via the unchanged, unit-tested `DocumentRenderer`. Select-**move** now
+  redraws a **one-time pre-flattened background** (base + all *other* annotations) + only the moved annotation,
+  instead of re-flattening the whole document each frame. The commit path is byte-for-byte the old (working) code,
+  so committed output is identical — only the live preview changed.
+- **Verified:** solution build **0/0**; `dotnet test` **256 passed / 0 failed** (incl. new SelectionMath /
+  Screens / ScreenCapture tests); `CaptureDisplay` returns the clean real-framebuffer size on this rig (no black
+  bar); editor opens, renders edge-to-edge, and tool-select works (driven via UI Automation — a synthetic *drag*
+  can't be injected into WPF here, but the draw **commit** path is unchanged from shipped v1.0). **Republished to
+  `dist/` and relaunched the tray agent** (new exe 18:47). Committed on `windows-port` (not pushed).
+- **Owner note:** the black-bar fix can't be reproduced on-screen right now (this rig's reported size == real
+  framebuffer, so no bar today) — it triggers only when a game/app leaves the scanout stretched. The fix is proven
+  safe (no-op when sizes agree) and correct against the DC-caps ground truth. Worth a spin next time you capture
+  right after a stretched-res game. (Owner's capture hotkey is **Alt+.**, not the Ctrl+Shift defaults.)
+
+## 2026-07-03 — JVoice monochrome UI revamp (owner request)
+Re-skinned the **whole Windows app** to the sibling **JVoice-Windows** black-and-white identity (owner: "take a
+look at how JVoice's UI looks and incorporate it throughout, especially settings"). Spec + rationale:
+`windows/docs/UI-JVOICE-REVAMP.md`.
+- **Palette** (`Resources/Theme.xaml`): remapped every token to monochrome — window `#000`, card `#0E0E0E`,
+  hairline `#242424`, and **white is the accent** (was blue `#0A84FF`). Keys unchanged, so all windows re-skin
+  through the existing implicit styles. Fixed the styles that would now be white-on-white (AccentButton = white
+  fill + black text; toggle/tool checked = white@20%; ComboBoxItem highlight = white@16%; CheckBox check = black).
+- **New components**: ported JVoice's `DarkSection` card control (`Controls/DarkSection.cs` + implicit style: glowing
+  white dot + UPPERCASE header + divider), `Theme.MonoSwitch` (macOS toggle), `Theme.SegmentLeft/Mid/Right/Solo`
+  (joined segmented control), `Theme.PillButton`, `Theme.PressableButton`.
+- **Settings** (`Settings/SettingsWindow.xaml[.cs]`): replaced the 3-tab layout with a **two-column masonry of
+  DarkSection cards** (no TabControl). Booleans → MonoSwitch rows; short enums → segmented RadioButton groups;
+  pin-radius → styled ComboBox; shortcuts → full-width card (mono chip + Change pill + Clear). Instant-apply +
+  shortcut-recording behavior unchanged; `SizeToContent=Height` clamped to the work area.
+- **Stray blues removed**: editor marquee, history selection border (+ darker cells), window-picker highlight, tray
+  menu colors. **Left blue (logged):** `ClickHighlighter` (baked into the recorded video, not chrome).
+- **Decisions (owner away):** Windows-only (macOS Swift app untouched — it's the behavioral source of truth and not
+  verifiable here); destructive buttons are monochrome (no red) to match JVoice, guarded by confirm dialogs.
+- **Verified:** solution build **0/0**; `dotnet test` **241 passed / 0 failed**; every window screenshotted via
+  `--ui-preview`; **published to `dist/`** and the tray agent relaunched. Committed on `windows-port`
+  (`64a05fe` code + `adcd560` docs) and **pushed to `origin/windows-port`** (2026-07-03). `main` not merged —
+  merge/PR when ready.
+
 ## Current pointer
 - **Branch:** `windows-port`
 - **Phase:** ✅ **DONE** — Phases 1–8 complete, `win-v1.0` tagged, full harden re-scan clean. Loop ended (no wakeup scheduled).
@@ -458,6 +675,21 @@ stopped the stale process, ran `pwsh windows/scripts/publish-app.ps1 -NoShortcut
 **Lesson / gotcha:** after any change the owner will *see* at runtime, you must **republish `dist/` and relaunch**
 the tray agent — a green build + commit alone leaves the owner testing a stale binary. (This is now called out in
 `README-win.md` and in `LOOP-PROMPT.md` §5 Rules.)
+
+## Editor text: click-off crash + no white background (2026-07-03) — commit `dc8c9a2`
+Owner reported two things. Adding text then clicking back onto the image crashed the whole app. And the text
+editor was a clunky white box. Both fixed. Details in `INVESTIGATION-2026-07-03-editor-text-crash-background.md`.
+
+- **Crash.** `NullReferenceException` in `PlaceTextBox` (from `OnDown`). No global handler, so it killed the process.
+- Root cause: each `TextBox`'s `LostKeyboardFocus` committed the shared `_textBox` field, not the box that lost focus.
+- On click-off `OnDown` committed the old box then placed a new one in the same handler. A late focus event re-entered
+  `CommitText()` and nulled `_textBox` mid-`PlaceTextBox`.
+- Fix: `CommitText(TextBox)` guarded by `ReferenceEquals`; handlers wired to the specific box before `Focus()`;
+  `OnDown` now finishes an open text box and consumes the click instead of committing-then-replacing.
+- **White background.** The inline editor is now WYSIWYG: transparent, no chrome, stroke-colored bold text in the render font.
+- Text has no background by default. A new inspector toggle adds an optional rounded chip (auto-contrast color).
+- Chip is sticky (`AnnotationStyle.TextBackground`), drawn by `DocumentRenderer`; old styles without the field load as `null`.
+- Verified: 260 tests green; crash harness survives all orderings; visually confirmed; `dist/` republished.
 
 ## Known issues / TODO discovered during build (append as you find them)
 - Git warns LF→CRLF on the C# files (autocrlf). Harmless; could add a `.gitattributes` to normalize.
