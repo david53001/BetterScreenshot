@@ -2,11 +2,12 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
-## Unreleased — Windows-Parity Backport
+## v2.5.0 — 2026-08-01 · Hold Duration + Windows-Parity Backport
 
-Brings the macOS app up to visual + behavioral parity with the Windows port in three
-areas (settings UI, the post-capture card, and a batch of editor/capture fixes). Design
-in `docs/WINDOWS-TO-MAC-PARITY.md`; implementation plans in
+Adds a much longer hold duration for the post-capture card, and brings the macOS app up
+to visual + behavioral parity with the Windows port in three areas (settings UI, the
+post-capture card, and a batch of editor/capture fixes). Parity design in
+`docs/WINDOWS-TO-MAC-PARITY.md`; implementation plans in
 `docs/superpowers/plans/2026-07-04-parity-part{1,2,3}-*.md`.
 
 ### Changed
@@ -27,10 +28,13 @@ in `docs/WINDOWS-TO-MAC-PARITY.md`; implementation plans in
   is migrated to 100.
 
 ### Added
-- **Auto-dismiss for the Quick Access card.** A new "Auto-dismiss after" slider
-  (Settings → Quick Access Overlay) closes the post-capture card after a chosen delay —
-  2 s … 30 s, or **Never** — and pauses the countdown while the pointer is over the card.
-  Default is **Never** (the card stays until you dismiss it).
+- **Choose how long a capture is held on screen.** A new "Auto-dismiss after" slider
+  (Settings → Quick Access Overlay) closes the post-capture Quick Access card after a
+  chosen delay. The slider stops at **30 s · 1 m · 2 m · 5 m · 10 m · 15 m · 30 m ·
+  Never**, and the countdown pauses while the pointer is over the card. Default is
+  **Never** (the card stays until you dismiss it). A delay saved by an older build
+  (for example the previous 6-second default) is moved to the nearest stop the first
+  time the settings are loaded.
 - **Play a sound on capture.** New Settings → Capture toggle (on by default) that plays a
   short system sound when you take a screenshot.
 - **Optional text-background chip in the editor.** A new inspector toggle draws a rounded,

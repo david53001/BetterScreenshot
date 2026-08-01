@@ -15,7 +15,7 @@ let captureSettingsTests: [TestCase] = [
         s.afterCapture = .saveOnly
         s.format = .jpg
         s.overlayCorner = .topLeft
-        s.overlayAutoDismissSeconds = 10
+        s.overlayAutoDismissSeconds = 300
         let restored = CaptureSettings(dictionary: s.dictionary)
         t.equal(restored, s)
     },
@@ -48,6 +48,14 @@ let captureSettingsTests: [TestCase] = [
         t.equal(snapped.historyCap, 100)
         let unchanged = CaptureSettings(dictionary: ["historyCap": "50"])
         t.equal(unchanged.historyCap, 50)
+    },
+    TestCase("autoDismissSnapsLegacyValueToAllowedStop") { t in
+        let legacy = CaptureSettings(dictionary: ["overlayAutoDismissSeconds": "6"])
+        t.equal(legacy.overlayAutoDismissSeconds, 30)
+        let never = CaptureSettings(dictionary: ["overlayAutoDismissSeconds": "0"])
+        t.equal(never.overlayAutoDismissSeconds, 0)
+        let unchanged = CaptureSettings(dictionary: ["overlayAutoDismissSeconds": "600"])
+        t.equal(unchanged.overlayAutoDismissSeconds, 600)
     },
     TestCase("playSoundDefaultsOnAndRoundTrips") { t in
         t.isTrue(CaptureSettings.default.playSound)

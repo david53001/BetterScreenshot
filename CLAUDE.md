@@ -47,11 +47,14 @@ Local Swift packages + a menu-bar app target:
 - `CHANGELOG.md` — per-release history.
 
 ## Roadmap (post-v1, each its own spec → plan)
-~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added) · ~~v2.3 capture history~~ (shipped 2026-06-05) · ~~editor sticky defaults + Stack-to-Quick-Access button~~ (shipped 2026-06-25, on `main`, not tagged — see Source of truth above) · ~~Windows→macOS parity backport~~ (shipped 2026-07-04, on `main`, not tagged — JVoice settings reskin + full-bleed Quick Access card + editor/capture backports; see Source of truth above. Outstanding: stretched-resolution "black bar" capture item, needs owner hardware).
+~~P2 recording~~ (shipped v2.0/2.1) · ~~P3 OCR + pin-to-screen~~ (shipped v1.3) · ~~reliability + infra sprint~~ (shipped v2.2, 2026-06-05 — fixes from the scan, CI added) · ~~v2.3 capture history~~ (shipped 2026-06-05) · ~~editor sticky defaults + Stack-to-Quick-Access button~~ (shipped 2026-06-25, on `main`, not tagged — see Source of truth above) · ~~Windows→macOS parity backport~~ (shipped 2026-07-04, on `main`, not tagged — JVoice settings reskin + full-bleed Quick Access card + editor/capture backports; see Source of truth above. Outstanding: stretched-resolution "black bar" capture item, needs owner hardware) · ~~Quick Access hold duration~~ (shipped v2.5.0, 2026-08-01 — see below).
 
-**Next up — specs ready, implement in this order** (for each: `superpowers:writing-plans` from the spec, then execute with `superpowers:subagent-driven-development`; each spec lists its own probes/risks — run probe tasks first, and verify named symbols against live code before planning):
-1. **v2.4 Recording Controls** (countdown · window target · pause/resume) — `docs/superpowers/specs/2026-06-05-betterscreenshot-recording-controls-design.md`
-2. **v2.5 Trim Editor** — `docs/superpowers/specs/2026-06-05-betterscreenshot-trim-editor-design.md`
+**Quick Access hold duration** (shipped 2026-08-01, tag `v2.5.0`, built directly without a spec at the owner's request): the Settings → Quick Access Overlay → "Auto-dismiss after" slider now runs over an ordered stop table in `OverlayDismissScale` (`Packages/CaptureKit/Sources/CaptureKit/OverlayDismissScale.swift`) — **30s · 1m · 2m · 5m · 10m · 15m · 30m · Never** — where the slider position is the stop *index*, not a second count. `CaptureSettings.init(dictionary:)` snaps any persisted value that isn't a stop to the nearest one (same precedent as `historyCap` in `48e9c3a`). Default is still `0` = Never. The C# port mirrors the identical table in `windows/src/BetterScreenshot.Capture/OverlayDismissScale.cs` on the `windows-port` branch.
+
+**Next up — spec ready** (`superpowers:writing-plans` from the spec, then execute with `superpowers:subagent-driven-development`; the spec lists its own probes/risks — run probe tasks first, and verify named symbols against live code before planning):
+1. **Trim Editor** — `docs/superpowers/specs/2026-06-05-betterscreenshot-trim-editor-design.md`
+
+(Recording Controls — countdown · window target · pause/resume — shipped as `v2.4.0` on 2026-06-25.)
 
 **Background/wallpaper styling: dropped by owner decision (2026-06-05) — do not build or re-propose.**
 
