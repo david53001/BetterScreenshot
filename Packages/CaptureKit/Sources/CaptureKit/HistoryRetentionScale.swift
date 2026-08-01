@@ -40,8 +40,11 @@ public enum HistoryRetentionScale {
         seconds > 0 ? TimeInterval(seconds) : nil
     }
 
+    /// The "Never" stop shows as ∞ — matches the Quick Access auto-dismiss slider.
+    public static let neverLabel = "∞"
+
     public static func label(_ seconds: Int) -> String {
-        if seconds <= 0 { return "Never" }
+        if seconds <= 0 { return neverLabel }
         if seconds < 60 { return "\(seconds)s" }
         if seconds < 3600 { return "\(seconds / 60)m" }
         return "\(seconds / 3600)h"

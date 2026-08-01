@@ -56,7 +56,10 @@ public static class OverlayDismissScale
         return best;
     }
 
-    /// <summary>Human-readable label for a persisted seconds value: "Never" for 0, otherwise e.g. "30s" or "5m".</summary>
+    /// <summary>Label shown next to the slider. The "Never" stop renders as ∞ (reads as "forever"
+    /// at a glance and stays narrow next to the numeric stops); otherwise e.g. "30s" or "5m".</summary>
+    public const string NeverLabel = "∞";
+
     public static string Label(int seconds) =>
-        seconds <= 0 ? "Never" : seconds < 60 ? $"{seconds}s" : $"{seconds / 60}m";
+        seconds <= 0 ? NeverLabel : seconds < 60 ? $"{seconds}s" : $"{seconds / 60}m";
 }

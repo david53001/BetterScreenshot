@@ -41,8 +41,8 @@ let overlayDismissScaleTests: [TestCase] = [
         }
     },
     TestCase("labels") { t in
-        t.equal(OverlayDismissScale.label(0), "Never")
-        t.equal(OverlayDismissScale.label(-3), "Never")
+        t.equal(OverlayDismissScale.label(0), "∞")
+        t.equal(OverlayDismissScale.label(-3), "∞")
         t.equal(OverlayDismissScale.label(30), "30s")
         t.equal(OverlayDismissScale.label(60), "1m")
         t.equal(OverlayDismissScale.label(120), "2m")

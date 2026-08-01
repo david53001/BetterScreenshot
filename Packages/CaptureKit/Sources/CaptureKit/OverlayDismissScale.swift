@@ -30,8 +30,12 @@ public enum OverlayDismissScale {
         return finiteStops.min(by: { abs($0 - seconds) < abs($1 - seconds) }) ?? finiteStops[0]
     }
 
+    /// The "Never" stop shows as ∞ — it reads as "forever" at a glance and keeps the
+    /// slider's value label narrow next to the numeric stops.
+    public static let neverLabel = "∞"
+
     public static func label(_ seconds: Int) -> String {
-        if seconds <= 0 { return "Never" }
+        if seconds <= 0 { return neverLabel }
         return seconds < 60 ? "\(seconds)s" : "\(seconds / 60)m"
     }
 }

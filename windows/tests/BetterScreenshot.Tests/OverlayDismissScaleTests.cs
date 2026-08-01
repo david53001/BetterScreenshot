@@ -46,8 +46,8 @@ public class OverlayDismissScaleTests
         Assert.Equal(expected, OverlayDismissScale.Snap(seconds));
 
     [Theory]
-    [InlineData(0, "Never")]
-    [InlineData(-1, "Never")]
+    [InlineData(0, "∞")]
+    [InlineData(-1, "∞")]
     [InlineData(30, "30s")]
     [InlineData(60, "1m")]
     [InlineData(300, "5m")]

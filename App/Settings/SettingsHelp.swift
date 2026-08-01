@@ -45,7 +45,7 @@ enum SettingsHelp {
         "Auto-dismiss after",
         "How long the Quick Access thumbnail is held on screen before it closes itself — "
             + "from 30 seconds up to 30 minutes.",
-        example: "Set to 5m to keep a capture handy while you work, or Never to hold it "
+        example: "Set to 5m to keep a capture handy while you work, or ∞ to hold it "
             + "until you dismiss it yourself."
     )
 
@@ -55,7 +55,7 @@ enum SettingsHelp {
             + "is deleted. Only the app's own copy goes — anything you saved or copied "
             + "elsewhere is untouched, and recordings are never deleted.",
         example: "Set to 30m and a capture leaves the History window half an hour later; "
-            + "Never keeps it until the \"Keep at most\" limit pushes it out."
+            + "∞ keeps it until the \"Keep at most\" limit pushes it out."
     )
 
     static let pinCornerRadius = HelpText(

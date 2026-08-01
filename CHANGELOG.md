@@ -2,6 +2,16 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.6.1 — 2026-08-01 · ∞ instead of "Never"
+
+### Changed
+- **Both retention sliders now show ∞ where they used to read "Never".** This affects
+  Settings → Quick Access Overlay → "Auto-dismiss after" and Settings → History →
+  "Keep in cache for". The meaning is unchanged — ∞ is the last stop on each slider and
+  means the card stays until you dismiss it / the capture is kept until the "Keep at most"
+  count limit pushes it out. The stored value for that stop is still `0`, so no setting is
+  reset by this update. The Windows port's auto-dismiss slider shows ∞ to match.
+
 ## v2.6.0 — 2026-08-01 · Cache Retention
 
 ### Added

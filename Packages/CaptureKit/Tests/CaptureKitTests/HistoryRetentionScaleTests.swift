@@ -34,7 +34,7 @@ let historyRetentionScaleTests: [TestCase] = [
         t.equal(HistoryRetentionScale.snap(-3), 0)
     },
     TestCase("labels") { t in
-        t.equal(HistoryRetentionScale.label(0), "Never")
+        t.equal(HistoryRetentionScale.label(0), "∞")
         t.equal(HistoryRetentionScale.label(10), "10s")
         t.equal(HistoryRetentionScale.label(30), "30s")
         t.equal(HistoryRetentionScale.label(300), "5m")
