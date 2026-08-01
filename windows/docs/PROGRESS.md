@@ -18,6 +18,30 @@
 The loop (`windows/LOOP-PROMPT.md`) reads this first every firing to avoid redoing work. Keep it current: check off
 finished tasks, move the pointer, log assumptions/known-issues. One firing = one durable increment.
 
+## 2026-08-01 — Quick Access hold duration: 30s … 30m stop table replaces the 2s … 30s bar (owner request)
+Owner asked to be able to hold a capture on screen "from 30 seconds up to 30 minutes". The change was made on macOS
+first (tag `v2.5.0`) and mirrored here stop for stop, so the two platforms keep a single shared scale.
+- **`src/BetterScreenshot.Capture/OverlayDismissScale.cs` is now a stop table**, not a linear seconds range. The stops
+  are `30, 60, 120, 300, 600, 900, 1800` seconds (30s · 1m · 2m · 5m · 10m · 15m · 30m) followed by the trailing
+  "Never" stop, which still persists as `0`. **A slider position is now a stop *index* (0…7), not a second count** —
+  that is the one conceptual break from the old file. `MinSeconds` / `MaxSeconds` are gone; `MinPosition` (0),
+  `NeverPosition` (7) and `FiniteStops` replace them. `Label` grew a minutes branch: `<60` renders as `"30s"`,
+  anything else as `"5m"`.
+- **New `OverlayDismissScale.Snap(int)`** rounds any persisted value to the nearest stop (ties break toward the
+  shorter stop), and `CaptureSettings.FromDictionary` now runs every stored `overlayAutoDismissSeconds` through it.
+  Without that, a `settings.json` written by an older build (the 6s default) would keep firing at 6s while the
+  slider displayed 30s. Mirrors how the macOS app snaps `historyCap`.
+- **`CaptureSettings.OverlayAutoDismissSeconds` default is now `30`** (was `6`, which is no longer a valid stop).
+  Deliberately *not* `0`/Never — Never is the macOS owner's personal preference, so the port keeps auto-dismissing.
+- **`Settings/SettingsWindow.xaml`:** `DismissSlider` is now `Minimum="0" Maximum="7"`, `LargeChange="1"`. No code
+  change in `SettingsWindow.xaml.cs` — it already goes through `SecondsToPosition` / `PositionToSeconds` / `Label`.
+- `QuickAccessWindow.StartAutoDismiss` needed **no change**: it already takes an arbitrary second count and treats
+  `<= 0` as "never dismiss".
+- **⚠️ NOT COMPILED OR TESTED.** This was written on the owner's Mac, which has no .NET SDK installed and cannot
+  build `net9.0-windows10.0.19041.0` regardless. `tests/BetterScreenshot.Tests/OverlayDismissScaleTests.cs` and
+  `CaptureSettingsTests.cs` were updated for the new scale but **have not been run**. First thing on a Windows box:
+  `dotnet test windows/BetterScreenshot.sln`, then re-verify the slider by eye.
+
 ## 2026-07-05 — "Launch at login" now actually registers with Windows (owner request — it was a dead flag)
 Owner asked for a setting to "pick if this app starts on startup." **The Settings UI already had it** — a "Startup" `DarkSection`
 card with a `LaunchAtLoginCheck` `Theme.MonoSwitch`, an InfoTip, and the `SettingsStore.LaunchAtLogin` bool round-tripping to

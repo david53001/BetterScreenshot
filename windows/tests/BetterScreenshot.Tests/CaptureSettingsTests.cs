@@ -12,7 +12,7 @@ public class CaptureSettingsTests
         Assert.Equal(AfterCaptureBehavior.ShowOverlay, d.AfterCapture);
         Assert.Equal(SettingsImageFormat.Png, d.Format);
         Assert.Equal(SettingsOverlayCorner.BottomRight, d.OverlayCorner);
-        Assert.Equal(6, d.OverlayAutoDismissSeconds);
+        Assert.Equal(30, d.OverlayAutoDismissSeconds);
         Assert.Equal(8, d.PinCornerRadius);
         Assert.True(d.PinShadow);
         Assert.True(d.HistoryEnabled);
@@ -27,7 +27,7 @@ public class CaptureSettingsTests
             AfterCapture = AfterCaptureBehavior.CopyAndSave,
             Format = SettingsImageFormat.Jpg,
             OverlayCorner = SettingsOverlayCorner.TopLeft,
-            OverlayAutoDismissSeconds = 12,
+            OverlayAutoDismissSeconds = 600,
             PinCornerRadius = 3,
             PinShadow = false,
             HistoryEnabled = false,
@@ -35,6 +35,19 @@ public class CaptureSettingsTests
         };
         var round = CaptureSettings.FromDictionary(s.ToDictionary());
         Assert.Equal(s, round);
+    }
+
+    [Theory]
+    [InlineData("6", 30)]     // a delay saved by an older build snaps to the nearest stop
+    [InlineData("0", 0)]      // Never survives
+    [InlineData("600", 600)]  // an exact stop is left alone
+    public void AutoDismissSnapsToAllowedStop(string stored, int expected)
+    {
+        var s = CaptureSettings.FromDictionary(new Dictionary<string, string>
+        {
+            ["overlayAutoDismissSeconds"] = stored,
+        });
+        Assert.Equal(expected, s.OverlayAutoDismissSeconds);
     }
 
     [Fact]

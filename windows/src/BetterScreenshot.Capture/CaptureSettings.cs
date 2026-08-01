@@ -8,7 +8,7 @@ public enum SettingsOverlayCorner { TopLeft, TopRight, BottomLeft, BottomRight }
 
 /// <summary>
 /// Capture behavior settings, persisted as a flat string dictionary (1:1 with the macOS app's persisted keys).
-/// Defaults: show the quick-access overlay, PNG, bottom-right corner, 6s auto-dismiss, pin radius 8 + shadow,
+/// Defaults: show the quick-access overlay, PNG, bottom-right corner, 30s auto-dismiss, pin radius 8 + shadow,
 /// history enabled with a 50-item cap.
 /// </summary>
 public sealed record CaptureSettings
@@ -16,7 +16,7 @@ public sealed record CaptureSettings
     public AfterCaptureBehavior AfterCapture { get; init; } = AfterCaptureBehavior.ShowOverlay;
     public SettingsImageFormat Format { get; init; } = SettingsImageFormat.Png;
     public SettingsOverlayCorner OverlayCorner { get; init; } = SettingsOverlayCorner.BottomRight;
-    public int OverlayAutoDismissSeconds { get; init; } = 6;
+    public int OverlayAutoDismissSeconds { get; init; } = 30;
     public int PinCornerRadius { get; init; } = 8;
     public bool PinShadow { get; init; } = true;
     public bool HistoryEnabled { get; init; } = true;
@@ -74,7 +74,10 @@ public sealed record CaptureSettings
                     _ => def.OverlayCorner,
                 }
                 : def.OverlayCorner,
-            OverlayAutoDismissSeconds = ParseInt(d, "overlayAutoDismissSeconds", def.OverlayAutoDismissSeconds),
+            // Snap to the slider's stop table so a legacy persisted value (e.g. an older build's 6s
+            // default) resolves to a stop the Settings slider can show.
+            OverlayAutoDismissSeconds = OverlayDismissScale.Snap(
+                ParseInt(d, "overlayAutoDismissSeconds", def.OverlayAutoDismissSeconds)),
             PinCornerRadius = ParseInt(d, "pinCornerRadius", def.PinCornerRadius),
             PinShadow = ParseBool(d, "pinShadow", def.PinShadow),
             HistoryEnabled = ParseBool(d, "historyEnabled", def.HistoryEnabled),

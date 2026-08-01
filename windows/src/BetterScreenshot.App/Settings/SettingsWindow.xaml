@@ -134,8 +134,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Slider x:Name="DismissSlider" Grid.Column="0" VerticalAlignment="Center"
-                                        Minimum="2" Maximum="31" IsSnapToTickEnabled="True" TickFrequency="1"
-                                        SmallChange="1" LargeChange="2"
+                                        Minimum="0" Maximum="7" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        SmallChange="1" LargeChange="1"
                                         Style="{StaticResource Theme.Slider}"
                                         ValueChanged="DismissSlider_ValueChanged"/>
                                 <TextBlock x:Name="DismissValueLabel" Grid.Column="1" MinWidth="46"
