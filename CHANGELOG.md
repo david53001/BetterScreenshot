@@ -16,7 +16,8 @@ All notable changes to BetterScreenshot. Versions are git tags; releases are pub
   your saved file for recordings — never a temporary copy that the cache sweep deletes.
 - **Multi-select in History.** ⇧-click selects a contiguous range, ⌘-click toggles individual items.
   Copy, Delete and Show in Finder act on the whole selection, and dragging a multi-selection drags
-  every file at once. Annotate and Pin remain single-selection.
+  every file at once. Annotate and Pin remain single-selection. Deleting more than one item now asks
+  for confirmation first; deleting a single item is still immediate, as before.
 
 ## v2.7.0 — 2026-08-01 · Temp-file retention (replaces v2.6.0's history retention)
 

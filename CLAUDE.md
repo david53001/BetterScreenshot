@@ -64,11 +64,14 @@ borderless overlay needs to receive Escape; the Quick Access card and HUD are `.
 and never stole focus. In the History window, selection is now `HistorySelectionState`
 (`Packages/HistoryKit/Sources/HistoryKit/HistorySelection.swift`, pure + unit-tested) driven by
 `App/History/HistoryItemInteraction.swift`, a transparent AppKit view per cell — SwiftUI on macOS 14
-can express neither modifier-aware clicks nor a multi-file `NSDraggingSession`. Two invariants in
-`CaptureCoordinator.rememberFrontmostApp()` are deliberate, not oversights: it skips recording
-BetterScreenshot itself as the "previous" app, and `previousApp` is never cleared once set — both so
-a second capture hotkey pressed during an already-open selection doesn't lose the real target app.
-Recording flows are not covered — `RecordingCoordinator` has no refocus path.
+can express neither modifier-aware clicks nor a multi-file `NSDraggingSession`. Two invariants split
+across `CaptureCoordinator.rememberFrontmostApp()` and `restoreFrontmostApp()` are deliberate, not
+oversights: `rememberFrontmostApp()` skips recording BetterScreenshot itself as the "previous" app,
+and `restoreFrontmostApp()` never clears `previousApp` — both so a second capture hotkey pressed
+during an already-open selection doesn't lose the real target app. The single exception is
+`rememberFrontmostApp()` clearing `previousApp` when we are frontmost *and* no selection is up: the
+capture came from one of our own windows, so there is nothing to hand back to. Recording flows are
+not covered — `RecordingCoordinator` has no refocus path.
 
 > **v2.6.0 was the same feature aimed at the wrong target** and is fully reverted: it expired *History* entries. **Capture History has no time expiry** — `HistoryIndex.pruned(cap:)` applies the count cap only, and even the pre-v2.6.0 fixed 30-day prune is gone (owner: "that one is infinite and holds a certain number of screenshots"). Don't reintroduce an age prune in HistoryKit. The stop table shape is deliberately duplicated between `TempFileRetentionScale` and `OverlayDismissScale` rather than extracted.
 

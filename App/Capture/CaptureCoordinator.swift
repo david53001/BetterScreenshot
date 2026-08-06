@@ -281,8 +281,8 @@ final class CaptureCoordinator {
 
     /// Hands focus back to that app. The remembered app is deliberately *not*
     /// cleared: re-activating an already-active app is a no-op, and keeping it
-    /// means a capture started while we are frontmost (from the menu-bar menu,
-    /// or a second hotkey during a selection) still has somewhere to return to.
+    /// means a second capture hotkey pressed while our own selection overlay
+    /// is already up still has somewhere to return to.
     private func restoreFrontmostApp() {
         guard let app = previousApp else { return }
         guard FocusRestore.shouldRestore(previousBundleID: app.bundleIdentifier,

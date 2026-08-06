@@ -148,8 +148,9 @@ struct HistoryView: View {
                             isPresented: Binding(get: { !pendingBulkDelete.isEmpty },
                                                  set: { if !$0 { pendingBulkDelete = [] } }),
                             titleVisibility: .visible) {
-            Button("Delete \(pendingBulkDelete.count) Items", role: .destructive) {
-                performDelete(pendingBulkDelete)
+            let doomed = pendingBulkDelete
+            Button("Delete \(doomed.count) Items", role: .destructive) {
+                performDelete(doomed)
                 pendingBulkDelete = []
             }
         } message: {
