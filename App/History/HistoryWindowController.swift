@@ -43,6 +43,7 @@ struct HistoryView: View {
     let actions: HistoryWindowActions
     @State private var selection = HistorySelectionState()
     @State private var confirmingClear = false
+    @State private var pendingBulkDelete: [HistoryEntry] = []
 
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 12)]
 
@@ -103,12 +104,15 @@ struct HistoryView: View {
     /// Evaluated when a drag actually starts: an unselected cell becomes the
     /// selection first, then every selected entry with a file on disk is dragged.
     private func dragItems(startingAt entry: HistoryEntry) -> [HistoryDragItem] {
-        selection = HistorySelection.dragStart(on: entry.id,
-                                               order: history.entries.map(\.id), state: selection)
-        return selectedEntries.compactMap { candidate in
-            guard let url = history.dragURL(for: candidate) else { return nil }
-            return HistoryDragItem(url: url, image: history.thumbnail(for: candidate))
-        }
+        let next = HistorySelection.dragStart(on: entry.id,
+                                              order: history.entries.map(\.id), state: selection)
+        selection = next
+        return history.entries
+            .filter { next.selected.contains($0.id) }
+            .compactMap { candidate in
+                guard let url = history.dragURL(for: candidate) else { return nil }
+                return HistoryDragItem(url: url, image: history.thumbnail(for: candidate))
+            }
     }
 
     private var actionBar: some View {
@@ -140,12 +144,23 @@ struct HistoryView: View {
         } message: {
             Text("Removes every remembered capture and its stored copies. Saved recording files on disk are not deleted.")
         }
+        .confirmationDialog("Delete \(pendingBulkDelete.count) captures?",
+                            isPresented: Binding(get: { !pendingBulkDelete.isEmpty },
+                                                 set: { if !$0 { pendingBulkDelete = [] } }),
+                            titleVisibility: .visible) {
+            Button("Delete \(pendingBulkDelete.count) Items", role: .destructive) {
+                performDelete(pendingBulkDelete)
+                pendingBulkDelete = []
+            }
+        } message: {
+            Text("Removes them from history and deletes their stored copies. Saved recording files on disk are not deleted.")
+        }
     }
 
     /// "12 items" normally; "3 of 12 selected" once more than one is picked.
     private var countLabel: String {
         let total = history.entries.count
-        let picked = selection.selected.count
+        let picked = selectedEntries.count
         if picked > 1 { return "\(picked) of \(total) selected" }
         return "\(total) item\(total == 1 ? "" : "s")"
     }
@@ -154,18 +169,18 @@ struct HistoryView: View {
     private func contextItems(for entry: HistoryEntry) -> some View {
         let group = targets(for: entry)
         Button(group.count > 1 ? "Copy \(group.count) Items" : "Copy") {
-            history.copyToClipboard(group)
+            history.copyToClipboard(targets(for: entry))
         }
         if entry.kind == .screenshot {
             Button("Annotate") { annotate(entry) }
             Button("Pin") { pin(entry) }
         }
         if group.contains(where: { history.canReveal($0) }) {
-            Button("Show in Finder") { history.revealInFinder(group) }
+            Button("Show in Finder") { history.revealInFinder(targets(for: entry)) }
         }
         Divider()
         Button(group.count > 1 ? "Delete \(group.count) Items" : "Delete", role: .destructive) {
-            delete(group)
+            delete(targets(for: entry))
         }
     }
 
@@ -189,6 +204,11 @@ struct HistoryView: View {
     }
 
     private func delete(_ entries: [HistoryEntry]) {
+        guard entries.count > 1 else { performDelete(entries); return }
+        pendingBulkDelete = entries
+    }
+
+    private func performDelete(_ entries: [HistoryEntry]) {
         let ids = Set(entries.map(\.id))
         selection.selected.subtract(ids)
         if let anchor = selection.anchor, ids.contains(anchor) { selection.anchor = nil }

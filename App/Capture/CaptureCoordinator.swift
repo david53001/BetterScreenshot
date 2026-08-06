@@ -266,12 +266,16 @@ final class CaptureCoordinator {
     }
 
     /// Remembers who had focus before the selection overlay activates us.
-    /// A second capture hotkey pressed while our own overlay is already up
-    /// would otherwise record *us* and lose the real target, so recording
-    /// ourselves is skipped and the earlier target is kept.
+    /// Recording ourselves is skipped two different ways: while our own
+    /// overlay is already up (a second capture hotkey — keep the real target),
+    /// and when the capture was started from one of our own windows, where
+    /// there is nothing to hand focus back to.
     private func rememberFrontmostApp() {
-        guard let front = NSWorkspace.shared.frontmostApplication,
-              front.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+        guard let front = NSWorkspace.shared.frontmostApplication else { return }
+        guard front.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            if !overlay.isPresenting { previousApp = nil }
+            return
+        }
         previousApp = front
     }
 

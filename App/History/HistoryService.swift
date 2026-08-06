@@ -71,11 +71,6 @@ final class HistoryService: ObservableObject {
 
     // MARK: - History window actions
 
-    func delete(_ entry: HistoryEntry) {
-        store.remove(id: entry.id)
-        entries = store.index.entries
-    }
-
     func delete(_ entries: [HistoryEntry]) {
         for entry in entries { store.remove(id: entry.id) }
         self.entries = store.index.entries
@@ -152,12 +147,6 @@ final class HistoryService: ObservableObject {
     func canReveal(_ entry: HistoryEntry) -> Bool {
         guard let url = revealURL(for: entry) else { return false }
         return FileManager.default.fileExists(atPath: url.path)
-    }
-
-    func revealInFinder(_ entry: HistoryEntry) {
-        guard let url = revealURL(for: entry),
-              FileManager.default.fileExists(atPath: url.path) else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     /// Reveals every selected file in one Finder window.

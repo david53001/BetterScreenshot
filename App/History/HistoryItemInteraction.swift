@@ -6,11 +6,6 @@ import HistoryKit
 struct HistoryDragItem {
     let url: URL
     let image: NSImage?
-
-    init(url: URL, image: NSImage?) {
-        self.url = url
-        self.image = image
-    }
 }
 
 /// A transparent AppKit layer over a History grid cell. It exists for two things

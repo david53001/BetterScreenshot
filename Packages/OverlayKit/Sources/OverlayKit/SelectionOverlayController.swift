@@ -5,6 +5,11 @@ public final class SelectionOverlayController {
     private var windows: [NSWindow] = []
     private var completion: ((SelectionResult?) -> Void)?
 
+    /// True while a selection is on screen and awaiting its result. Lets the
+    /// capture layer tell "our overlay has focus" apart from "the user is in
+    /// one of our windows".
+    public var isPresenting: Bool { completion != nil }
+
     public init() {}
 
     /// Presents selection overlays on all screens; calls completion with the result (or nil if cancelled).
