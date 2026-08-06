@@ -26,8 +26,9 @@ final class CaptureCoordinator {
 
     private var editorController: EditorWindowController?
 
-    /// The app that was frontmost when the current capture began, so focus can
-    /// be handed back once we're done stealing it for the selection overlay.
+    /// The last app that was frontmost before one of our overlays took focus,
+    /// so focus can be handed back after a capture. Outlives a single capture
+    /// on purpose — see `rememberFrontmostApp()`.
     private var previousApp: NSRunningApplication?
 
     func presentEditor(_ image: CGImage) {
@@ -265,15 +266,21 @@ final class CaptureCoordinator {
     }
 
     /// Remembers who had focus before the selection overlay activates us.
+    /// A second capture hotkey pressed while our own overlay is already up
+    /// would otherwise record *us* and lose the real target, so recording
+    /// ourselves is skipped and the earlier target is kept.
     private func rememberFrontmostApp() {
-        previousApp = NSWorkspace.shared.frontmostApplication
+        guard let front = NSWorkspace.shared.frontmostApplication,
+              front.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+        previousApp = front
     }
 
-    /// Hands focus back to that app. Safe to call more than once per capture —
-    /// the remembered app is cleared on the first call.
+    /// Hands focus back to that app. The remembered app is deliberately *not*
+    /// cleared: re-activating an already-active app is a no-op, and keeping it
+    /// means a capture started while we are frontmost (from the menu-bar menu,
+    /// or a second hotkey during a selection) still has somewhere to return to.
     private func restoreFrontmostApp() {
         guard let app = previousApp else { return }
-        previousApp = nil
         guard FocusRestore.shouldRestore(previousBundleID: app.bundleIdentifier,
                                          ownBundleID: Bundle.main.bundleIdentifier) else { return }
         app.activate()
