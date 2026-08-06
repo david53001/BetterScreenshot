@@ -26,6 +26,10 @@ final class CaptureCoordinator {
 
     private var editorController: EditorWindowController?
 
+    /// The app that was frontmost when the current capture began, so focus can
+    /// be handed back once we're done stealing it for the selection overlay.
+    private var previousApp: NSRunningApplication?
+
     func presentEditor(_ image: CGImage) {
         let controller = EditorWindowController(image: image, defaultStyle: settings.editorStyle)
         controller.onCopy = { [weak self] img in self?.copy(img) }
@@ -55,20 +59,24 @@ final class CaptureCoordinator {
     }
 
     func captureArea() {
+        rememberFrontmostApp()
         guard ensurePermission() else { return }
         overlay.present { [weak self] result in
-            guard let self, let result else { return }
+            guard let self else { return }
+            guard let result else { self.restoreFrontmostApp(); return }
             Task { await self.run(.area(rect: result.globalRect, displayID: result.displayID),
                                   sourceRect: result.globalRect) }
         }
     }
 
     func captureFullscreen() {
+        rememberFrontmostApp()
         guard ensurePermission() else { return }
         Task { await run(.fullscreen(displayID: CGMainDisplayID())) }
     }
 
     func captureFrontWindow() {
+        rememberFrontmostApp()
         guard ensurePermission() else { return }
         Task { if let id = await frontmostWindowID() { await run(.window(windowID: id)) } }
     }
@@ -76,9 +84,11 @@ final class CaptureCoordinator {
     /// Capture Text (OCR + QR): drag a region; the recognized text — or a QR
     /// code's payload, which wins — lands on the clipboard. HUD confirms.
     func captureText() {
+        rememberFrontmostApp()
         guard ensurePermission() else { return }
         overlay.present { [weak self] result in
-            guard let self, let result else { return }
+            guard let self else { return }
+            guard let result else { self.restoreFrontmostApp(); return }
             Task { await self.runCaptureText(result) }
         }
     }
@@ -100,6 +110,9 @@ final class CaptureCoordinator {
             NSLog("Capture Text failed: \(error)")
             hud.show("Capture Text failed", on: screen(for: result.displayID))
         }
+        // Focus goes back last, so the recognized text can be pasted straight
+        // into the app the user was already in.
+        restoreFrontmostApp()
     }
 
     private func screen(for displayID: CGDirectDisplayID) -> NSScreen? {
@@ -116,6 +129,7 @@ final class CaptureCoordinator {
         } catch {
             NSLog("Capture failed: \(error)")
             hud.show("Capture failed")
+            restoreFrontmostApp()
         }
     }
 
@@ -129,6 +143,9 @@ final class CaptureCoordinator {
         case .copyAndSave: copy(image); save(image)
         case .showOverlay: presentOverlay(image, sourceRect: sourceRect, historyID: historyID)
         }
+        // The Quick Access card is a .nonactivatingPanel, so handing focus back
+        // here leaves it on screen and clickable.
+        restoreFrontmostApp()
     }
 
     private func presentOverlay(_ image: CGImage, sourceRect: CGRect?, historyID: UUID?) {
@@ -245,6 +262,21 @@ final class CaptureCoordinator {
         if PermissionManager.hasScreenRecordingPermission { return true }
         presentSetup?()   // one-button setup window owns the whole grant flow
         return false
+    }
+
+    /// Remembers who had focus before the selection overlay activates us.
+    private func rememberFrontmostApp() {
+        previousApp = NSWorkspace.shared.frontmostApplication
+    }
+
+    /// Hands focus back to that app. Safe to call more than once per capture —
+    /// the remembered app is cleared on the first call.
+    private func restoreFrontmostApp() {
+        guard let app = previousApp else { return }
+        previousApp = nil
+        guard FocusRestore.shouldRestore(previousBundleID: app.bundleIdentifier,
+                                         ownBundleID: Bundle.main.bundleIdentifier) else { return }
+        app.activate()
     }
 
     private func frontmostWindowID() async -> CGWindowID? {
