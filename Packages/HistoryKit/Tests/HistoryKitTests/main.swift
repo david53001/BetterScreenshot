@@ -6,5 +6,6 @@ runTests("HistoryKitTests",
     historyIndexTests +
     restoreStackTests +
     thumbnailRendererTests +
-    historyStoreTests
+    historyStoreTests +
+    historySelectionTests
 )
