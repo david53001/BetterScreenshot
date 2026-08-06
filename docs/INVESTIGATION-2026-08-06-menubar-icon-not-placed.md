@@ -1,7 +1,61 @@
 # Investigation — BetterScreenshot's menu-bar icon is never placed (2026-08-06)
 
-**Status: UNSOLVED.** This document records what was tested and what is established fact, so the next
-person does not repeat any of it.
+**Status: RESOLVED (2026-08-06, same day, second session).** Root cause and fix are below; the
+original investigation record follows unchanged for history.
+
+## Root cause
+
+macOS 26 (this machine: 26.5.2) moved all third-party menu-bar status items into **ControlCenter
+hosting**: every visible status item is a window owned by the ControlCenter process (layer 25), and
+an app's `NSStatusItem` only produces an on-screen icon if ControlCenter accepts ("tracks") the
+app's *host* registration. ControlCenter also keeps an internal **blocked-host list** — the engine
+behind System Settings → Menu Bar → "Allow in the Menu Bar" — and it held a stuck record keyed to
+the bundle id `com.betterscreenshot.app`. Every launch, ControlCenter logged:
+
+```
+Moving host to blocked list; (bid:com.betterscreenshot.app-Item-0-<pid>)
+Starting to track blocked host; …
+```
+
+(watch with `log stream --predicate 'process == "ControlCenter" AND category == "appStatusItems"'`).
+A blocked host never gets a hosted window — which is exactly the "constructed correctly but never
+placed" symptom recorded below. The record was **stuck**: the "BetterScreenshot" row in System
+Settings → Menu Bar showed ON, and cycling it produced no ControlCenter reaction (dead row binding),
+while the same toggle provably worked for a freshly-registered test app (blocked it, then
+`Unblocking host` restored it live). "Reset Control Centre…" resets only Control Centre layout and
+did not clear it. The record's backing store was never located — it is in none of: any `defaults`
+domain (including ByHost and nested-binary-plist contents), `~/Library/Preferences`, ControlCenter's
+Application Support / containers / group container, the LaunchServices database, or Screen Time
+stores — and it survives `killall -9 ControlCenter` and logout.
+
+**The matcher is the bundle id (with a valid code signature).** Bisected by launching copies of the
+real app with exactly one identity field changed each: `CFBundleName` ✗ still blocked ·
+`CFBundleExecutable` ✗ · bundle directory name ✗ · codesign `--identifier` ✗ · status-item
+`autosaveName` ✗ (host id became `…-MainStatusItem` and was blocked anyway) · **`CFBundleIdentifier`
++ proper re-sign ✓ icon appears instantly**. (The "bundle identifier ruled out" row in the table
+below was a false negative: that copy's Info.plist was edited without re-signing, so its effective
+identity never changed.)
+
+## Fix shipped
+
+`App/Info.plist`: `CFBundleIdentifier` changed `com.betterscreenshot.app` → **`com.betterscreenshot.mac`**.
+Do not revert it — the poisoned ControlCenter record for the old id cannot be deleted by any
+supported means and will re-block the icon on this machine.
+
+One-time migration done at deploy (2026-08-06):
+- Settings copied to the new defaults domain: `defaults export com.betterscreenshot.app - | defaults import com.betterscreenshot.mac -`
+  (capture history is unaffected — it lives at `~/Library/Application Support/BetterScreenshot/`, not keyed by bundle id).
+- `didRegisterLaunchAtLogin` was deleted from the new domain so the app re-registered its login item.
+- The Screen Recording permission does **not** follow a bundle-id change (macOS's TCC —
+  Transparency, Consent, and Control — privacy database keys grants by bundle id), so the owner must
+  re-grant it once via the app's onboarding window (Enable Screen Recording → toggle in System
+  Settings → Privacy & Security → Screen & System Audio Recording).
+- Investigation-era keys planted in the old `com.betterscreenshot.app` domain
+  (`NSStatusItem VisibleCC Item-0`, `NSStatusItem Preferred Position Item-0`) are inert and were left.
+
+Everything below is the original (pre-resolution) record.
+
+---
 
 ## Context for someone with zero prior knowledge
 

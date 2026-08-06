@@ -2,6 +2,19 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.8.1 — 2026-08-06 · Menu-bar icon restored (new bundle identifier)
+
+### Fixed
+- **The menu-bar icon is back.** On macOS 26 the icon had vanished entirely: ControlCenter — which
+  hosts every third-party menu-bar item on macOS 26 and enforces the System Settings → Menu Bar
+  "Allow in the Menu Bar" list — held a stuck, undeletable blocked-host record keyed to the app's
+  bundle id, and silently blocked the item on every launch. No supported control clears it (the
+  Settings toggle for the app was dead, "Reset Control Centre…" doesn't touch it). The app's bundle
+  identifier changed `com.betterscreenshot.app` → `com.betterscreenshot.mac` to escape the record;
+  settings were migrated to the new preferences domain automatically. **One-time cost:** macOS ties
+  the Screen Recording permission to the bundle id, so it must be granted once more via the app's
+  onboarding prompt. Full forensics: `docs/INVESTIGATION-2026-08-06-menubar-icon-not-placed.md`.
+
 ## v2.8.0 — 2026-08-06 · Focus hand-back + History drag & multi-select
 
 ### Added

@@ -13,6 +13,10 @@ A **free, local macOS clone of CleanShot X** (screenshot + screen-recording tool
 - **No cloud.** No uploads, share links, accounts, or cloud sync — ever. Local features only.
 - **macOS-native, non-sandboxed, menu-bar agent** (`LSUIElement`). Personal/local use; ad-hoc signed (no Apple Developer account required).
 - **Min target: macOS 14 (Sonoma).**
+- **Bundle id is `com.betterscreenshot.mac` — never change it back to `com.betterscreenshot.app`.**
+  macOS 26's ControlCenter holds an unremovable blocked-host record for the old id that permanently
+  hides the menu-bar icon on the owner's machine (v2.8.1; forensics in
+  `docs/INVESTIGATION-2026-08-06-menubar-icon-not-placed.md`).
 
 ## Stack
 - Swift 5.9+, **SwiftUI + AppKit hybrid** (SwiftUI for settings/menus; AppKit `NSPanel`/custom `NSView` for overlays + the editor canvas).

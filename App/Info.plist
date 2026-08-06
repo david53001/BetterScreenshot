@@ -4,7 +4,10 @@
 <dict>
     <key>CFBundleName</key><string>BetterScreenshot</string>
     <key>CFBundleDisplayName</key><string>BetterScreenshot</string>
-    <key>CFBundleIdentifier</key><string>com.betterscreenshot.app</string>
+    <!-- Was com.betterscreenshot.app until 2026-08-06: macOS 26's ControlCenter holds an
+         unremovable blocked-host record keyed to that bundle id, which permanently hides the
+         menu-bar icon (docs/INVESTIGATION-2026-08-06-menubar-icon-not-placed.md). -->
+    <key>CFBundleIdentifier</key><string>com.betterscreenshot.mac</string>
     <key>CFBundleExecutable</key><string>BetterScreenshot</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>2.4.0</string>
