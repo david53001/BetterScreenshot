@@ -19,5 +19,6 @@ runTests("CaptureKitTests",
     windowPickingTests +
     overlayDismissScaleTests +
     tempFileRetentionScaleTests +
-    selectionClampTests
+    selectionClampTests +
+    focusRestoreTests
 )
