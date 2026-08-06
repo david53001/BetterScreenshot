@@ -2,6 +2,19 @@
 
 All notable changes to BetterScreenshot. Versions are git tags; releases are published on [GitHub](../../releases).
 
+## v2.8.0 — 2026-08-06 · Focus hand-back + History drag & multi-select
+
+### Added
+- **Focus returns to your app after a capture.** Taking a screenshot (⌘⇧4 area, fullscreen, window)
+  or running Capture Text (⌘⇧7) now hands keyboard focus back to whatever app was frontmost when you
+  started — including when you cancel the selection with Escape. Previously BetterScreenshot kept
+  focus and you had to click your window again before typing.
+- **Drag captures out of History.** Drag any thumbnail in the History window straight into Finder, a
+  chat, or a terminal. The dragged file is the stored copy, so it never expires.
+- **Multi-select in History.** ⇧-click selects a contiguous range, ⌘-click toggles individual items.
+  Copy, Delete and Show in Finder act on the whole selection, and dragging a multi-selection drags
+  every file at once. Annotate and Pin remain single-selection.
+
 ## v2.7.0 — 2026-08-01 · Temp-file retention (replaces v2.6.0's history retention)
 
 v2.6.0 put the retention timer on the wrong thing. It expired entries in the capture

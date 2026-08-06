@@ -53,6 +53,19 @@ Local Swift packages + a menu-bar app target:
 
 **Temp-file retention** (shipped 2026-08-01, tag `v2.7.0`, built directly without a spec at the owner's request): Settings → Capture → "Keep cached files for" controls how long the temporary PNG the app writes for a drag-out or for putting a file path on the clipboard survives in `$TMPDIR/BetterScreenshot-<UUID>/` (e.g. `/var/folders/8h/…/T/BetterScreenshot-4C7446B4-…/Screenshot 2026-08-01 at 18.25.57.png`). Stops live in `TempFileRetentionScale` (`Packages/CaptureKit/Sources/CaptureKit/TempFileRetentionScale.swift`) — **10s · 30s · 5m · 10m · 30m · 1h · ∞** — persisted as `CaptureSettings.tempRetentionSeconds` (default **300**, matching the old hard-coded behaviour; `0` = ∞). `TempImageWriter.cleanExpired(in:olderThan:now:)` does the work and is **scoped to the `BetterScreenshot-` directory prefix**, which is what keeps it away from the in-progress GIF `RecordingCoordinator` writes straight to the temp root. `App/Capture/TempFileService.swift` sweeps every 5s *and at launch* — the launch sweep matters because cleanup used to be a per-file `DispatchQueue.asyncAfter(300)` in `CaptureCoordinator` and `DraggableImageView`, which died with the process and orphaned a folder on every quit. Both of those timers (and `DraggableImageView.deletesFileAfterDrag`, now unused) were deleted.
 
+**Refocus after capture + History drag/multi-select** (shipped 2026-08-06, tag `v2.8.0`, plan:
+`docs/superpowers/plans/2026-08-06-betterscreenshot-refocus-and-history-multiselect.md`): every
+screenshot entry point in `CaptureCoordinator` now records `NSWorkspace.shared.frontmostApplication`
+up front and reactivates it once the capture finishes — after the pixels are grabbed, so the restored
+window ordering can't leak into the shot. The predicate is
+`FocusRestore.shouldRestore(previousBundleID:ownBundleID:)` in CaptureKit. The focus theft itself
+comes from `SelectionOverlayController.present()`'s `NSApp.activate(ignoringOtherApps:)`, which the
+borderless overlay needs to receive Escape; the Quick Access card and HUD are `.nonactivatingPanel`
+and never stole focus. In the History window, selection is now `HistorySelectionState`
+(`Packages/HistoryKit/Sources/HistoryKit/HistorySelection.swift`, pure + unit-tested) driven by
+`App/History/HistoryItemInteraction.swift`, a transparent AppKit view per cell — SwiftUI on macOS 14
+can express neither modifier-aware clicks nor a multi-file `NSDraggingSession`.
+
 > **v2.6.0 was the same feature aimed at the wrong target** and is fully reverted: it expired *History* entries. **Capture History has no time expiry** — `HistoryIndex.pruned(cap:)` applies the count cap only, and even the pre-v2.6.0 fixed 30-day prune is gone (owner: "that one is infinite and holds a certain number of screenshots"). Don't reintroduce an age prune in HistoryKit. The stop table shape is deliberately duplicated between `TempFileRetentionScale` and `OverlayDismissScale` rather than extracted.
 
 **Both scales render their "never expire" stop as `∞`** (tag `v2.6.1`) via a `neverLabel` constant — the persisted value for that stop is still `0` and the internal `neverSeconds` / `neverPosition` names are unchanged, so only the displayed glyph differs. The C# port mirrors this in `OverlayDismissScale.NeverLabel`.
