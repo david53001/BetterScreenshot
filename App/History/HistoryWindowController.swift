@@ -41,7 +41,7 @@ final class HistoryWindowController {
 struct HistoryView: View {
     @ObservedObject var history: HistoryService
     let actions: HistoryWindowActions
-    @State private var selection: UUID?
+    @State private var selection = HistorySelectionState()
     @State private var confirmingClear = false
 
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 12)]
@@ -58,9 +58,12 @@ struct HistoryView: View {
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(history.entries) { entry in
                             HistoryCell(entry: entry, history: history,
-                                        isSelected: selection == entry.id)
-                                .gesture(TapGesture(count: 2).onEnded { open(entry) })
-                                .onTapGesture { selection = entry.id }
+                                        isSelected: selection.selected.contains(entry.id))
+                                .overlay(HistoryItemInteraction(
+                                    onClick: { modifier, clicks in
+                                        handleClick(entry, modifier: modifier, clicks: clicks)
+                                    },
+                                    dragItems: { dragItems(startingAt: entry) }))
                                 .contextMenu { contextItems(for: entry) }
                         }
                     }
@@ -72,32 +75,66 @@ struct HistoryView: View {
         .frame(minWidth: 520, minHeight: 360)
     }
 
-    private var selected: HistoryEntry? { history.entries.first { $0.id == selection } }
+    /// The selected entries, in displayed order.
+    private var selectedEntries: [HistoryEntry] {
+        history.entries.filter { selection.selected.contains($0.id) }
+    }
+
+    /// The single selected entry, when the selection is exactly one.
+    private var soleSelection: HistoryEntry? {
+        selectedEntries.count == 1 ? selectedEntries[0] : nil
+    }
+
+    /// Context-menu and drag target: the whole selection when the clicked entry
+    /// is part of it, otherwise just that entry — the Finder convention.
+    private func targets(for entry: HistoryEntry) -> [HistoryEntry] {
+        selection.selected.contains(entry.id) ? selectedEntries : [entry]
+    }
+
+    private func handleClick(_ entry: HistoryEntry, modifier: HistoryClickModifier, clicks: Int) {
+        if clicks >= 2 {
+            open(entry)
+            return
+        }
+        selection = HistorySelection.click(on: entry.id, modifier: modifier,
+                                           order: history.entries.map(\.id), state: selection)
+    }
+
+    /// Evaluated when a drag actually starts: an unselected cell becomes the
+    /// selection first, then every selected entry with a file on disk is dragged.
+    private func dragItems(startingAt entry: HistoryEntry) -> [HistoryDragItem] {
+        selection = HistorySelection.dragStart(on: entry.id,
+                                               order: history.entries.map(\.id), state: selection)
+        return selectedEntries.compactMap { candidate in
+            guard let url = history.dragURL(for: candidate) else { return nil }
+            return HistoryDragItem(url: url, image: history.thumbnail(for: candidate))
+        }
+    }
 
     private var actionBar: some View {
         HStack(spacing: 8) {
-            Text("\(history.entries.count) item\(history.entries.count == 1 ? "" : "s")")
+            Text(countLabel)
                 .font(.caption).foregroundStyle(.secondary)
             Button("Clear All…") { confirmingClear = true }
                 .disabled(history.entries.isEmpty)
             Spacer()
-            Button("Copy") { if let e = selected { copy(e) } }
-                .disabled(selected == nil)
-            Button("Annotate") { if let e = selected { annotate(e) } }
-                .disabled(selected?.kind != .screenshot)
-            Button("Pin") { if let e = selected { pin(e) } }
-                .disabled(selected?.kind != .screenshot)
-            Button("Show in Finder") { if let e = selected { history.revealInFinder(e) } }
-                .disabled(selected.map { !history.canReveal($0) } ?? true)
-            Button("Delete") { if let e = selected { delete(e) } }
-                .disabled(selected == nil)
+            Button("Copy") { history.copyToClipboard(selectedEntries) }
+                .disabled(selectedEntries.isEmpty)
+            Button("Annotate") { if let e = soleSelection { annotate(e) } }
+                .disabled(soleSelection?.kind != .screenshot)
+            Button("Pin") { if let e = soleSelection { pin(e) } }
+                .disabled(soleSelection?.kind != .screenshot)
+            Button("Show in Finder") { history.revealInFinder(selectedEntries) }
+                .disabled(!selectedEntries.contains { history.canReveal($0) })
+            Button("Delete") { delete(selectedEntries) }
+                .disabled(selectedEntries.isEmpty)
         }
         .padding(10)
         .background(.bar)
         .confirmationDialog("Clear all capture history?",
                             isPresented: $confirmingClear, titleVisibility: .visible) {
             Button("Clear All", role: .destructive) {
-                selection = nil
+                selection = HistorySelectionState()
                 history.clearAll()
             }
         } message: {
@@ -105,18 +142,31 @@ struct HistoryView: View {
         }
     }
 
+    /// "12 items" normally; "3 of 12 selected" once more than one is picked.
+    private var countLabel: String {
+        let total = history.entries.count
+        let picked = selection.selected.count
+        if picked > 1 { return "\(picked) of \(total) selected" }
+        return "\(total) item\(total == 1 ? "" : "s")"
+    }
+
     @ViewBuilder
     private func contextItems(for entry: HistoryEntry) -> some View {
-        Button("Copy") { copy(entry) }
+        let group = targets(for: entry)
+        Button(group.count > 1 ? "Copy \(group.count) Items" : "Copy") {
+            history.copyToClipboard(group)
+        }
         if entry.kind == .screenshot {
             Button("Annotate") { annotate(entry) }
             Button("Pin") { pin(entry) }
         }
-        if history.canReveal(entry) {
-            Button("Show in Finder") { history.revealInFinder(entry) }
+        if group.contains(where: { history.canReveal($0) }) {
+            Button("Show in Finder") { history.revealInFinder(group) }
         }
         Divider()
-        Button("Delete", role: .destructive) { delete(entry) }
+        Button(group.count > 1 ? "Delete \(group.count) Items" : "Delete", role: .destructive) {
+            delete(group)
+        }
     }
 
     /// Double-click: screenshots → editor, recordings → default player.
@@ -128,8 +178,6 @@ struct HistoryView: View {
         }
     }
 
-    private func copy(_ entry: HistoryEntry) { history.copyToClipboard(entry) }
-
     private func annotate(_ entry: HistoryEntry) {
         guard let image = history.image(for: entry) else { return }
         actions.annotate(image)
@@ -140,9 +188,11 @@ struct HistoryView: View {
         actions.pin(image)
     }
 
-    private func delete(_ entry: HistoryEntry) {
-        if selection == entry.id { selection = nil }
-        history.delete(entry)
+    private func delete(_ entries: [HistoryEntry]) {
+        let ids = Set(entries.map(\.id))
+        selection.selected.subtract(ids)
+        if let anchor = selection.anchor, ids.contains(anchor) { selection.anchor = nil }
+        history.delete(entries)
     }
 }
 
