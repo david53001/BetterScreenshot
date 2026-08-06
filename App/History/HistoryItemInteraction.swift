@@ -19,7 +19,8 @@ struct HistoryDragItem {
 struct HistoryItemInteraction: NSViewRepresentable {
     /// (modifier, clickCount) — clickCount 2 is the open/annotate gesture.
     let onClick: (HistoryClickModifier, Int) -> Void
-    /// Evaluated at drag time, so it sees the selection the click just made.
+    /// Evaluated at drag time, before a plain click has been applied — so a
+    /// drag started on one of several selected cells still sees all of them.
     let dragItems: () -> [HistoryDragItem]
 
     func makeNSView(context: Context) -> HistoryItemView {
@@ -40,6 +41,8 @@ final class HistoryItemView: NSView, NSDraggingSource {
     var dragItems: (() -> [HistoryDragItem])?
 
     private var mouseDownPoint: NSPoint?
+    /// A plain click waiting to see whether this turns into a drag.
+    private var pendingClick: (modifier: HistoryClickModifier, clicks: Int)?
 
     func draggingSession(_ session: NSDraggingSession,
                          sourceOperationMaskFor context: NSDraggingContext)
@@ -47,7 +50,17 @@ final class HistoryItemView: NSView, NSDraggingSource {
 
     override func mouseDown(with event: NSEvent) {
         mouseDownPoint = event.locationInWindow
-        onClick?(Self.modifier(for: event), event.clickCount)
+        let modifier = Self.modifier(for: event)
+        if event.clickCount >= 2 || modifier != .none {
+            // Modifier clicks and double-clicks act on press, as in Finder.
+            onClick?(modifier, event.clickCount)
+            pendingClick = nil
+        } else {
+            // A plain press on an already-selected cell must not collapse the
+            // selection yet — that would strip a multi-file drag down to one
+            // file. Hold it until mouseUp, which only fires if no drag began.
+            pendingClick = (modifier, event.clickCount)
+        }
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -57,6 +70,7 @@ final class HistoryItemView: NSView, NSDraggingSource {
         let p = event.locationInWindow
         guard hypot(p.x - down.x, p.y - down.y) >= 4 else { return }
         mouseDownPoint = nil
+        pendingClick = nil          // a drag is not a click
 
         let items = dragItems?() ?? []
         guard !items.isEmpty else { return }
@@ -65,7 +79,9 @@ final class HistoryItemView: NSView, NSDraggingSource {
             let di = NSDraggingItem(pasteboardWriter: item.url as NSURL)
             // Fan the thumbnails out slightly so a multi-file drag reads as a stack.
             let offset = CGFloat(index) * 8
-            di.setDraggingFrame(bounds.offsetBy(dx: offset, dy: -offset), contents: item.image)
+            if let image = item.image {
+                di.setDraggingFrame(bounds.offsetBy(dx: offset, dy: -offset), contents: image)
+            }
             return di
         }
         beginDraggingSession(with: dragging, event: event, source: self)
@@ -73,6 +89,9 @@ final class HistoryItemView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         mouseDownPoint = nil
+        guard let pending = pendingClick else { return }
+        pendingClick = nil
+        onClick?(pending.modifier, pending.clicks)
     }
 
     private static func modifier(for event: NSEvent) -> HistoryClickModifier {
