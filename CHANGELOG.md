@@ -8,9 +8,12 @@ All notable changes to BetterScreenshot. Versions are git tags; releases are pub
 - **Focus returns to your app after a capture.** Taking a screenshot (⌘⇧4 area, fullscreen, window)
   or running Capture Text (⌘⇧7) now hands keyboard focus back to whatever app was frontmost when you
   started — including when you cancel the selection with Escape. Previously BetterScreenshot kept
-  focus and you had to click your window again before typing.
+  focus and you had to click your window again before typing. If you start the capture from one of
+  BetterScreenshot's own windows (History, the editor), there's nothing to hand back to, so focus is
+  simply left alone. Screen recording does not restore focus — only screenshots do.
 - **Drag captures out of History.** Drag any thumbnail in the History window straight into Finder, a
-  chat, or a terminal. The dragged file is the stored copy, so it never expires.
+  chat, or a terminal. The dragged file is the one on disk — the app's stored copy for screenshots,
+  your saved file for recordings — never a temporary copy that the cache sweep deletes.
 - **Multi-select in History.** ⇧-click selects a contiguous range, ⌘-click toggles individual items.
   Copy, Delete and Show in Finder act on the whole selection, and dragging a multi-selection drags
   every file at once. Annotate and Pin remain single-selection.

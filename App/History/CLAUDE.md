@@ -9,8 +9,9 @@
 
 Index/store/restore-stack/thumbnail logic (pure + file IO) lives in `Packages/HistoryKit` and is
 unit-tested there. Invariant inherited from HistoryKit: saved **recordings are referenced, never
-copied or deleted**; screenshots are copied + thumbnailed; age/cap pruning happens at load. Verify via
-HistoryKit tests plus opening the history window in the built app.
+copied or deleted**; screenshots are copied + thumbnailed; count-cap pruning happens at load (no age
+prune — Capture History has no time expiry). Verify via HistoryKit tests plus opening the history
+window in the built app.
 
 Dragged files are always the **persistent** ones — the history-owned PNG under
 `~/Library/Application Support/BetterScreenshot/History/` for screenshots, the user's saved file for
