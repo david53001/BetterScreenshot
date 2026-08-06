@@ -76,6 +76,11 @@ final class HistoryService: ObservableObject {
         entries = store.index.entries
     }
 
+    func delete(_ entries: [HistoryEntry]) {
+        for entry in entries { store.remove(id: entry.id) }
+        self.entries = store.index.entries
+    }
+
     func clearAll() {
         store.clearAll()
         entries = store.index.entries
@@ -94,6 +99,19 @@ final class HistoryService: ObservableObject {
 
     func savedFileURL(for entry: HistoryEntry) -> URL? { store.savedFileURL(for: entry) }
     func savedFileExists(_ entry: HistoryEntry) -> Bool { store.savedFileExists(entry) }
+
+    /// The file to put on the pasteboard when this entry is dragged out:
+    /// the history-owned PNG for screenshots, the user's saved file for
+    /// recordings. Nil when the file is missing, so it is simply skipped.
+    func dragURL(for entry: HistoryEntry) -> URL? {
+        var url: URL?
+        switch entry.kind {
+        case .screenshot: url = store.imageURL(for: entry)
+        case .recording:  url = store.savedFileURL(for: entry)
+        }
+        guard let url, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return url
+    }
 
     /// Copy: image for screenshots, file URL for recordings. HUD confirms.
     func copyToClipboard(_ entry: HistoryEntry) {
@@ -117,6 +135,18 @@ final class HistoryService: ObservableObject {
         }
     }
 
+    /// Multi-selection copy. One entry keeps the rich single-item behaviour
+    /// (image data + file URL); several write file URLs, which is what Finder,
+    /// Mail and chat apps accept for a multi-file paste.
+    func copyToClipboard(_ entries: [HistoryEntry]) {
+        guard entries.count != 1 else { copyToClipboard(entries[0]); return }
+        let urls = entries.compactMap { dragURL(for: $0) }
+        guard !urls.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.writeObjects(urls.map { $0 as NSURL })
+        hud.show("\(urls.count) files copied")
+    }
+
     /// Show in Finder targets the saved recording file, or the history-owned
     /// screenshot copy.
     func canReveal(_ entry: HistoryEntry) -> Bool {
@@ -128,6 +158,14 @@ final class HistoryService: ObservableObject {
         guard let url = revealURL(for: entry),
               FileManager.default.fileExists(atPath: url.path) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    /// Reveals every selected file in one Finder window.
+    func revealInFinder(_ entries: [HistoryEntry]) {
+        let urls = entries.compactMap { revealURL(for: $0) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+        guard !urls.isEmpty else { return }
+        NSWorkspace.shared.activateFileViewerSelecting(urls)
     }
 
     private func revealURL(for entry: HistoryEntry) -> URL? {
